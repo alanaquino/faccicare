@@ -1,0 +1,100 @@
+{% extends "layouts/base_padres.html" %}
+{% block title %}Reportar Síntomas{% endblock %}
+{% block content %}
+
+<div class="md:px-8 max-w-3xl mx-auto w-full space-y-6">
+
+{# Header #}
+<div class="flex items-center gap-4">
+  <a href="{% url 'padres:estado' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Reportar Síntomas</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Paciente: <strong>{{ paciente.nombre }}</strong></p>
+  </div>
+</div>
+
+{# Aviso de emergencia #}
+<div class="flex items-start gap-3 p-4 rounded-xl bg-error-container/30 border border-error/30">
+  <span class="material-symbols-outlined text-error mt-0.5">emergency</span>
+  <div>
+    <p class="font-label-md text-label-md text-error">¿Es una emergencia?</p>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Si su hijo tiene dificultad para respirar, fiebre muy alta (40°C+), o pierde el conocimiento, llame al <strong>911</strong> o diríjase a emergencias inmediatamente.</p>
+  </div>
+</div>
+
+<form action="{% url 'padres:estado' %}" method="get">
+  {% csrf_token %}
+
+  {# Información del reporte #}
+  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container p-6 mb-6">
+    <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary">info</span>
+      Información del Reporte
+    </h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Fecha de inicio de síntomas</label>
+        <input class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+               type="date"/>
+      </div>
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Gravedad percibida</label>
+        <select class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+          <option>Leve — no interfiere con actividades</option>
+          <option>Moderada — limita algunas actividades</option>
+          <option>Severa — requiere atención pronta</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  {# Categorías de síntomas #}
+  <div class="space-y-4 mb-6">
+    {% for categoria in categorias %}
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container overflow-hidden">
+      <div class="flex items-center gap-3 p-4 bg-surface-container-low border-b border-surface-container">
+        <span class="material-symbols-outlined text-primary">{{ categoria.icono }}</span>
+        <h3 class="font-headline-md text-headline-md text-on-background">{{ categoria.nombre }}</h3>
+      </div>
+      <div class="p-4">
+        <div class="grid grid-cols-2 gap-3">
+          {% for sintoma in categoria.sintomas %}
+          <label class="flex items-center gap-3 p-3 rounded-xl border border-surface-container hover:bg-surface-container-low cursor-pointer transition-colors">
+            <input type="checkbox" class="w-4 h-4 text-primary border-outline-variant rounded focus:ring-primary/50"/>
+            <span class="font-body-sm text-body-sm text-on-surface">{{ sintoma }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Descripción libre #}
+  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container p-6 mb-6">
+    <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+      <span class="material-symbols-outlined text-tertiary">note_alt</span>
+      Descripción Adicional
+    </h3>
+    <textarea class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md h-32 resize-none"
+              placeholder="Describa con sus propias palabras cómo se siente su hijo, cuándo comenzaron los síntomas, qué los mejora o empeora..."></textarea>
+  </div>
+
+  {# Botones #}
+  <div class="flex flex-col sm:flex-row gap-3">
+    <button type="submit"
+            class="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm text-base">
+      <span class="material-symbols-outlined">send</span>
+      Enviar Reporte al Médico
+    </button>
+    <a href="{% url 'padres:estado' %}"
+       class="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors text-base">
+      Cancelar
+    </a>
+  </div>
+</form>
+
+</div>
+{% endblock %}

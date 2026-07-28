@@ -1,0 +1,247 @@
+{% extends "layouts/base.html" %}
+{% block title %}Auditoria{% endblock %}
+{% block content %}
+
+<div class="space-y-gutter">
+  <header>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Auditoria</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Actividad operativa reciente del sistema.</p>
+  </header>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-gutter">
+    <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <div class="flex items-center justify-between">
+        <span class="font-label-md text-label-md text-on-surface-variant">Usuarios</span>
+        <span class="material-symbols-outlined text-primary">groups</span>
+      </div>
+      <p class="font-headline-md text-headline-md text-on-surface mt-3">{{ stats.total_usuarios }}</p>
+    </section>
+    <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <div class="flex items-center justify-between">
+        <span class="font-label-md text-label-md text-on-surface-variant">Activos</span>
+        <span class="material-symbols-outlined text-tertiary">verified_user</span>
+      </div>
+      <p class="font-headline-md text-headline-md text-on-surface mt-3">{{ stats.usuarios_activos }}</p>
+    </section>
+    <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <div class="flex items-center justify-between">
+        <span class="font-label-md text-label-md text-on-surface-variant">Acciones hoy</span>
+        <span class="material-symbols-outlined text-secondary">history</span>
+      </div>
+      <p class="font-headline-md text-headline-md text-on-surface mt-3">{{ stats.acciones_hoy }}</p>
+    </section>
+    <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <div class="flex items-center justify-between">
+        <span class="font-label-md text-label-md text-on-surface-variant">Reportes</span>
+        <span class="material-symbols-outlined text-orange-600">bar_chart</span>
+      </div>
+      <p class="font-headline-md text-headline-md text-on-surface mt-3">{{ stats.reportes_generados }}</p>
+    </section>
+    <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <div class="flex items-center justify-between">
+        <span class="font-label-md text-label-md text-on-surface-variant">Accesos recientes</span>
+        <span class="material-symbols-outlined text-primary">login</span>
+      </div>
+      <p class="font-headline-md text-headline-md text-on-surface mt-3">{{ stats.accesos_recientes }}</p>
+    </section>
+  </div>
+
+  <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-3">
+      <div class="xl:col-span-2">
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Usuario</label>
+        <input type="search" name="usuario" value="{{ filtros.usuario }}" placeholder="Nombre, usuario o correo"
+               class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+      </div>
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Rol</label>
+        <select name="rol" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+          <option value="">Todos</option>
+          {% for valor, etiqueta in roles %}
+          <option value="{{ valor }}" {% if filtros.rol == valor %}selected{% endif %}>{{ etiqueta }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Estado</label>
+        <select name="estado" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+          <option value="">Todos</option>
+          <option value="activo" {% if filtros.estado == "activo" %}selected{% endif %}>Activo</option>
+          <option value="inactivo" {% if filtros.estado == "inactivo" %}selected{% endif %}>Inactivo</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Acceso</label>
+        <select name="ultimo_acceso" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+          <option value="">Todos</option>
+          <option value="con_acceso" {% if filtros.ultimo_acceso == "con_acceso" %}selected{% endif %}>Con acceso</option>
+          <option value="sin_acceso" {% if filtros.ultimo_acceso == "sin_acceso" %}selected{% endif %}>Sin acceso</option>
+          <option value="ultimos_7" {% if filtros.ultimo_acceso == "ultimos_7" %}selected{% endif %}>Ultimos 7 dias</option>
+        </select>
+      </div>
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Modulo</label>
+        <select name="modulo" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+          <option value="">Todos</option>
+          {% for modulo in modulos %}
+          <option value="{{ modulo }}" {% if filtros.modulo == modulo %}selected{% endif %}>{{ modulo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Tipo</label>
+        <select name="tipo_accion" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+          <option value="">Todos</option>
+          {% for valor, etiqueta in tipos_accion %}
+          <option value="{{ valor }}" {% if filtros.tipo_accion == valor %}selected{% endif %}>{{ etiqueta }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Desde</label>
+        <input type="date" name="fecha_desde" value="{{ filtros.fecha_desde }}"
+               class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+      </div>
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Hasta</label>
+        <input type="date" name="fecha_hasta" value="{{ filtros.fecha_hasta }}"
+               class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+      </div>
+      <div class="md:col-span-2 xl:col-span-7 flex flex-wrap gap-3 pt-1">
+        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors">
+          <span class="material-symbols-outlined" style="font-size:18px;">filter_alt</span>
+          Filtrar
+        </button>
+        <a href="{% url 'auditoria' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+          <span class="material-symbols-outlined" style="font-size:18px;">restart_alt</span>
+          Limpiar
+        </a>
+      </div>
+    </form>
+  </section>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-gutter">
+    <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+      <div class="p-5 border-b border-surface-container">
+        <h3 class="font-headline-md text-headline-md">Usuarios</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="bg-surface-container-low text-on-surface-variant">
+              <th class="p-4 font-label-sm text-label-sm">Usuario</th>
+              <th class="p-4 font-label-sm text-label-sm">Rol</th>
+              <th class="p-4 font-label-sm text-label-sm">Estado</th>
+              <th class="p-4 font-label-sm text-label-sm">Ultimo acceso</th>
+              <th class="p-4 font-label-sm text-label-sm">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-container">
+            {% for usuario in usuarios %}
+            <tr class="hover:bg-surface-container-low/60">
+              <td class="p-4">
+                <p class="font-body-sm text-body-sm font-semibold text-on-surface">{{ usuario.username }}</p>
+                <p class="font-body-sm text-body-sm text-on-surface-variant">{{ usuario.nombre_completo }}</p>
+                <p class="font-label-sm text-label-sm text-on-surface-variant/70">{{ usuario.email|default:"Sin correo" }}</p>
+                <p class="font-label-sm text-label-sm text-on-surface-variant/70">Creado: {{ usuario.created_at|date:"d/m/Y"|default:"-" }}</p>
+              </td>
+              <td class="p-4 font-body-sm text-body-sm">{{ usuario.get_rol_display }}</td>
+              <td class="p-4">
+                {% if usuario.is_active %}
+                <span class="px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-label-sm text-label-sm">Activo</span>
+                {% else %}
+                <span class="px-2 py-1 rounded-full bg-rose-50 text-rose-700 font-label-sm text-label-sm">Inactivo</span>
+                {% endif %}
+              </td>
+              <td class="p-4 font-body-sm text-body-sm">{{ usuario.last_login|date:"d/m/Y H:i"|default:"Sin acceso" }}</td>
+              <td class="p-4 font-body-sm text-body-sm">{{ usuario.acciones_count }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="p-10 text-center text-on-surface-variant">No hay usuarios para los filtros seleccionados.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+      <div class="p-5 border-b border-surface-container">
+        <h3 class="font-headline-md text-headline-md">Reportes generados</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="bg-surface-container-low text-on-surface-variant">
+              <th class="p-4 font-label-sm text-label-sm">Tipo</th>
+              <th class="p-4 font-label-sm text-label-sm">Usuario</th>
+              <th class="p-4 font-label-sm text-label-sm">Fecha</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-container">
+            {% for reporte in reportes %}
+            <tr class="hover:bg-surface-container-low/60">
+              <td class="p-4 font-body-sm text-body-sm">{{ reporte.get_tipo_reporte_display }}</td>
+              <td class="p-4 font-body-sm text-body-sm">{{ reporte.generado_por.nombre_completo|default:reporte.generado_por.username }}</td>
+              <td class="p-4 font-body-sm text-body-sm">{{ reporte.created_at|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="p-10 text-center text-on-surface-variant">No hay reportes generados.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="p-5 border-b border-surface-container flex items-center justify-between">
+      <h3 class="font-headline-md text-headline-md">Actividad reciente</h3>
+      <span class="font-body-sm text-body-sm text-on-surface-variant">{{ actividad_reciente|length }}</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="bg-surface-container-low text-on-surface-variant">
+            <th class="p-4 font-label-sm text-label-sm">Fecha</th>
+            <th class="p-4 font-label-sm text-label-sm">Usuario</th>
+            <th class="p-4 font-label-sm text-label-sm">Modulo</th>
+            <th class="p-4 font-label-sm text-label-sm">Accion</th>
+            <th class="p-4 font-label-sm text-label-sm">Tipo</th>
+            <th class="p-4 font-label-sm text-label-sm">Descripcion</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-container">
+          {% for log in actividad_reciente %}
+          <tr class="hover:bg-surface-container-low/60 align-top">
+            <td class="p-4 font-body-sm text-body-sm whitespace-nowrap">{{ log.fecha|date:"d/m/Y H:i" }}</td>
+            <td class="p-4 font-body-sm text-body-sm">{{ log.usuario.nombre_completo|default:"Sistema" }}</td>
+            <td class="p-4 font-body-sm text-body-sm">{{ log.modulo|default:log.modelo }}</td>
+            <td class="p-4 font-body-sm text-body-sm">
+              <p class="font-semibold text-on-surface">{{ log.accion }}</p>
+              {% if log.objeto_repr %}<p class="text-on-surface-variant">{{ log.objeto_repr }}</p>{% endif %}
+              {% if log.direccion_ip %}<p class="font-label-sm text-label-sm text-on-surface-variant/70">IP {{ log.direccion_ip }}</p>{% endif %}
+            </td>
+            <td class="p-4">
+              <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full font-label-sm text-label-sm whitespace-nowrap
+                {% if log.tipo_accion == 'CREACION' %}bg-emerald-50 text-emerald-700
+                {% elif log.tipo_accion == 'EDICION' %}bg-sky-50 text-sky-700
+                {% elif log.tipo_accion == 'ELIMINACION' %}bg-rose-50 text-rose-700
+                {% elif log.tipo_accion == 'REPORTE' %}bg-orange-50 text-orange-700
+                {% elif log.tipo_accion == 'LOGIN' or log.tipo_accion == 'LOGOUT' %}bg-violet-50 text-violet-700
+                {% else %}bg-surface-container-low text-on-surface-variant{% endif %}">
+                <span class="material-symbols-outlined" style="font-size:16px;">{{ log.tipo_icono }}</span>
+                {{ log.get_tipo_accion_display }}
+              </span>
+            </td>
+            <td class="p-4 font-body-sm text-body-sm text-on-surface-variant max-w-xl">{{ log.descripcion|default:"Sin descripcion" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="p-10 text-center text-on-surface-variant">No hay actividad registrada para los filtros seleccionados.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+{% endblock %}

@@ -1,0 +1,16 @@
+asgiref==3.11.1
+Django==6.0.5
+djangorestframework==3.17.1
+djangorestframework-simplejwt
+argon2-cffi
+django-filter
+openpyxl
+reportlab
+drf-spectacular
+mysqlclient==2.2.8
+Pillow>=10.0.0
+requests
+sqlparse==0.5.5
+tzdata==2026.2
+python-decouple==3.8
+cryptography>=42.0.0

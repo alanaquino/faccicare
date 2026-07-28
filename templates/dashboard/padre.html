@@ -1,0 +1,23 @@
+{% extends "layouts/base_padres.html" %}
+{% block title %}Mi Panel Familiar{% endblock %}
+{% block content %}
+<div class="flex flex-col items-center justify-center py-16 text-center">
+  <div class="w-20 h-20 rounded-full bg-primary-container flex items-center justify-center mb-6 shadow-sm">
+    <span class="material-symbols-outlined text-primary" style="font-size: 40px; font-variation-settings: 'FILL' 1;">family_restroom</span>
+  </div>
+  <h1 class="font-headline-lg text-headline-lg text-on-background mb-2">{{ saludo }}, {{ usuario_nombre }}</h1>
+  <p class="font-body-md text-body-md text-on-surface-variant mb-8 max-w-md">
+    Acceda al portal completo de seguimiento de su hijo.
+  </p>
+  <div class="flex gap-4">
+    <a href="{% url 'padres:estado' %}" class="bg-primary text-on-primary px-6 py-3 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm flex items-center gap-2">
+      <span class="material-symbols-outlined" style="font-size:18px; font-variation-settings: 'FILL' 1;">home</span>
+      Ver Portal de Padres
+    </a>
+    <a href="{% url 'padres:reportar_sintomas' %}" class="border border-outline-variant text-on-surface-variant px-6 py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center gap-2">
+      <span class="material-symbols-outlined" style="font-size:18px;">report</span>
+      Reportar Síntomas
+    </a>
+  </div>
+</div>
+{% endblock %}

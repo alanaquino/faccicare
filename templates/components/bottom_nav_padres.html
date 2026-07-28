@@ -1,0 +1,73 @@
+{# ===== BOTTOM NAVBAR PORTAL PADRES — Mobile Only ===== #}
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-5 pt-3 bg-white shadow-[0_-8px_20px_rgba(0,0,0,0.06)] rounded-t-[28px] border-t border-surface-container/30">
+
+  {% with url_name=request.resolver_match.url_name app_name=request.resolver_match.app_name %}
+
+  {# 1. Inicio #}
+  <a href="{% url 'padres:estado' %}"
+     class="flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+    <div class="h-8 px-5 rounded-full flex items-center justify-center transition-all duration-200
+                {% if url_name == 'estado' %}bg-[#d4bbff] text-[#533487]{% else %}text-[#3d4947] hover:bg-surface-container-high/40{% endif %}">
+      <span class="material-symbols-outlined {% if url_name == 'estado' %}icon-fill{% endif %}" style="font-size: 24px;">home</span>
+    </div>
+    <span class="font-label-sm text-[12px] mt-1.5 transition-colors duration-200
+                 {% if url_name == 'estado' %}text-[#533487] font-semibold{% else %}text-[#3d4947]{% endif %}">
+      Inicio
+    </span>
+  </a>
+
+  {# 2. Evolución #}
+  <a href="{% url 'padres:evolucion' %}"
+     class="flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+    <div class="h-8 px-5 rounded-full flex items-center justify-center transition-all duration-200
+                {% if url_name == 'evolucion' or url_name == 'reportar_sintomas' %}bg-[#d4bbff] text-[#533487]{% else %}text-[#3d4947] hover:bg-surface-container-high/40{% endif %}">
+      <span class="material-symbols-outlined {% if url_name == 'evolucion' or url_name == 'reportar_sintomas' %}icon-fill{% endif %}" style="font-size: 24px;">trending_up</span>
+    </div>
+    <span class="font-label-sm text-[12px] mt-1.5 transition-colors duration-200
+                 {% if url_name == 'evolucion' or url_name == 'reportar_sintomas' %}text-[#533487] font-semibold{% else %}text-[#3d4947]{% endif %}">
+      Evolución
+    </span>
+  </a>
+
+  {# 3. Recursos #}
+  <a href="{% url 'padres:recursos_educativos' %}"
+     class="flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+    <div class="h-8 px-5 rounded-full flex items-center justify-center transition-all duration-200
+                {% if url_name == 'recursos_educativos' %}bg-[#d4bbff] text-[#533487]{% else %}text-[#3d4947] hover:bg-surface-container-high/40{% endif %}">
+      <span class="material-symbols-outlined {% if url_name == 'recursos_educativos' %}icon-fill{% endif %}" style="font-size: 24px;">menu_book</span>
+    </div>
+    <span class="font-label-sm text-[12px] mt-1.5 transition-colors duration-200
+                 {% if url_name == 'recursos_educativos' %}text-[#533487] font-semibold{% else %}text-[#3d4947]{% endif %}">
+      Recursos
+    </span>
+  </a>
+
+  {# 4. Docs #}
+  <a href="{% url 'padres:documentos' %}"
+     class="flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+    <div class="h-8 px-5 rounded-full flex items-center justify-center transition-all duration-200
+                {% if url_name == 'documentos' or url_name == 'subir_documento' or url_name == 'subir_documento_solicitud' %}bg-[#d4bbff] text-[#533487]{% else %}text-[#3d4947] hover:bg-surface-container-high/40{% endif %}">
+      <span class="material-symbols-outlined {% if url_name == 'documentos' or url_name == 'subir_documento' or url_name == 'subir_documento_solicitud' %}icon-fill{% endif %}" style="font-size: 24px;">folder_open</span>
+    </div>
+    <span class="font-label-sm text-[12px] mt-1.5 transition-colors duration-200
+                 {% if url_name == 'documentos' or url_name == 'subir_documento' or url_name == 'subir_documento_solicitud' %}text-[#533487] font-semibold{% else %}text-[#3d4947]{% endif %}">
+      Docs
+    </span>
+  </a>
+
+  {# 5. Perfil #}
+  <a href="{% url 'padres:perfil' %}"
+     class="flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+    <div class="h-8 px-5 rounded-full flex items-center justify-center transition-all duration-200
+                {% if url_name == 'perfil' %}bg-[#d4bbff] text-[#533487]{% else %}text-[#3d4947] hover:bg-surface-container-high/40{% endif %}">
+      <span class="material-symbols-outlined {% if url_name == 'perfil' %}icon-fill{% endif %}" style="font-size: 24px;">person</span>
+    </div>
+    <span class="font-label-sm text-[12px] mt-1.5 transition-colors duration-200
+                 {% if url_name == 'perfil' %}text-[#533487] font-semibold{% else %}text-[#3d4947]{% endif %}">
+      Perfil
+    </span>
+  </a>
+
+  {% endwith %}
+
+</nav>

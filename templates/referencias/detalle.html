@@ -1,0 +1,318 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ referencia.codigo }} — Referencia{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+  <div class="flex items-center gap-3 min-w-0">
+    <a href="{% url 'referencias:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant shrink-0">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div class="min-w-0">
+      <h2 class="font-headline-lg text-headline-lg text-on-background">{{ referencia.codigo }}</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant">{{ referencia.paciente }} &middot; {{ referencia.fecha }}</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2 shrink-0">
+    <a href="{% url 'referencias:imprimir' referencia.pk %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">description</span>Formulario MSP
+    </a>
+    {% if ingreso_casa %}
+    <a href="{% url 'referencias:formulario_ingreso_casa_facci' ingreso_casa.pk %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary font-label-md text-label-md hover:bg-primary-container/10 transition-colors shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">home_health</span>Ficha Casa FACCI
+    </a>
+    {% else %}
+    <a href="{% url 'referencias:crear_ingreso_casa_facci' referencia.pk %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary font-label-md text-label-md hover:bg-primary-container/10 transition-colors shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">home_health</span>Referir a Casa FACCI
+    </a>
+    {% endif %}
+    <button type="button" onclick="window.print()"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined icon-sm">print</span>Imprimir
+    </button>
+  </div>
+</div>
+
+{# Badge de estado y prioridad #}
+<div class="flex items-center gap-3 flex-wrap">
+  <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full font-label-md text-label-md
+               {% if referencia.estado == 'PENDIENTE' %}bg-secondary-container/40 text-secondary
+               {% elif referencia.estado == 'ACEPTADA' %}bg-primary-container/30 text-primary
+               {% elif referencia.estado == 'EN_PROCESO' %}bg-tertiary-container/30 text-tertiary
+               {% elif referencia.estado == 'COMPLETADA' %}bg-primary-container/30 text-primary
+               {% else %}bg-error-container/30 text-error{% endif %}">
+    <span class="material-symbols-outlined" style="font-size:16px;">
+      {% if referencia.estado == 'PENDIENTE' %}schedule
+      {% elif referencia.estado == 'ACEPTADA' %}check_circle
+      {% elif referencia.estado == 'EN_PROCESO' %}play_circle
+      {% elif referencia.estado == 'COMPLETADA' %}task_alt
+      {% else %}cancel{% endif %}
+    </span>
+    {{ referencia.get_estado_display }}
+  </span>
+  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-label-sm text-label-sm
+               {% if referencia.prioridad == 'URGENTE' %}bg-error-container text-error
+               {% elif referencia.prioridad == 'ALTA' %}bg-error-container/50 text-error
+               {% elif referencia.prioridad == 'MEDIA' %}bg-secondary-container/40 text-secondary
+               {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+    {{ referencia.get_prioridad_display }}
+  </span>
+  <span class="font-body-sm text-body-sm text-on-surface-variant">Creada por {{ referencia.medico_origen }}</span>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+  {# Columna principal #}
+  <div class="lg:col-span-2 space-y-gutter">
+
+    {# Datos de la referencia #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">description</span>
+        Datos de la Referencia
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Paciente</p>
+          <p class="font-body-md text-body-md text-on-surface font-medium">{{ referencia.paciente }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ referencia.edad }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Médico referente</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ referencia.medico_origen }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Hospital destino</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ referencia.hospital_destino|default:"—" }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Especialista asignado</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ referencia.medico_destino }}</p>
+        </div>
+        {% if referencia.fecha_cita %}
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Fecha de cita</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ referencia.fecha_cita|date:"d/m/Y H:i" }}</p>
+        </div>
+        {% endif %}
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Fecha de referencia</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ referencia.fecha }}</p>
+        </div>
+      </div>
+
+      <div class="mt-5 pt-4 border-t border-surface-container">
+        <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-2">Motivo clínico</p>
+        <div class="p-4 bg-surface-container-low rounded-lg border-l-4
+                    {% if referencia.prioridad == 'URGENTE' or referencia.prioridad == 'ALTA' %}border-error{% else %}border-primary{% endif %}">
+          <p class="font-body-md text-body-md text-on-surface">{{ referencia.motivo_referencia }}</p>
+        </div>
+      </div>
+
+      {% if referencia.observaciones %}
+      <div class="mt-4">
+        <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-2">Observaciones</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">{{ referencia.observaciones }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    {# Historial de estados #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary">timeline</span>
+        Historial de la Referencia
+      </h3>
+      <div class="relative">
+        <div class="absolute left-5 top-4 bottom-0 w-0.5 bg-surface-container-highest"></div>
+        <div class="space-y-4">
+          {% for evento in historial %}
+          <div class="flex items-start gap-4">
+            <div class="relative z-10 w-10 h-10 rounded-full bg-{{ evento.color }}-container/30 border-2 border-surface-container-lowest flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-{{ evento.color }}" style="font-size:16px;">{{ evento.icono }}</span>
+            </div>
+            <div class="flex-1 pb-4">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-label-md text-label-md text-on-surface">{{ evento.label }}</span>
+                <span class="font-body-sm text-body-sm text-on-surface-variant">{{ evento.fecha|date:"d/m/Y H:i" }}</span>
+              </div>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">{{ evento.nota }}</p>
+              <p class="font-label-sm text-label-sm text-outline mt-1">Por: {{ evento.usuario }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# Columna lateral #}
+  <div class="space-y-gutter">
+
+    {# Contrarreferencia — emitir o ver #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 space-y-3">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Casa FACCI</h3>
+      {% if ingreso_casa %}
+      <div class="flex items-center gap-2 p-3 bg-primary-container/20 rounded-lg">
+        <span class="material-symbols-outlined text-primary" style="font-size:18px;">home_health</span>
+        <div class="flex-1 min-w-0">
+          <p class="font-label-md text-label-md text-on-surface">{{ ingreso_casa.codigo }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ ingreso_casa.get_estado_display }} &middot; Entrada {{ ingreso_casa.fecha_entrada|date:"d/m/Y" }}</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 gap-2">
+        <a href="{% url 'referencias:formulario_ingreso_casa_facci' ingreso_casa.pk %}"
+           class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors block text-center">
+          <span class="material-symbols-outlined" style="font-size:16px;">description</span>
+          Ver formulario
+        </a>
+        <a href="{% url 'referencias:formulario_ingreso_casa_facci' ingreso_casa.pk %}?print=1"
+           class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors block text-center">
+          <span class="material-symbols-outlined" style="font-size:16px;">print</span>
+          Imprimir
+        </a>
+        <a href="{% url 'referencias:formulario_ingreso_casa_facci_pdf' ingreso_casa.pk %}"
+           class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors block text-center">
+          <span class="material-symbols-outlined" style="font-size:16px;">picture_as_pdf</span>
+          Descargar PDF
+        </a>
+      </div>
+      {% else %}
+      <p class="font-body-sm text-body-sm text-on-surface-variant">Prepare una ficha institucional para ingreso en Casa FACCI.</p>
+      <a href="{% url 'referencias:crear_ingreso_casa_facci' referencia.pk %}"
+         class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity block text-center">
+        <span class="material-symbols-outlined icon-sm">home_health</span>
+        Referir a ingreso Casa FACCI
+      </a>
+      {% endif %}
+    </div>
+
+    {% if puede_contrarreferir %}
+    <div class="bg-primary-container/10 rounded-xl border border-primary-container/40 p-5">
+      <div class="flex items-start gap-3 mb-3">
+        <span class="material-symbols-outlined text-primary shrink-0">reply</span>
+        <div>
+          <p class="font-label-md text-label-md text-on-surface">Contrarreferencia pendiente</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Informe al centro de origen sobre el resultado de la atención.</p>
+        </div>
+      </div>
+      <a href="{% url 'referencias:contrarreferir' referencia.pk %}"
+         class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity block text-center">
+        <span class="material-symbols-outlined icon-sm">reply</span>
+        Emitir contrarreferencia
+      </a>
+    </div>
+    {% elif contrarreferencia %}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 space-y-3">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Contrarreferencia</h3>
+      <div class="flex items-center gap-2 p-3 bg-primary-container/20 rounded-lg">
+        <span class="material-symbols-outlined text-primary" style="font-size:18px;">task_alt</span>
+        <div class="flex-1 min-w-0">
+          <p class="font-label-md text-label-md text-on-surface">{{ contrarreferencia.codigo }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ contrarreferencia.get_resultado_atencion_display }}</p>
+        </div>
+      </div>
+      <a href="{% url 'referencias:contrarreferencia_detalle' contrarreferencia.pk %}"
+         class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors block text-center">
+        <span class="material-symbols-outlined" style="font-size:16px;">open_in_new</span>
+        Ver contrarreferencia
+      </a>
+    </div>
+    {% endif %}
+
+    {# Acciones según estado y rol #}
+    {% if acciones %}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-3">Acciones</h3>
+      <form method="post" id="form-estado">
+        {% csrf_token %}
+        <div class="space-y-2">
+          {% for estado_val, label, icono, color in acciones %}
+          <button type="button"
+                  onclick="confirmarCambio('{{ estado_val }}', '{{ label }}')"
+                  class="w-full flex items-center gap-3 p-3 rounded-lg font-label-md text-label-md transition-colors
+                         {% if color == 'primary' %}bg-primary text-on-primary hover:opacity-90
+                         {% elif color == 'error' %}border border-error/40 text-error hover:bg-error-container/20
+                         {% else %}border border-outline-variant text-on-surface-variant hover:bg-surface-container{% endif %}">
+            <span class="material-symbols-outlined icon-sm">{{ icono }}</span>
+            {{ label }}
+          </button>
+          {% endfor %}
+        </div>
+        <div id="nota-container" class="hidden mt-3">
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Nota (opcional)</label>
+          <textarea name="nota" rows="2" placeholder="Añade una nota sobre este cambio..."
+                    class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface font-body-sm text-body-sm text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
+        </div>
+        <input type="hidden" name="nuevo_estado" id="input-nuevo-estado">
+        <div id="confirmar-container" class="hidden mt-2">
+          <button type="submit"
+                  class="w-full py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity">
+            Confirmar
+          </button>
+          <button type="button" onclick="cancelarCambio()"
+                  class="w-full mt-1 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+    {% elif referencia.estado == 'COMPLETADA' %}
+    <div class="bg-primary-container/20 rounded-xl border border-primary-container p-5 text-center">
+      <span class="material-symbols-outlined text-primary text-3xl block mb-2">task_alt</span>
+      <p class="font-label-md text-label-md text-primary">Referencia completada</p>
+    </div>
+    {% elif referencia.estado == 'CANCELADA' %}
+    <div class="bg-error-container/20 rounded-xl border border-error-container p-5 text-center">
+      <span class="material-symbols-outlined text-error text-3xl block mb-2">cancel</span>
+      <p class="font-label-md text-label-md text-error">Referencia cancelada</p>
+    </div>
+    {% endif %}
+
+    {# Paciente Asociado #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-3">Paciente Asociado</h3>
+      <div class="flex items-center gap-3 p-3 bg-surface-container-low rounded-lg">
+        <div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+          <span class="font-label-md text-label-md text-on-primary-container">{{ referencia.paciente.iniciales }}</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-label-md text-label-md text-on-surface">{{ referencia.paciente }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ referencia.edad }}</p>
+        </div>
+      </div>
+      <a href="{% url 'pacientes:expediente' referencia.paciente.id %}"
+         class="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors block text-center">
+        <span class="material-symbols-outlined" style="font-size:16px;">folder_open</span>
+        Ver expediente
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function confirmarCambio(estado, label) {
+    document.getElementById('input-nuevo-estado').value = estado;
+    document.getElementById('nota-container').classList.remove('hidden');
+    document.getElementById('confirmar-container').classList.remove('hidden');
+    document.querySelectorAll('#form-estado button[type="button"][onclick]').forEach(function(btn) {
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+    });
+  }
+  function cancelarCambio() {
+    document.getElementById('input-nuevo-estado').value = '';
+    document.getElementById('nota-container').classList.add('hidden');
+    document.getElementById('confirmar-container').classList.add('hidden');
+    document.querySelectorAll('#form-estado button[type="button"][onclick]').forEach(function(btn) {
+      btn.disabled = false;
+      btn.classList.remove('opacity-50');
+    });
+  }
+</script>
+{% endblock %}

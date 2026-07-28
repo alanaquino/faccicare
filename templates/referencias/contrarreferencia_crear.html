@@ -1,0 +1,222 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ titulo_pagina }}{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-3 mb-2">
+  <a href="{% url 'referencias:detalle' referencia.pk %}"
+     class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant shrink-0">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Emitir Contrarreferencia</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">
+      {{ referencia.codigo }} &middot; {{ referencia.paciente }}
+    </p>
+  </div>
+</div>
+
+{# Aviso informativo #}
+<div class="flex items-start gap-3 p-4 bg-primary-container/20 rounded-xl border border-primary-container/40 mb-2">
+  <span class="material-symbols-outlined text-primary shrink-0 mt-0.5">info</span>
+  <p class="font-body-sm text-body-sm text-on-surface">
+    La contrarreferencia notifica al médico referente sobre el resultado de la atención al paciente
+    <strong>{{ referencia.paciente }}</strong>. Al guardar, la referencia quedará marcada como
+    <strong>Completada</strong>.
+  </p>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+    {# Columna principal #}
+    <div class="lg:col-span-2 space-y-gutter">
+
+      {# Datos de la atención #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-5">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">medical_services</span>
+          Datos de la Atención
+        </h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+              Fecha de atención <span class="text-error">*</span>
+            </label>
+            <input type="date" name="fecha_atencion" required max="{{ hoy }}"
+                   class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+              Resultado de la atención <span class="text-error">*</span>
+            </label>
+            <select name="resultado_atencion" required
+                    class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+              <option value="">— Seleccionar —</option>
+              {% for val, label in resultados %}
+              <option value="{{ val }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+            Diagnóstico establecido <span class="text-error">*</span>
+          </label>
+          <textarea name="diagnostico" rows="3" required
+                    placeholder="Diagnóstico clínico o histopatológico confirmado..."
+                    class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Tipo de cáncer confirmado</label>
+            <select name="tipo_cancer"
+                    class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+              <option value="">— N/A o por definir —</option>
+              {% for val, label in tipos_cancer %}
+              <option value="{{ val }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Estadio clínico</label>
+            <select name="estadio"
+                    class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+              {% for val, label in estadios %}
+              <option value="{{ val }}" {% if val == 'NE' %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {# Tratamiento y medicamentos #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-5">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary">medication</span>
+          Tratamiento y Medicamentos
+        </h3>
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Tratamiento realizado / indicado</label>
+          <textarea name="tratamiento_realizado" rows="3"
+                    placeholder="Cirugía, quimioterapia, radioterapia, protocolo aplicado..."
+                    class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
+        </div>
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Medicamentos indicados</label>
+          <textarea name="medicamentos_indicados" rows="3"
+                    placeholder="Nombre del fármaco, dosis, frecuencia, duración..."
+                    class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
+        </div>
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Estudios y/o imágenes realizadas</label>
+          <textarea name="estudios_realizados" rows="3"
+                    placeholder="Laboratorios, radiografías, TAC, RMN, ecografías u otros estudios efectuados..."
+                    class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
+        </div>
+      </div>
+
+      {# Recomendaciones al referente #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-5">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-tertiary">tips_and_updates</span>
+          Recomendaciones al Médico Referente
+        </h3>
+        <div>
+          <textarea name="recomendaciones" rows="4"
+                    placeholder="Indicaciones de seguimiento, signos de alarma, próximos pasos para el médico de origen..."
+                    class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
+        </div>
+      </div>
+
+    </div>
+
+    {# Columna lateral #}
+    <div class="space-y-gutter">
+
+      {# Seguimiento #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 space-y-4">
+        <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Seguimiento</h3>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+          <div class="relative mt-0.5 shrink-0">
+            <input type="checkbox" name="requiere_seguimiento_facci" checked
+                   class="peer sr-only">
+            <div class="w-5 h-5 rounded border-2 border-outline-variant bg-surface peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
+              <span class="material-symbols-outlined text-on-primary hidden peer-checked:block" style="font-size:14px;">check</span>
+            </div>
+          </div>
+          <div>
+            <p class="font-label-md text-label-md text-on-surface">Requiere seguimiento en FACCI</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">El paciente debe continuar en FACCI Care</p>
+          </div>
+        </label>
+
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Próxima cita (opcional)</label>
+          <input type="date" name="proxima_cita"
+                 class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+        </div>
+      </div>
+
+      {# Resumen referencia original #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 space-y-3">
+        <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Referencia de origen</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span class="text-on-surface-variant">Código</span>
+            <span class="font-medium text-on-surface">{{ referencia.codigo }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-on-surface-variant">Paciente</span>
+            <span class="font-medium text-on-surface">{{ referencia.paciente }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-on-surface-variant">Prioridad</span>
+            <span class="font-medium
+              {% if referencia.prioridad == 'URGENTE' %}text-error{% elif referencia.prioridad == 'ALTA' %}text-error{% else %}text-on-surface{% endif %}">
+              {{ referencia.get_prioridad_display }}
+            </span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-on-surface-variant">Referente</span>
+            <span class="font-medium text-on-surface">{{ referencia.medico_origen }}</span>
+          </div>
+        </div>
+        <div class="pt-2 border-t border-surface-container">
+          <p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Motivo original</p>
+          <p class="font-body-sm text-body-sm text-on-surface">{{ referencia.motivo_referencia|truncatewords:30 }}</p>
+        </div>
+      </div>
+
+      {# Botones #}
+      <div class="space-y-2">
+        <button type="submit"
+                class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-on-primary font-label-lg text-label-lg hover:opacity-90 transition-opacity">
+          <span class="material-symbols-outlined">send</span>
+          Emitir Contrarreferencia
+        </button>
+        <a href="{% url 'referencias:detalle' referencia.pk %}"
+           class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors block text-center">
+          Cancelar
+        </a>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+<script>
+  // Checkbox visual
+  document.querySelectorAll('input[type="checkbox"].peer').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      const icon = this.closest('label').querySelector('.material-symbols-outlined');
+      if (icon) icon.classList.toggle('hidden', !this.checked);
+    });
+  });
+</script>
+
+{% endblock %}

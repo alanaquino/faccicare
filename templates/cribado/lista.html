@@ -1,0 +1,157 @@
+{% extends "layouts/base.html" %}
+{% block title %}Cribado de sintomas{% endblock %}
+{% block content %}
+
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Cribado de sintomas</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-1">Historial de cuestionarios FACCI y alertas de riesgo registradas.</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="{% url 'cribado:exportar' %}"
+       class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:20px;">download</span>
+      Exportar CSV
+    </a>
+    {% if request.user.puede_hacer_cribado %}
+    <a href="{% url 'cribado:cuestionario' %}"
+       class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:20px;">add</span>
+      Nuevo cribado
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <p class="font-label-md text-label-md text-on-surface-variant">Total evaluaciones</p>
+    <p class="font-headline-xl text-headline-xl text-on-background mt-2">{{ total }}</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-error-container p-6">
+    <p class="font-label-md text-label-md text-on-surface-variant">Riesgo alto</p>
+    <p class="font-headline-xl text-headline-xl text-error mt-2">{{ riesgo_alto }}</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-secondary-container p-6">
+    <p class="font-label-md text-label-md text-on-surface-variant">Requieren referencia</p>
+    <p class="font-headline-xl text-headline-xl text-secondary mt-2">{{ requieren_referencia }}</p>
+  </div>
+</div>
+
+<form method="get" class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-4">
+  <div class="grid grid-cols-1 md:grid-cols-[1fr_190px_190px_auto] gap-3">
+    <div class="relative">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+      <input type="text" name="q" value="{{ buscar }}"
+             class="w-full pl-10 pr-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-md text-body-md"
+             data-live-filter placeholder="Buscar por paciente o codigo">
+    </div>
+    <select name="nivel" data-autosubmit
+            class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-md text-body-md">
+      <option value="">Todos los niveles</option>
+      {% for valor, etiqueta in niveles %}
+      <option value="{{ valor }}" {% if nivel_actual == valor %}selected{% endif %}>{{ etiqueta }}</option>
+      {% endfor %}
+    </select>
+    <select name="tipo" data-autosubmit
+            class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-md text-body-md">
+      <option value="">Todos los tipos</option>
+      {% for valor, etiqueta in tipos_cancer %}
+      <option value="{{ valor }}" {% if tipo_actual == valor %}selected{% endif %}>{{ etiqueta }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit"
+            class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">filter_alt</span>
+      Filtrar
+    </button>
+  </div>
+</form>
+
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container-low text-on-surface-variant font-label-md text-label-md border-b border-surface-container">
+          <th class="p-4 font-semibold">Paciente</th>
+          <th class="p-4 font-semibold">Fecha</th>
+          <th class="p-4 font-semibold">Evaluador</th>
+          <th class="p-4 font-semibold">Puntaje</th>
+          <th class="p-4 font-semibold">Tipo sospechado</th>
+          <th class="p-4 font-semibold">Nivel</th>
+          <th class="p-4 font-semibold text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-container font-body-sm text-body-sm">
+        {% for cribado in cribados %}
+        <tr class="hover:bg-surface-container-low transition-colors">
+          <td class="p-4">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-label-sm text-label-sm">
+                {{ cribado.paciente.iniciales }}
+              </div>
+              <div>
+                <p class="font-label-md text-label-md text-on-surface">{{ cribado.paciente.nombre_completo }}</p>
+                <p class="font-body-sm text-body-sm text-on-surface-variant">
+                  {{ cribado.paciente.codigo_paciente }}
+                  {% if cribado.leucocoria %}
+                  <span class="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-error-container text-error rounded-full font-label-sm text-label-sm" title="Leucocoria positiva">
+                    <span class="material-symbols-outlined" style="font-size:11px;">visibility</span> Leucocoria
+                  </span>
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+          </td>
+          <td class="p-4 text-on-surface-variant">{{ cribado.fecha_evaluacion|date:"d/m/Y H:i" }}</td>
+          <td class="p-4 text-on-surface-variant">{{ cribado.medico.nombre_completo }}</td>
+          <td class="p-4">
+            <span class="font-label-md text-label-md text-on-surface">{{ cribado.puntaje_total }}/{{ score_maximo }}</span>
+          </td>
+          <td class="p-4">
+            {% if cribado.tipo_cancer_sospechado %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-container/30 text-tertiary font-label-sm text-label-sm">
+              {{ cribado.get_tipo_cancer_sospechado_display }}
+            </span>
+            {% else %}
+            <span class="text-on-surface-variant font-body-sm">—</span>
+            {% endif %}
+          </td>
+          <td class="p-4">
+            {% if cribado.nivel_riesgo == 'ALTO' %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-error-container text-error font-label-sm text-label-sm">
+              <span class="material-symbols-outlined" style="font-size:14px;">warning</span>{{ cribado.get_nivel_riesgo_display }}
+            </span>
+            {% elif cribado.nivel_riesgo == 'MEDIO' %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/40 text-secondary font-label-sm text-label-sm">
+              <span class="material-symbols-outlined" style="font-size:14px;">info</span>{{ cribado.get_nivel_riesgo_display }}
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-container/30 text-primary font-label-sm text-label-sm">
+              <span class="material-symbols-outlined" style="font-size:14px;">check_circle</span>{{ cribado.get_nivel_riesgo_display }}
+            </span>
+            {% endif %}
+          </td>
+          <td class="p-4 text-right">
+            <a href="{% url 'cribado:detalle' cribado.pk %}" class="inline-flex items-center justify-center p-2 rounded-lg text-primary hover:bg-surface-container" title="Ver detalle">
+              <span class="material-symbols-outlined">visibility</span>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="py-16 text-center text-on-surface-variant">
+            <span class="material-symbols-outlined text-5xl block mb-3 text-outline">fact_check</span>
+            <p class="font-body-md text-body-md">No hay cribados registrados.</p>
+            {% if request.user.puede_hacer_cribado %}
+            <a href="{% url 'cribado:cuestionario' %}" class="mt-2 inline-flex text-primary font-label-md text-label-md hover:underline">Iniciar primer cribado</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

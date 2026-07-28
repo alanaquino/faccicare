@@ -1,0 +1,363 @@
+{% extends "layouts/base.html" %}
+{% block title %}Referencias Médicas{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Referencias Médicas</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-1">Gestión y seguimiento de derivaciones a centros oncológicos especializados.</p>
+  </div>
+  <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+    <form method="get" class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+      <div class="relative flex-1 md:w-64">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+        <input class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-sm text-body-sm text-on-background placeholder:text-outline"
+          data-live-filter placeholder="Buscar paciente o centro..." type="search" name="q" value="{{ filtro_search }}">
+      </div>
+      <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm hover:bg-surface-tint transition-colors">
+        Buscar
+      </button>
+      {% if filtro_search %}
+      <a href="{% url 'referencias:lista' %}" class="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors text-center">
+        Limpiar
+      </a>
+      {% endif %}
+    </form>
+    <a href="{% url 'referencias:crear' %}"
+      class="bg-primary text-on-primary hover:bg-surface-tint font-label-md text-label-md px-5 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm whitespace-nowrap">
+      <span class="material-symbols-outlined">add</span>
+      Nueva Referencia
+    </a>
+    <a href="{% url 'referencias:crear_ingreso_casa_facci_nuevo' %}"
+      class="border border-primary text-primary hover:bg-primary-container/10 font-label-md text-label-md px-5 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm whitespace-nowrap">
+      <span class="material-symbols-outlined">home_health</span>
+      Referir a ingreso Casa FACCI
+    </a>
+  </div>
+</div>
+
+{# Banner urgentes sin asignar — solo visible para admin/oncólogo #}
+{% if urgentes_sin_asignar %}
+<div class="rounded-xl border border-error bg-error-container/20 p-4 flex items-start gap-4">
+  <div class="shrink-0 w-10 h-10 rounded-full bg-error-container flex items-center justify-center text-error">
+    <span class="material-symbols-outlined">emergency</span>
+  </div>
+  <div class="flex-1 min-w-0">
+    <p class="font-label-lg text-label-lg text-error font-semibold">
+      {{ urgentes_sin_asignar|length }} referencia{{ urgentes_sin_asignar|length|pluralize }} URGENTE{{ urgentes_sin_asignar|length|pluralize }} sin oncólogo asignado
+    </p>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Estas referencias requieren atención inmediata. Asigne un especialista para cada una.</p>
+    <div class="flex flex-wrap gap-2 mt-3">
+      {% for ref in urgentes_sin_asignar %}
+      <a href="{% url 'referencias:detalle' ref.pk %}"
+         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-error text-on-error font-label-sm text-label-sm hover:opacity-90 transition-opacity shadow-sm">
+        <span class="material-symbols-outlined" style="font-size:15px;">person</span>
+        {{ ref.paciente.nombre_completo }} &mdash; {{ ref.hospital_destino.nombre|default:"—"|truncatechars:25 }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# KPIs #}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+  <div class="bg-white/70 backdrop-blur border border-white/50 shadow-sm rounded-xl p-6 flex flex-col justify-between">
+    <div class="flex justify-between items-start mb-4">
+      <h3 class="font-label-md text-label-md text-on-surface-variant">Total Referencias (Mes)</h3>
+      <div class="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary">
+        <span class="material-symbols-outlined">dataset</span>
+      </div>
+    </div>
+    <div>
+      <span class="font-headline-xl text-headline-xl text-on-background">{{ total }}</span>
+      <p class="font-label-sm text-label-sm text-tertiary mt-1 flex items-center gap-1">
+        <span class="material-symbols-outlined text-sm">trending_up</span> Total registradas
+      </p>
+    </div>
+  </div>
+  <div class="bg-white/70 backdrop-blur border-l-4 border-l-secondary-container border border-white/50 shadow-sm rounded-xl p-6 flex flex-col justify-between">
+    <div class="flex justify-between items-start mb-4">
+      <h3 class="font-label-md text-label-md text-on-surface-variant">En Tránsito</h3>
+      <div class="w-8 h-8 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
+        <span class="material-symbols-outlined">local_taxi</span>
+      </div>
+    </div>
+    <div>
+      <span class="font-headline-xl text-headline-xl text-on-background">{{ en_transito|default:"—" }}</span>
+      <p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Requieren seguimiento</p>
+    </div>
+  </div>
+  <div class="bg-white/70 backdrop-blur border-l-4 border-l-error-container border border-white/50 shadow-sm rounded-xl p-6 flex flex-col justify-between">
+    <div class="flex justify-between items-start mb-4">
+      <h3 class="font-label-md text-label-md text-on-surface-variant">Pendientes de Aceptación</h3>
+      <div class="w-8 h-8 rounded-full bg-error-container/30 flex items-center justify-center text-error">
+        <span class="material-symbols-outlined">pending_actions</span>
+      </div>
+    </div>
+    <div>
+      <span class="font-headline-xl text-headline-xl text-error">{{ pendientes|default:"—" }}</span>
+      <p class="font-label-sm text-label-sm text-error mt-1 flex items-center gap-1">
+        <span class="material-symbols-outlined text-sm">warning</span> Prioridad Alta
+      </p>
+    </div>
+  </div>
+  <div class="bg-white/70 backdrop-blur border-l-4 border-l-tertiary-container border border-white/50 shadow-sm rounded-xl p-6 flex flex-col justify-between">
+    <div class="flex justify-between items-start mb-4">
+      <h3 class="font-label-md text-label-md text-on-surface-variant">Aceptadas (7 días)</h3>
+      <div class="w-8 h-8 rounded-full bg-tertiary-container/20 flex items-center justify-center text-tertiary">
+        <span class="material-symbols-outlined">check_circle</span>
+      </div>
+    </div>
+    <div>
+      <span class="font-headline-xl text-headline-xl text-on-background">{{ aceptadas|default:"—" }}</span>
+      <p class="font-label-sm text-label-sm text-tertiary mt-1">Derivaciones exitosas</p>
+    </div>
+  </div>
+</div>
+
+{# Panel: referencias que me toca aceptar (como especialista destino) #}
+{% if mis_por_aceptar %}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-error/30 p-5 space-y-4">
+  <h3 class="font-title-md text-title-md text-on-background flex items-center justify-between gap-2">
+    <span class="flex items-center gap-2">
+      <span class="material-symbols-outlined text-error" style="font-size:20px;">pending_actions</span>
+      Referencias pendientes de tu aceptación
+    </span>
+    <span class="px-2 py-0.5 rounded-full bg-error/10 text-error font-label-sm text-label-sm">
+      {{ mis_por_aceptar|length }} por aceptar
+    </span>
+  </h3>
+  <div class="overflow-x-auto border border-surface-container rounded-lg">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container-low text-on-surface-variant font-label-md text-label-md border-b border-surface-container">
+          <th class="p-3 font-semibold">Código</th>
+          <th class="p-3 font-semibold">Paciente</th>
+          <th class="p-3 font-semibold">Referido por</th>
+          <th class="p-3 font-semibold">Fecha</th>
+          <th class="p-3 font-semibold">Prioridad</th>
+          <th class="p-3 font-semibold">Motivo</th>
+          <th class="p-3 font-semibold text-right">Acción</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-container font-body-sm text-body-sm">
+        {% for ref in mis_por_aceptar %}
+        <tr class="hover:bg-surface-container-low transition-colors">
+          <td class="p-3 font-mono font-bold text-on-surface">{{ ref.codigo }}</td>
+          <td class="p-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-label-sm text-label-sm shrink-0">{{ ref.paciente.iniciales }}</div>
+              <div>
+                <p class="font-label-md text-label-md text-on-surface">{{ ref.paciente.nombre_completo }}</p>
+                <p class="font-body-sm text-body-sm text-on-surface-variant">{{ ref.paciente.codigo_paciente }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="p-3 text-on-surface-variant">{{ ref.medico_referente.nombre_completo|default:"—" }}</td>
+          <td class="p-3 text-on-surface-variant">{{ ref.fecha_referencia|date:"d/m/Y" }}</td>
+          <td class="p-3">
+            {% if ref.prioridad == 'URGENTE' or ref.prioridad == 'ALTA' %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container/30 text-error font-label-sm text-label-sm">{{ ref.get_prioridad_display }}</span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm">{{ ref.get_prioridad_display }}</span>
+            {% endif %}
+          </td>
+          <td class="p-3 text-on-surface-variant truncate max-w-[220px]" title="{{ ref.motivo_referencia }}">{{ ref.motivo_referencia }}</td>
+          <td class="p-3">
+            <div class="flex items-center justify-end gap-1.5">
+              <form method="post" action="{% url 'referencias:actualizar_estado' ref.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="nuevo_estado" value="ACEPTADA">
+                <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap">
+                  <span class="material-symbols-outlined" style="font-size:16px;">check_circle</span>Aceptar
+                </button>
+              </form>
+              <form method="post" action="{% url 'referencias:actualizar_estado' ref.pk %}" onsubmit="return confirm('¿Rechazar esta referencia?');">
+                {% csrf_token %}
+                <input type="hidden" name="nuevo_estado" value="CANCELADA">
+                <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-error/40 text-error font-label-sm text-label-sm hover:bg-error-container/20 transition-colors whitespace-nowrap">
+                  <span class="material-symbols-outlined" style="font-size:16px;">cancel</span>Rechazar
+                </button>
+              </form>
+              <a href="{% url 'referencias:detalle' ref.pk %}" class="p-2 rounded-lg text-primary hover:bg-surface-container-low transition-colors" title="Ver detalle">
+                <span class="material-symbols-outlined" style="font-size:18px;">visibility</span>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# Panel: referencias aceptadas por mí — pendientes de contrarreferencia #}
+{% if mis_por_contrarreferir %}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-tertiary/30 p-5 space-y-4">
+  <h3 class="font-title-md text-title-md text-on-background flex items-center justify-between gap-2">
+    <span class="flex items-center gap-2">
+      <span class="material-symbols-outlined text-tertiary" style="font-size:20px;">assignment_return</span>
+      Referencias aceptadas — pendientes de contrarreferencia
+    </span>
+    <span class="px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary font-label-sm text-label-sm">
+      {{ mis_por_contrarreferir|length }} por responder
+    </span>
+  </h3>
+  <div class="overflow-x-auto border border-surface-container rounded-lg">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container-low text-on-surface-variant font-label-md text-label-md border-b border-surface-container">
+          <th class="p-3 font-semibold">Código</th>
+          <th class="p-3 font-semibold">Paciente</th>
+          <th class="p-3 font-semibold">Referido por</th>
+          <th class="p-3 font-semibold">Fecha</th>
+          <th class="p-3 font-semibold">Estado</th>
+          <th class="p-3 font-semibold text-right">Acción</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-container font-body-sm text-body-sm">
+        {% for ref in mis_por_contrarreferir %}
+        <tr class="hover:bg-surface-container-low transition-colors">
+          <td class="p-3 font-mono font-bold text-on-surface">{{ ref.codigo }}</td>
+          <td class="p-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-label-sm text-label-sm shrink-0">{{ ref.paciente.iniciales }}</div>
+              <div>
+                <p class="font-label-md text-label-md text-on-surface">{{ ref.paciente.nombre_completo }}</p>
+                <p class="font-body-sm text-body-sm text-on-surface-variant">{{ ref.paciente.codigo_paciente }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="p-3 text-on-surface-variant">{{ ref.medico_referente.nombre_completo|default:"—" }}</td>
+          <td class="p-3 text-on-surface-variant">{{ ref.fecha_referencia|date:"d/m/Y" }}</td>
+          <td class="p-3">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-tertiary-container/30 text-tertiary font-label-sm text-label-sm">{{ ref.get_estado_display }}</span>
+          </td>
+          <td class="p-3">
+            <div class="flex items-center justify-end gap-1.5">
+              <a href="{% url 'referencias:contrarreferencia_crear' ref.pk %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-tertiary text-on-tertiary font-label-sm text-label-sm hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap">
+                <span class="material-symbols-outlined" style="font-size:16px;">assignment_return</span>Contrarreferir
+              </a>
+              <a href="{% url 'referencias:detalle' ref.pk %}" class="p-2 rounded-lg text-primary hover:bg-surface-container-low transition-colors" title="Ver detalle">
+                <span class="material-symbols-outlined" style="font-size:18px;">visibility</span>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# Tabla #}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden">
+  <div class="p-4 border-b border-outline-variant bg-surface-container-lowest flex justify-between items-center">
+    <h3 class="font-body-lg text-body-lg font-semibold text-on-background">Solicitudes Activas</h3>
+    {% if request.user.puede_generar_reportes %}
+    <a href="{% url 'reportes:generacion' %}" class="text-primary hover:bg-surface-container-low px-3 py-1.5 rounded-lg font-label-md text-label-md transition-colors flex items-center gap-1">
+      Generar reportes <span class="material-symbols-outlined text-lg">summarize</span>
+    </a>
+    {% endif %}
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container-low/50 text-on-surface-variant font-label-md text-label-md border-b border-outline-variant">
+          <th class="p-4 font-semibold">Paciente</th>
+          <th class="p-4 font-semibold">Centro Origen</th>
+          <th class="p-4 font-semibold">Hospital Destino</th>
+          <th class="p-4 font-semibold">Fecha</th>
+          <th class="p-4 font-semibold">Prioridad</th>
+          <th class="p-4 font-semibold">Estado</th>
+          <th class="p-4 font-semibold text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="font-body-sm text-body-sm text-on-background divide-y divide-outline-variant/50">
+        {% for ref in referencias %}
+        <tr class="hover:bg-surface-container-lowest/50 transition-colors">
+          <td class="p-4">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary font-bold text-xs">
+                {{ ref.paciente.iniciales }}
+              </div>
+              <div>
+                <a href="{% url 'referencias:historial_paciente' ref.paciente.id %}"
+                   class="font-medium text-on-background hover:text-primary transition-colors">
+                  {{ ref.paciente.nombre_completo }}
+                </a>
+                <p class="text-on-surface-variant text-xs">{{ ref.paciente.edad }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="p-4 text-on-surface-variant">{{ ref.medico_referente.centro_medico|default:"N/D" }}</td>
+          <td class="p-4">
+            <p class="font-medium">{{ ref.hospital_destino|default:"—" }}</p>
+          </td>
+          <td class="p-4 text-on-surface-variant">{{ ref.fecha_referencia|date:"d/m/Y" }}</td>
+          <td class="p-4">
+            {% if ref.prioridad == 'ALTA' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-error-container/30 text-error font-label-sm text-label-sm">
+              <span class="material-symbols-outlined text-sm">priority_high</span> {{ ref.get_prioridad_display }}
+            </span>
+            {% elif ref.prioridad == 'MEDIA' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm">
+              {{ ref.get_prioridad_display }}
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-container/20 text-tertiary font-label-sm text-label-sm">
+              {{ ref.get_prioridad_display }}
+            </span>
+            {% endif %}
+          </td>
+          <td class="p-4">
+            {% if ref.estado == 'EN_TRANSITO' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-container/30 text-on-secondary-container font-label-sm text-label-sm border border-secondary-container/50 whitespace-nowrap">
+              <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> {{ ref.get_estado_display }}
+            </span>
+            {% elif ref.estado == 'ACEPTADA' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-container/30 text-tertiary font-label-sm text-label-sm border border-tertiary-container/50 whitespace-nowrap">
+              <span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> {{ ref.get_estado_display }}
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm border border-outline-variant whitespace-nowrap">
+              <span class="w-1.5 h-1.5 rounded-full bg-outline"></span> {{ ref.get_estado_display }}
+            </span>
+            {% endif %}
+          </td>
+          <td class="p-4 text-right">
+            <div class="inline-flex items-center justify-end gap-1">
+              <a href="{% url 'referencias:detalle' ref.id %}" class="text-primary hover:bg-surface-container-low p-2 rounded-lg transition-colors inline-flex" title="Ver detalles">
+                <span class="material-symbols-outlined">visibility</span>
+              </a>
+              <a href="{% url 'referencias:historial_paciente' ref.paciente.id %}" class="text-primary hover:bg-surface-container-low p-2 rounded-lg transition-colors inline-flex" title="Ver historial del paciente">
+                <span class="material-symbols-outlined">history</span>
+              </a>
+              <a href="{% url 'referencias:crear_ingreso_casa_facci' ref.id %}" class="text-primary hover:bg-surface-container-low p-2 rounded-lg transition-colors inline-flex" title="Referir a Casa FACCI">
+                <span class="material-symbols-outlined">home_health</span>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="py-16 text-center text-on-surface-variant font-body-md text-body-md">
+            <span class="material-symbols-outlined text-5xl block mb-3 text-outline">send</span>
+            {% if filtro_search %}No hay referencias que coincidan con la busqueda.{% else %}No hay referencias registradas.{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="p-4 border-t border-outline-variant flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+    <span><span class="font-medium text-on-surface">{{ total }}</span> referencias en total</span>
+  </div>
+</div>
+{% include 'components/pagination.html' %}
+
+{% endblock %}

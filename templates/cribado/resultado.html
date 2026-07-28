@@ -1,0 +1,162 @@
+{% extends "layouts/base.html" %}
+{% block title %}Resultado del Cribado{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex items-center gap-4">
+  <a href="{% url 'cribado:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Resultado del Cribado FACCI</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">{{ resultado.fecha }} &middot; {{ resultado.medico }}</p>
+  </div>
+</div>
+
+{# Tarjeta de resultado principal #}
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border-2
+            {% if resultado.nivel == 'alto' %}border-error{% elif resultado.nivel == 'medio' %}border-secondary{% else %}border-primary{% endif %}
+            overflow-hidden">
+
+  {# Banner de nivel de riesgo #}
+  <div class="p-6 {% if resultado.nivel == 'alto' %}bg-error-container/30{% elif resultado.nivel == 'medio' %}bg-secondary-container/20{% else %}bg-primary-container/20{% endif %}">
+    <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+
+      {# Ícono grande de resultado #}
+      <div class="flex-shrink-0">
+        <div class="w-24 h-24 rounded-2xl flex items-center justify-center
+                    {% if resultado.nivel == 'alto' %}bg-error text-on-error{% elif resultado.nivel == 'medio' %}bg-secondary text-on-secondary{% else %}bg-primary text-on-primary{% endif %}
+                    shadow-lg">
+          <span class="material-symbols-outlined icon-fill" style="font-size:48px;">{{ resultado.icono }}</span>
+        </div>
+      </div>
+
+      {# Info del resultado #}
+      <div class="flex-1 text-center sm:text-left">
+        <p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest mb-1">Nivel de riesgo</p>
+        <h3 class="font-headline-xl text-headline-xl
+                   {% if resultado.nivel == 'alto' %}text-error{% elif resultado.nivel == 'medio' %}text-secondary{% else %}text-primary{% endif %}
+                   capitalize mb-2">
+          Riesgo {{ resultado.nivel|title }}
+        </h3>
+        <p class="font-body-lg text-body-lg text-on-surface mb-3">{{ resultado.recomendacion }}</p>
+        <div class="flex flex-wrap gap-3 justify-center sm:justify-start">
+          <div class="flex items-center gap-2 bg-surface-container-lowest/80 rounded-lg px-3 py-2">
+            <span class="font-headline-md text-headline-md
+                         {% if resultado.nivel == 'alto' %}text-error{% elif resultado.nivel == 'medio' %}text-secondary{% else %}text-primary{% endif %}">
+              {{ resultado.score }}
+            </span>
+            <span class="font-body-sm text-body-sm text-on-surface-variant">/ {{ resultado.score_maximo }} puntos</span>
+          </div>
+          <div class="flex items-center gap-2 bg-surface-container-lowest/80 rounded-lg px-3 py-2">
+            <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px;">person</span>
+            <span class="font-body-sm text-body-sm text-on-surface">{{ resultado.paciente }}</span>
+          </div>
+        </div>
+      </div>
+
+      {# Gauge visual #}
+      <div class="shrink-0 text-center">
+        <div class="relative w-32 h-32">
+          <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" stroke-width="10" class="text-surface-container"/>
+            <circle cx="60" cy="60" r="50" fill="none"
+                    stroke="{% if resultado.nivel == 'alto' %}#ba1a1a{% elif resultado.nivel == 'medio' %}#6d4ea2{% else %}#006a62{% endif %}"
+                    stroke-width="10"
+                    stroke-dasharray="314"
+                    stroke-dashoffset="{{ resultado.gauge_offset }}"
+                    stroke-linecap="round"/>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="font-headline-md text-headline-md
+                         {% if resultado.nivel == 'alto' %}text-error{% elif resultado.nivel == 'medio' %}text-secondary{% else %}text-primary{% endif %}">
+              {{ resultado.score }}
+            </span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant">pts</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {# Síntomas positivos detectados #}
+  <div class="p-6 border-t border-surface-container">
+    <h4 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+      <span class="material-symbols-outlined text-error">report</span>
+      Síntomas Positivos Detectados
+    </h4>
+    {% if sintomas_positivos %}
+    <ul class="space-y-2">
+      {% for sintoma in sintomas_positivos %}
+      <li class="flex items-start gap-3 p-3 bg-error-container/20 rounded-lg border border-error/20">
+        <span class="material-symbols-outlined text-error mt-0.5" style="font-size:18px;">fiber_manual_record</span>
+        <span class="font-body-md text-body-md text-on-surface">{{ sintoma }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-on-surface-variant font-body-md text-body-md">No se detectaron síntomas de alarma.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+{# Próximos pasos #}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+  <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+    <span class="material-symbols-outlined text-primary">task_alt</span>
+    Próximos Pasos Recomendados
+  </h3>
+  <div class="space-y-3">
+    {% for paso in proximos_pasos %}
+    <div class="flex items-center gap-4 p-4 rounded-lg border border-surface-container hover:bg-surface-container-low transition-colors">
+      <div class="w-8 h-8 rounded-full bg-{{ paso.color }}-container/40 flex items-center justify-center shrink-0">
+        <span class="font-label-md text-label-md text-{{ paso.color }}">{{ paso.paso }}</span>
+      </div>
+      <div class="flex-1">
+        <p class="font-label-md text-label-md text-on-surface">{{ paso.accion }}</p>
+      </div>
+      <span class="px-3 py-1 rounded-full font-label-sm text-label-sm
+                   {% if paso.color == 'error' %}bg-error-container text-error
+                   {% elif paso.color == 'secondary' %}bg-secondary-container/40 text-secondary
+                   {% else %}bg-primary-container/30 text-primary{% endif %}">
+        {{ paso.urgencia }}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{# Botones de acción #}
+<div class="flex flex-wrap gap-4">
+  <form method="post" action="{% url 'cribado:crear_referencia' cribado.pk %}" class="flex-1 sm:flex-none">
+    {% csrf_token %}
+    <button type="submit"
+     class="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+    <span class="material-symbols-outlined" style="font-size:20px;">send</span>
+    Crear Referencia Médica
+    </button>
+  </form>
+  <a href="{% url 'seguimiento:seguimiento' %}"
+     class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+    <span class="material-symbols-outlined" style="font-size:20px;">timeline</span>
+    Agregar a Seguimiento
+  </a>
+  <button onclick="window.print()"
+     class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+    <span class="material-symbols-outlined" style="font-size:20px;">print</span>
+    Imprimir Reporte
+  </button>
+  <a href="{% url 'pacientes:lista' %}"
+     class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+    <span class="material-symbols-outlined" style="font-size:20px;">arrow_back</span>
+    Volver a Pacientes
+  </a>
+  <a href="{% url 'cribado:detalle' cribado.pk %}"
+     class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+    <span class="material-symbols-outlined" style="font-size:20px;">description</span>
+    Ver Detalle
+  </a>
+</div>
+{% endblock %}

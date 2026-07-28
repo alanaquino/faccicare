@@ -1,0 +1,28 @@
+{# ===== TARJETA DE ALERTA CRÍTICA ===== #}
+{# Uso: {% include "components/cards/alert_card.html" with alerta=alerta_dict %} #}
+<div class="bg-surface-container-lowest p-4 rounded-lg border-l-4 border-{{ alerta.color|default:'error' }} shadow-sm">
+  <div class="flex justify-between items-start mb-1">
+    <p class="font-label-md text-label-md font-bold text-on-background">{{ alerta.titulo }}</p>
+    <span class="text-xs text-on-surface-variant shrink-0 ml-2">{{ alerta.tiempo }}</span>
+  </div>
+  <p class="font-body-sm text-body-sm text-on-surface-variant mb-3">{{ alerta.descripcion }}</p>
+  {% if alerta.acciones %}
+  <div class="flex gap-2 flex-wrap">
+    {% for accion in alerta.acciones %}
+    {% if alerta.detalle_url %}
+    <a href="{{ alerta.detalle_url }}" class="{% if forloop.first %}bg-error text-on-error{% else %}border border-outline-variant text-on-surface-variant{% endif %} px-3 py-1.5 rounded-md font-label-sm text-label-sm hover:opacity-90 transition-opacity">
+      {{ accion }}
+    </a>
+    {% elif alerta.referencia_id %}
+    <a href="{% url 'referencias:detalle' alerta.referencia_id %}" class="{% if forloop.first %}bg-error text-on-error{% else %}border border-outline-variant text-on-surface-variant{% endif %} px-3 py-1.5 rounded-md font-label-sm text-label-sm hover:opacity-90 transition-opacity">
+      {{ accion }}
+    </a>
+    {% else %}
+    <button class="{% if forloop.first %}bg-error text-on-error{% else %}border border-outline-variant text-on-surface-variant{% endif %} px-3 py-1.5 rounded-md font-label-sm text-label-sm hover:opacity-90 transition-opacity">
+      {{ accion }}
+    </button>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

@@ -1,0 +1,123 @@
+{% extends "layouts/base.html" %}
+{% block title %}Nuevo Usuario{% endblock %}
+{% block content %}
+
+{% if messages %}
+<div class="space-y-2">
+  {% for msg in messages %}
+  <div class="rounded-lg px-4 py-3 text-sm flex items-center gap-2
+    {% if msg.tags == 'error' %}bg-error-container text-on-error-container{% else %}bg-tertiary-container/30 text-on-tertiary-container{% endif %}">
+    <span class="material-symbols-outlined text-base">{% if msg.tags == 'error' %}error{% else %}check_circle{% endif %}</span>
+    {{ msg }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="flex items-center gap-3 mb-2">
+  <a href="{% url 'usuarios:gestion' %}" class="text-on-surface-variant hover:text-on-surface transition-colors">
+    <span class="material-symbols-outlined" style="font-size:22px;">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Nuevo Usuario</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Registrar un nuevo miembro del equipo en el sistema.</p>
+  </div>
+</div>
+
+<div class="bg-surface-container-lowest border border-surface-container rounded-xl shadow-sm p-6 max-w-2xl">
+  <form method="post" action="{% url 'usuarios:nuevo' %}">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+      {# Nombre y Apellido #}
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Nombre <span class="text-error">*</span></label>
+        <input type="text" name="first_name" value="{{ form.first_name|default:'' }}" required
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md"
+               placeholder="Ej. Juan">
+      </div>
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Apellido</label>
+        <input type="text" name="last_name" value="{{ form.last_name|default:'' }}"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md"
+               placeholder="Ej. Martínez">
+      </div>
+
+      {# Usuario y Cédula #}
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Nombre de usuario <span class="text-error">*</span></label>
+        <input type="text" name="username" value="{{ form.username|default:'' }}" required
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md"
+               placeholder="Ej. jmartinez">
+      </div>
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Cédula</label>
+        <input type="text" name="cedula" value="{{ form.cedula|default:'' }}"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md"
+               placeholder="000-0000000-0">
+      </div>
+
+      {# Email #}
+      <div class="sm:col-span-2">
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Correo electrónico</label>
+        <input type="email" name="email" value="{{ form.email|default:'' }}"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md"
+               placeholder="usuario@faccicare.org">
+      </div>
+
+      {# Rol #}
+      <div class="sm:col-span-2">
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Rol en el sistema <span class="text-error">*</span></label>
+        <select name="rol" required
+                class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+          {% for value, label in roles %}
+          <option value="{{ value }}" {% if form.rol == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# Especialidad y Centro #}
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Especialidad</label>
+        <input type="text" name="especialidad" value="{{ form.especialidad|default:'' }}"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md"
+               placeholder="Ej. Pediatría Clínica">
+      </div>
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Centro médico</label>
+        <select name="centro_medico"
+                class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+          <option value="">— Seleccionar centro —</option>
+          {% for c in centros %}
+          <option value="{{ c.id }}" {% if form.centro_medico == c.id|stringformat:'s' %}selected{% endif %}>{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# Contraseña #}
+      <div class="sm:col-span-2">
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Contraseña inicial <span class="text-error">*</span></label>
+        <input type="password" name="password" required minlength="8"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md"
+               placeholder="Mínimo 8 caracteres">
+        <p class="text-xs text-on-surface-variant mt-1">El usuario podrá cambiarla desde su perfil.</p>
+      </div>
+
+    </div>
+
+    <div class="flex gap-3 mt-6 pt-5 border-t border-surface-container">
+      <button type="submit"
+              class="px-6 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+        Crear Usuario
+      </button>
+      <a href="{% url 'usuarios:gestion' %}"
+         class="px-6 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+        Cancelar
+      </a>
+    </div>
+
+  </form>
+</div>
+
+{% endblock %}

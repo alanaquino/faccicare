@@ -1,0 +1,319 @@
+{% extends "layouts/base.html" %}
+{% block title %}Generar Reportes{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-4">
+  <a href="{% url 'reportes:dashboard' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Generar Reportes</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Seleccione el tipo de reporte, periodo y formato de exportacion.</p>
+  </div>
+</div>
+
+<form method="post" id="report-form" action="{% url 'reportes:generar' %}" class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+  {% csrf_token %}
+  <input type="hidden" name="periodo" id="id_periodo" value="ultimo_mes">
+  <input type="hidden" name="download_token" id="id_download_token" value="">
+
+  <div class="lg:col-span-2 space-y-gutter">
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">description</span>
+        Tipo de Reporte
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {% for tipo in tipos_reporte %}
+        <label class="report-type-card flex items-start gap-4 p-4 rounded-xl border border-surface-container hover:border-primary hover:bg-primary-container/5 cursor-pointer transition-all group {% if forloop.first %}border-primary bg-primary-container/10{% endif %}">
+          <input type="radio" name="tipo_reporte" value="{{ tipo.id }}" class="w-4 h-4 text-primary mt-1 shrink-0" {% if forloop.first %}checked{% endif %}>
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="material-symbols-outlined text-primary" style="font-size:20px;">{{ tipo.icono }}</span>
+              <span class="font-label-md text-label-md text-on-surface">{{ tipo.titulo }}</span>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">{{ tipo.descripcion }}</p>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary">date_range</span>
+        Periodo de Tiempo
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {% for periodo in periodos_opciones %}
+            <button type="button"
+                    data-periodo="{{ periodo.id }}"
+                    class="period-button px-3 py-2 rounded-lg font-label-sm text-label-sm border transition-all {% if forloop.first %}bg-primary text-on-primary border-primary{% else %}border-outline-variant text-on-surface-variant hover:bg-surface-container{% endif %}">
+              {{ periodo.label }}
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="custom-range hidden">
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Desde</label>
+          <input class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                 type="date" name="fecha_inicio" value="{{ fecha_inicio_default }}">
+        </div>
+        <div class="custom-range hidden">
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Hasta</label>
+          <input class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                 type="date" name="fecha_fin" value="{{ fecha_fin_default }}">
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-tertiary">filter_list</span>
+        Filtros Adicionales
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Provincia</label>
+          <select name="provincia" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+            <option value="">Todas las provincias</option>
+            {% for prov in provincias %}
+            <option value="{{ prov }}">{{ prov }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Medico</label>
+          <select name="medico" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+            <option value="">Todos los medicos</option>
+            {% for med in medicos %}
+            <option value="{{ med.id }}">{{ med.nombre_completo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="email-panel" class="hidden bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">email</span>
+        Enviar por correo
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Correo destino</label>
+          <input type="email" name="correo_destino" id="correo_destino"
+                 class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-body-md text-body-md"
+                 placeholder="correo@dominio.com">
+        </div>
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Asunto</label>
+          <input type="text" name="correo_asunto"
+                 class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-body-md text-body-md"
+                 value="Reporte FACCI Care">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">Mensaje opcional</label>
+          <textarea name="correo_mensaje" rows="3"
+                    class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-body-md text-body-md"
+                    placeholder="Mensaje para el destinatario"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="space-y-gutter">
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 sticky top-20">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4">Formato de Exportacion</h3>
+
+      <div class="space-y-2 mb-5">
+        {% for formato in formatos %}
+        <label class="flex items-center gap-3 p-3 rounded-lg border border-surface-container hover:bg-surface-container-low cursor-pointer">
+          <input type="radio" name="formato" value="{{ formato.id }}" class="w-4 h-4 text-primary border-outline-variant" {% if forloop.first %}checked{% endif %}>
+          <span class="material-symbols-outlined text-on-surface-variant" style="font-size:20px;">{{ formato.icono }}</span>
+          <span class="font-body-sm text-body-sm text-on-surface">{{ formato.label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <div class="space-y-3">
+        <button type="submit"
+                data-submit-label="Generando..."
+                data-download-action="true"
+                class="action-button w-full bg-primary text-on-primary py-3 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+          Generar y Descargar
+        </button>
+        <button type="submit"
+                formaction="{% url 'reportes:vista_previa' %}"
+                data-submit-label="Preparando vista..."
+                class="action-button w-full border border-outline-variant text-on-surface-variant py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined" style="font-size:18px;">visibility</span>
+          Vista previa
+        </button>
+        <button type="button"
+                id="btn-email"
+                class="w-full border border-outline-variant text-on-surface-variant py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined" style="font-size:18px;">email</span>
+          Enviar por correo
+        </button>
+        <a href="{% url 'reportes:penci' %}"
+           class="w-full border border-primary text-primary py-3 rounded-lg font-label-md text-label-md hover:bg-primary-container/10 transition-colors flex items-center justify-center gap-2 shadow-sm">
+          <span class="material-symbols-outlined" style="font-size:18px;">summarize</span>
+          Generar PENCI-RD
+        </a>
+        <button type="submit"
+                id="btn-email-submit"
+                formaction="{% url 'reportes:enviar_correo' %}"
+                data-submit-label="Enviando..."
+                class="action-button hidden w-full bg-secondary text-on-secondary py-3 rounded-lg font-label-md text-label-md hover:opacity-90 transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined" style="font-size:18px;">send</span>
+          Confirmar envio
+        </button>
+      </div>
+
+      <div class="mt-4 p-3 bg-surface-container rounded-lg">
+        <p class="font-body-sm text-body-sm text-on-surface-variant text-center">
+          Los reportes se guardan automaticamente en el historial de reportes generados.
+        </p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant text-center mt-2">
+          Logo: {{ logo_path }}{% if not logo_configurado %} (pendiente de agregar){% endif %}
+        </p>
+      </div>
+    </div>
+
+    {% if reportes_recientes %}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <h3 class="font-headline-sm text-headline-sm text-on-background mb-3">Reportes recientes</h3>
+      <div class="space-y-3">
+        {% for reporte in reportes_recientes %}
+        <div class="rounded-lg border border-surface-container p-3">
+          <p class="font-label-md text-label-md text-on-surface">
+            {% if reporte.nombre_reporte %}{{ reporte.nombre_reporte }}{% else %}{{ reporte.get_tipo_reporte_display }}{% endif %}
+          </p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ reporte.created_at|date:"d/m/Y H:i" }} · {{ reporte.get_formato_display }}</p>
+          {% if reporte.archivo %}
+          <a href="{{ reporte.archivo.url }}" class="inline-flex items-center gap-1 mt-2 font-label-sm text-label-sm text-primary hover:underline">
+            <span class="material-symbols-outlined" style="font-size:16px;">download</span>
+            Descargar
+          </a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</form>
+
+<script>
+(function () {
+  const periodoInput = document.getElementById('id_periodo');
+  const customRange = document.querySelectorAll('.custom-range');
+  const emailPanel = document.getElementById('email-panel');
+  const emailInput = document.getElementById('correo_destino');
+  const emailSubmit = document.getElementById('btn-email-submit');
+  const reportForm = document.getElementById('report-form');
+  const downloadTokenInput = document.getElementById('id_download_token');
+  let downloadPollTimer = null;
+
+  function resetActionButtons() {
+    if (downloadPollTimer) {
+      window.clearInterval(downloadPollTimer);
+      downloadPollTimer = null;
+    }
+    document.querySelectorAll('.action-button').forEach(function (button) {
+      button.disabled = false;
+      if (button.dataset.originalText) {
+        button.innerHTML = button.dataset.originalText;
+      }
+    });
+  }
+
+  function readCookie(name) {
+    const prefix = name + '=';
+    return document.cookie
+      .split(';')
+      .map(function (item) { return item.trim(); })
+      .find(function (item) { return item.indexOf(prefix) === 0; })
+      ?.substring(prefix.length) || '';
+  }
+
+  function clearCookie(name) {
+    document.cookie = name + '=; Max-Age=0; path=/; SameSite=Lax';
+  }
+
+  function waitForDownload(token) {
+    clearCookie('facci_report_download');
+    downloadPollTimer = window.setInterval(function () {
+      if (readCookie('facci_report_download') === token) {
+        clearCookie('facci_report_download');
+        resetActionButtons();
+      }
+    }, 500);
+
+    window.setTimeout(function () {
+      if (downloadPollTimer) {
+        resetActionButtons();
+      }
+    }, 60000);
+  }
+
+  function setPeriodo(value, button) {
+    periodoInput.value = value;
+    document.querySelectorAll('.period-button').forEach(function (btn) {
+      btn.className = 'period-button px-3 py-2 rounded-lg font-label-sm text-label-sm border transition-all border-outline-variant text-on-surface-variant hover:bg-surface-container';
+    });
+    button.className = 'period-button px-3 py-2 rounded-lg font-label-sm text-label-sm border transition-all bg-primary text-on-primary border-primary';
+    customRange.forEach(function (item) {
+      item.classList.toggle('hidden', value !== 'personalizado');
+    });
+  }
+
+  document.querySelectorAll('.period-button').forEach(function (button) {
+    button.addEventListener('click', function () {
+      setPeriodo(button.dataset.periodo, button);
+    });
+  });
+
+  document.querySelectorAll('input[name="tipo_reporte"]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      document.querySelectorAll('.report-type-card').forEach(function (card) {
+        card.classList.remove('border-primary', 'bg-primary-container/10');
+      });
+      input.closest('.report-type-card').classList.add('border-primary', 'bg-primary-container/10');
+    });
+  });
+
+  document.getElementById('btn-email').addEventListener('click', function () {
+    emailPanel.classList.remove('hidden');
+    emailSubmit.classList.remove('hidden');
+    emailInput.required = true;
+    emailInput.focus();
+  });
+
+  reportForm.addEventListener('submit', function (event) {
+    const submitter = event.submitter;
+    if (!submitter) return;
+    submitter.disabled = true;
+    const label = submitter.dataset.submitLabel;
+    if (label) {
+      if (!submitter.dataset.originalText) {
+        submitter.dataset.originalText = submitter.innerHTML;
+      }
+      submitter.innerHTML = '<span class="material-symbols-outlined animate-spin" style="font-size:18px;">progress_activity</span>' + label;
+    }
+    if (submitter.dataset.downloadAction === 'true') {
+      const token = Date.now().toString() + Math.random().toString(36).substring(2);
+      downloadTokenInput.value = token;
+      waitForDownload(token);
+    }
+  });
+
+  window.addEventListener('pageshow', resetActionButtons);
+})();
+</script>
+
+{% endblock %}

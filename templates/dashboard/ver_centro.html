@@ -1,0 +1,234 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ centro.nombre }}{% endblock %}
+{% block content %}
+
+{# ── Header ─────────────────────────────────────────────────────── #}
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">{{ centro.nombre }}</h2>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-1 flex items-center gap-2">
+      <span class="material-symbols-outlined" style="font-size:16px;">location_on</span>
+      {{ centro.provincia }}{% if centro.municipio %}, {{ centro.municipio }}{% endif %}
+    </p>
+  </div>
+  <div class="flex gap-3 shrink-0">
+    <a href="{% url 'centros_salud' %}"
+       class="px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface font-label-md text-label-md hover:bg-surface-container transition-colors">
+      Volver
+    </a>
+    <a href="{% url 'editar_centro' centro.pk %}"
+       class="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">edit</span>
+      Editar
+    </a>
+  </div>
+</div>
+
+{# ── Grid principal ──────────────────────────────────────────────── #}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+  {# ── Columna izquierda (2/3) ─────────────────────────────────── #}
+  <div class="lg:col-span-2 space-y-gutter">
+
+    {# Información General #}
+    <div class="bg-surface-container-lowest rounded-2xl border border-surface-container p-6 shadow-sm">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary" style="font-size:20px;">info</span>
+        Información General
+      </h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Nombre del Centro</label>
+          <p class="font-body-md text-body-md text-on-background">{{ centro.nombre }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Tipo de Centro</label>
+            <p class="font-body-md text-body-md text-on-background">{{ centro.get_tipo_display }}</p>
+          </div>
+
+          <div>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Teléfono</label>
+            <p class="font-body-md text-body-md text-on-background">{% if centro.telefono %}<a href="tel:{{ centro.telefono }}" class="text-primary hover:underline">{{ centro.telefono }}</a>{% else %}—{% endif %}</p>
+          </div>
+
+          <div>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Provincia / Ciudad</label>
+            <p class="font-body-md text-body-md text-on-background">{{ centro.provincia|default:"—" }}</p>
+          </div>
+
+          <div>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Municipio</label>
+            <p class="font-body-md text-body-md text-on-background">{{ centro.municipio|default:"—" }}</p>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Dirección Exacta</label>
+            <p class="font-body-md text-body-md text-on-background">{{ centro.direccion|default:"—" }}</p>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Correo electrónico</label>
+            <p class="font-body-md text-body-md text-on-background">{% if centro.correo %}<a href="mailto:{{ centro.correo }}" class="text-primary hover:underline">{{ centro.correo }}</a>{% else %}—{% endif %}</p>
+          </div>
+
+          <div>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Estado</label>
+            <p class="font-body-md text-body-md">
+              <span class="inline-block px-3 py-1 rounded-full text-label-sm font-label-sm
+                {% if centro.activo %}bg-primary/15 text-primary{% else %}bg-error/15 text-error{% endif %}">
+                {% if centro.activo %}Activo{% else %}Inactivo{% endif %}
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Capacidades Clínicas #}
+    <div class="bg-surface-container-lowest rounded-2xl border border-surface-container p-6 shadow-sm">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary" style="font-size:20px;">local_hospital</span>
+        Capacidades Clínicas
+      </h3>
+      <div class="space-y-4">
+
+        {# Camas oncológicas #}
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Camas Oncológicas</label>
+          <p class="font-body-md text-body-md text-on-background">
+            <span class="text-primary font-semibold">{{ centro.camas_disponibles }}</span> disponibles de
+            <span class="font-semibold">{{ centro.camas_total }}</span> totales
+            {% if centro.camas_total > 0 %}
+              <span class="text-on-surface-variant text-label-sm ml-2">({{ disponibilidad_porcentaje }}%)</span>
+            {% endif %}
+          </p>
+        </div>
+
+        {# Estado derivación #}
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Estado de Derivación</label>
+          <p class="font-body-md text-body-md">
+            <span class="inline-block px-3 py-1 rounded-full text-label-sm font-label-sm
+              {% if centro.estado_derivacion == 'disponible' %}bg-primary/15 text-primary
+              {% elif centro.estado_derivacion == 'limitado' %}bg-secondary/15 text-secondary
+              {% else %}bg-error/15 text-error{% endif %}">
+              {{ centro.get_estado_derivacion_display }}
+            </span>
+          </p>
+        </div>
+
+        {# Especialidades #}
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-2">Especialidades Integradas</label>
+          <div class="flex flex-wrap gap-2">
+            {% if centro.esp_oncologia_pediatrica %}
+              <span class="inline-block px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-label-sm text-label-sm">
+                Oncología Pediátrica
+              </span>
+            {% endif %}
+            {% if centro.esp_pediatria_general %}
+              <span class="inline-block px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-label-sm text-label-sm">
+                Pediatría General
+              </span>
+            {% endif %}
+            {% if centro.esp_imagenes_diagnosticas %}
+              <span class="inline-block px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-label-sm text-label-sm">
+                Imágenes Diagnósticas
+              </span>
+            {% endif %}
+            {% if centro.esp_laboratorio_avanzado %}
+              <span class="inline-block px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-label-sm text-label-sm">
+                Laboratorio Clínico Avanzado
+              </span>
+            {% endif %}
+            {% if not centro.esp_oncologia_pediatrica and not centro.esp_pediatria_general and not centro.esp_imagenes_diagnosticas and not centro.esp_laboratorio_avanzado %}
+              <p class="font-body-sm text-on-surface-variant">Sin especialidades registradas</p>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {# ── Columna derecha (1/3) ───────────────────────────────────── #}
+  <div class="space-y-gutter">
+
+    {# Personal y Entrenamiento #}
+    <div class="bg-surface-container-lowest rounded-2xl border border-surface-container p-6 shadow-sm">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-tertiary" style="font-size:20px;">group</span>
+        Personal y Entrenamiento
+      </h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Especialistas Disponibles</label>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mb-1.5">Médicos titulares en turno</p>
+          <p class="font-headline-md text-headline-md text-on-background">{{ centro.medicos_titulares }}</p>
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Entrenados FACCI</label>
+          <p class="font-headline-md text-headline-md text-on-background">{{ centro.entrenados_facci }}</p>
+        </div>
+      </div>
+    </div>
+
+    {# Ubicación Exacta #}
+    <div class="bg-surface-container-lowest rounded-2xl border border-surface-container p-6 shadow-sm">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-on-surface-variant" style="font-size:20px;">location_on</span>
+        Ubicación
+      </h3>
+
+      {# Mini mapa interactivo #}
+      <div id="mini-mapa" class="rounded-xl border border-outline-variant overflow-hidden mb-4 isolate" style="height:320px; width:100%;"></div>
+
+      {% if centro.latitud and centro.longitud %}
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Latitud</label>
+          <p class="font-body-sm text-body-sm text-on-background">{{ centro.latitud }}</p>
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Longitud</label>
+          <p class="font-body-sm text-body-sm text-on-background">{{ centro.longitud }}</p>
+        </div>
+      </div>
+      {% else %}
+      <p class="font-body-sm text-on-surface-variant">Coordenadas no disponibles</p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const geoData = {{ centro_geo|safe }};
+  const DR_CENTER = [18.735, -70.163];
+  const initLat = geoData ? geoData.lat : DR_CENTER[0];
+  const initLng = geoData ? geoData.lng : DR_CENTER[1];
+  const initZoom = geoData ? 14 : 8;
+
+  const mapa = L.map('mini-mapa').setView([initLat, initLng], initZoom);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(mapa);
+
+  if (geoData) {
+    L.marker([geoData.lat, geoData.lng]).addTo(mapa);
+  }
+});
+</script>
+{% endblock %}

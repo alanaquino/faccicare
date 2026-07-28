@@ -1,0 +1,145 @@
+{% extends "layouts/base_padres.html" %}
+{% block title %}Evolución del Paciente — FACCI Care{% endblock %}
+{% block content %}
+
+<div class="md:px-8 max-w-4xl mx-auto w-full space-y-6">
+
+  {# Bienvenida y Botón para reportar síntomas #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Evolución Clínica</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant">Línea de tiempo de consultas y progresos de {{ paciente.nombre }}</p>
+    </div>
+    <div>
+      <a href="{% url 'padres:reportar_sintomas' %}"
+         class="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint active:scale-[0.98] transition-all shadow-sm">
+        <span class="material-symbols-outlined" style="font-size: 20px;">add_alert</span>
+        Reportar Síntomas
+      </a>
+    </div>
+  </div>
+
+  {# Ficha breve de estado actual #}
+  <div class="bg-surface-container-lowest border border-surface-container rounded-2xl p-5 shadow-sm flex items-center gap-4">
+    <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+      <span class="material-symbols-outlined text-2xl icon-fill">child_care</span>
+    </div>
+    <div class="flex-grow min-w-0">
+      <h3 class="font-headline-md text-sm font-bold text-on-surface truncate">{{ paciente.nombre }}</h3>
+      <p class="font-body-sm text-xs text-on-surface-variant mt-0.5 truncate">{{ paciente.edad }} &middot; {{ paciente.diagnostico }}</p>
+    </div>
+    <span class="px-3 py-1 rounded-full font-label-sm text-xs bg-primary-container/30 text-primary font-bold shrink-0">
+      {{ paciente.estado }}
+    </span>
+  </div>
+
+  {# Línea de tiempo #}
+  <div class="bg-surface-container-lowest border border-surface-container rounded-2xl p-6 shadow-sm space-y-6">
+    <h3 class="font-headline-md text-md font-bold text-on-background flex items-center gap-2 border-b border-surface-container pb-4">
+      <span class="material-symbols-outlined text-primary">timeline</span>
+      Historial Clínico
+    </h3>
+
+    {% if timeline %}
+    <div class="relative pl-6 border-l-2 border-outline-variant/40 space-y-8 ml-3 py-2">
+      {% for event in timeline %}
+      <div class="relative">
+        {# Punto en la línea de tiempo #}
+        <div class="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-primary border-4 border-white shadow-sm flex items-center justify-center"></div>
+        
+        {# Tarjeta de evento clínico #}
+        <div class="bg-surface rounded-2xl p-5 border border-surface-container hover:shadow-md transition-shadow">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+            <div>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold font-label-sm
+                           {% if event.estado_clinico == 'INDUCCION' or event.estado_clinico == 'Inducción' %}bg-error-container text-error
+                           {% elif event.estado_clinico == 'CONSOLIDACION' or event.estado_clinico == 'Consolidación' %}bg-secondary-container text-on-secondary-container
+                           {% else %}bg-primary-container/30 text-primary{% endif %}">
+                Fase: {{ event.estado_clinico }}
+              </span>
+            </div>
+            <p class="font-body-sm text-xs text-on-surface-variant flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">schedule</span>
+              {{ event.fecha }} &middot; {{ event.hora }}
+            </p>
+          </div>
+
+          <div class="space-y-3">
+            {# Tratamiento / Protocolo #}
+            {% if event.tratamiento_actual %}
+            <div class="space-y-1">
+              <p class="font-label-sm text-xs text-on-surface-variant uppercase font-semibold">Protocolo de Tratamiento</p>
+              <p class="font-body-md text-sm text-on-surface">{{ event.tratamiento_actual }}</p>
+            </div>
+            {% endif %}
+
+            {# Medicamentos #}
+            {% if event.medicamentos %}
+            <div class="space-y-1 p-3 bg-surface-container-low rounded-xl border border-surface-container/30">
+              <p class="font-label-sm text-xs text-on-surface-variant uppercase font-semibold flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">medication</span>
+                Medicamentos Indicados
+              </p>
+              <p class="font-body-sm text-xs text-on-surface leading-relaxed whitespace-pre-line">{{ event.medicamentos }}</p>
+            </div>
+            {% endif %}
+
+            {# Observaciones / Pautas #}
+            {% if event.observaciones %}
+            <div class="space-y-1">
+              <p class="font-label-sm text-xs text-on-surface-variant uppercase font-semibold">Pauta Médica del Doctor</p>
+              <p class="font-body-sm text-xs text-on-surface leading-relaxed whitespace-pre-line">{{ event.observaciones }}</p>
+            </div>
+            {% endif %}
+
+            {# Síntomas Reportados en la consulta #}
+            {% if event.sintomas_actuales %}
+            <div class="pt-2 flex flex-wrap items-center gap-2 border-t border-surface-container/60 mt-3">
+              <span class="text-[10px] text-on-surface-variant uppercase font-semibold">Síntomas evaluados:</span>
+              <span class="px-2 py-0.5 rounded-lg bg-outline-variant/10 text-on-surface-variant text-[10px] font-medium">
+                {{ event.sintomas_actuales }}
+              </span>
+            </div>
+            {% endif %}
+          </div>
+
+          {# Doctor firmante #}
+          <div class="mt-4 pt-3 border-t border-surface-container/60 flex justify-between items-center text-[10px] text-on-surface-variant/80">
+            <span class="flex items-center gap-1 font-medium">
+              <span class="material-symbols-outlined text-xs">stethoscope</span>
+              Dr(a). {{ event.medico }}
+            </span>
+            {% if event.requiere_hospitalizacion %}
+            <span class="flex items-center gap-0.5 text-error font-bold">
+              <span class="material-symbols-outlined text-xs">local_hospital</span>
+              Hospitalización
+            </span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="py-12 text-center text-on-surface-variant flex flex-col items-center justify-center">
+      <span class="material-symbols-outlined text-outline-variant text-5xl mb-3">timeline</span>
+      <p class="font-body-md text-sm">No hay registros de evolución clínica registrados aún.</p>
+      <p class="font-body-sm text-xs text-on-surface-variant mt-1">Cuando el médico registre su próxima consulta o seguimiento, aparecerá aquí.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# Consejos de soporte familiar #}
+  <div class="bg-surface-container-lowest border border-surface-container rounded-2xl p-6 shadow-sm">
+    <h3 class="font-headline-md text-md font-bold text-on-background mb-3 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary">volunteer_activism</span>
+      Acompañando la Evolución
+    </h3>
+    <p class="font-body-sm text-xs text-on-surface-variant leading-relaxed">
+      La evolución clínica de su hijo es monitoreada de forma permanente por nuestro equipo. Si nota fatiga extrema, fiebre persistente o dolor repentino, no espere a la próxima consulta: use el botón de **Reportar Síntomas** en la parte superior para alertarnos al instante.
+    </p>
+  </div>
+
+</div>
+
+{% endblock %}

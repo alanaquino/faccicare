@@ -1,0 +1,148 @@
+{% extends "layouts/base.html" %}
+{% block title %}Indicaciones - {{ paciente.nombre_completo }}{% endblock %}
+{% block content %}
+
+<div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+  <div class="flex items-center gap-3 min-w-0">
+    <a href="{% url 'indicaciones:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant shrink-0">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+      <span class="font-headline-md text-headline-md text-on-primary-container">{{ paciente.iniciales }}</span>
+    </div>
+    <div class="min-w-0">
+      <h2 class="font-headline-lg text-headline-lg text-on-background truncate">{{ paciente.nombre_completo }}</h2>
+      <p class="font-body-sm text-body-sm text-on-surface-variant truncate">
+        {{ paciente.codigo_paciente }} - {{ paciente.edad }} - {{ paciente.get_sexo_display }}
+      </p>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2 justify-end">
+    <a href="{% url 'seguimiento:indicaciones_admin_editar' paciente.id %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">edit</span>
+      Editar indicaciones
+    </a>
+    <a href="{% url 'indicaciones:descargo_tratamiento' paciente.id %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">description</span>
+      Generar descargo
+    </a>
+    <a href="{% url 'indicaciones:descargo_tratamiento_pdf' paciente.id %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+      Descargar PDF
+    </a>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide">Diagnostico</p>
+    <p class="font-body-md text-body-md text-on-surface mt-1">{{ paciente.get_diagnostico_display|default:"Sin diagnostico registrado" }}</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide">Medico asignado</p>
+    <p class="font-body-md text-body-md text-on-surface mt-1">{{ paciente.medico }}</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide">Estado</p>
+    <p class="font-body-md text-body-md text-on-surface mt-1">{{ paciente.get_estado_actual_display }}</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide">Ultima actualizacion</p>
+    <p class="font-body-md text-body-md text-on-surface mt-1">
+      {% if ultima_actualizacion %}{{ ultima_actualizacion|date:"d/m/Y H:i" }}{% else %}Sin registros{% endif %}
+    </p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="p-5 border-b border-surface-container bg-surface-container-low">
+      <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">assignment</span>
+        Protocolo activo
+      </h3>
+    </div>
+    <div class="p-5">
+      {% if protocolo_activo %}
+      <p class="font-body-md text-body-md text-on-surface whitespace-pre-wrap">{{ protocolo_activo.tratamiento_actual }}</p>
+      <p class="mt-3 font-body-sm text-body-sm text-on-surface-variant">
+        {{ protocolo_activo.fecha_seguimiento|date:"d/m/Y H:i" }} - {{ protocolo_activo.medico.nombre_completo }}
+      </p>
+      {% else %}
+      <p class="font-body-md text-body-md text-on-surface-variant">Sin protocolo activo registrado.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="p-5 border-b border-surface-container bg-surface-container-low">
+      <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary">rate_review</span>
+        Pauta medica
+      </h3>
+    </div>
+    <div class="p-5">
+      {% if pauta_medica %}
+      <p class="font-body-md text-body-md text-on-surface whitespace-pre-wrap">{{ pauta_medica.observaciones }}</p>
+      <p class="mt-3 font-body-sm text-body-sm text-on-surface-variant">
+        {{ pauta_medica.fecha_seguimiento|date:"d/m/Y H:i" }} - {{ pauta_medica.medico.nombre_completo }}
+      </p>
+      {% else %}
+      <p class="font-body-md text-body-md text-on-surface-variant">Sin pauta medica registrada.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+  <div class="p-5 border-b border-surface-container bg-surface-container-low flex items-center justify-between gap-3">
+    <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary">clinical_notes</span>
+      Indicaciones registradas
+    </h3>
+    <span class="font-label-sm text-label-sm text-on-surface-variant">{{ indicaciones|length }} registro(s)</span>
+  </div>
+  {% if indicaciones %}
+  <div class="divide-y divide-surface-container">
+    {% for ind in indicaciones %}
+    <article class="p-5 hover:bg-surface-container-low transition-colors">
+      <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="material-symbols-outlined text-primary" style="font-size:20px;">{{ ind.icono }}</span>
+            <h4 class="font-label-md text-label-md text-on-surface">{{ ind.titulo }}</h4>
+            <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm">{{ ind.get_tipo_indicacion_display }}</span>
+            {% if ind.activa %}
+            <span class="px-2 py-0.5 rounded-full bg-tertiary-container/20 text-tertiary font-label-sm text-label-sm">Activa</span>
+            {% else %}
+            <span class="px-2 py-0.5 rounded-full bg-outline/10 text-on-surface-variant font-label-sm text-label-sm">Inactiva</span>
+            {% endif %}
+          </div>
+          <p class="mt-2 font-body-md text-body-md text-on-surface whitespace-pre-wrap">{{ ind.descripcion }}</p>
+        </div>
+        <div class="md:text-right shrink-0">
+          <p class="font-label-sm text-label-sm text-on-surface-variant">{{ ind.created_at|date:"d/m/Y" }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ ind.medico.nombre_completo }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Prioridad {{ ind.get_prioridad_display }}</p>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="p-10 text-center">
+    <span class="material-symbols-outlined text-5xl text-outline">assignment_late</span>
+    <p class="font-title-md text-title-md text-on-surface mt-2">Este paciente no tiene indicaciones medicas registradas.</p>
+    <a href="{% url 'seguimiento:indicaciones_admin_editar' paciente.id %}"
+       class="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity">
+      <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+      Crear indicaciones
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

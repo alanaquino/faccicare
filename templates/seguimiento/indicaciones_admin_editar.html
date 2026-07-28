@@ -1,0 +1,333 @@
+{% extends "layouts/base.html" %}
+{% block title %}Editar Indicaciones — {{ paciente.nombre_completo }}{% endblock %}
+{% block content %}
+
+{# Cabecera y botón de retroceder #}
+<div class="flex flex-col md:flex-row md:items-center gap-4 mb-6">
+  <a href="{% url 'seguimiento:indicaciones_admin' %}" 
+     class="p-2.5 rounded-full hover:bg-surface-container transition-colors text-on-surface-variant flex items-center justify-center border border-outline-variant/30 shadow-sm"
+     title="Volver a la lista de indicaciones">
+    <span class="material-symbols-outlined text-xl">arrow_back</span>
+  </a>
+  <div class="flex-1 min-w-0">
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Gestionar Indicaciones Médicas</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-1">Configure las pautas de tratamiento específicas para {{ paciente.nombre_completo }}.</p>
+  </div>
+  <div class="flex flex-wrap items-center gap-2 md:justify-end">
+    {% for contacto in contactos_tutores %}
+    <a href="tel:{{ contacto.href }}"
+       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-label-md text-label-md shadow-sm transition-all active:scale-[0.98]
+              {% if contacto.tipo == 'Emergencia' %}bg-error text-on-error hover:bg-error/90{% else %}bg-primary text-on-primary hover:bg-surface-tint{% endif %}"
+       title="{{ contacto.nombre }} - {{ contacto.telefono }}">
+      <span class="material-symbols-outlined text-lg">phone_in_talk</span>
+      {% if contacto.tipo == 'Emergencia' %}Emergencia{% else %}Llamar tutor{% endif %}
+    </a>
+    {% empty %}
+    <span class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-outline-variant bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm">
+      <span class="material-symbols-outlined text-base">phone_disabled</span>
+      Sin telefono de tutor
+    </span>
+    {% endfor %}
+  </div>
+</div>
+
+{# Grid Dividido (Split View): Formulario a la izquierda, Simulador de Smartphone a la derecha #}
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+  
+  {# COLUMNA IZQUIERDA: Formulario de Configuración (7 Columnas) #}
+  <div class="lg:col-span-7 space-y-6">
+    
+    {# Ficha Técnica del Paciente #}
+    <div class="bg-surface-container-lowest border border-outline-variant/40 rounded-2xl p-5 shadow-sm">
+      <h3 class="font-headline-md text-md font-bold text-on-surface mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">badge</span>
+        Ficha del Paciente
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+        <div>
+          <p class="font-label-sm text-xs text-on-surface-variant">Código</p>
+          <p class="font-body-md text-on-surface font-semibold mt-0.5">{{ paciente.codigo_paciente }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-xs text-on-surface-variant">Edad</p>
+          <p class="font-body-md text-on-surface font-semibold mt-0.5">{{ paciente.edad }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-xs text-on-surface-variant">Estado</p>
+          <p class="font-body-md text-on-surface font-semibold mt-0.5">
+            <span class="inline-flex items-center gap-1 text-primary">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+              {{ paciente.get_estado_actual_display }}
+            </span>
+          </p>
+        </div>
+        <div>
+          <p class="font-label-sm text-xs text-on-surface-variant">Última Act.</p>
+          <p class="font-body-md text-on-surface font-semibold mt-0.5">{{ fecha_actualizacion }}</p>
+        </div>
+      </div>
+    </div>
+
+    {# Formulario Principal #}
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+      
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-5">
+        <h3 class="font-headline-md text-md font-bold text-on-surface flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">clinical_notes</span>
+          Pautas Médicas Editables
+        </h3>
+        
+        {# Datos nutricionales de la visita #}
+        <div class="grid grid-cols-2 gap-4 pb-2 border-b border-outline-variant/30">
+          <div class="space-y-1.5">
+            <label class="block text-sm font-semibold text-on-surface">
+              Peso (kg) <span class="font-normal text-on-surface-variant text-xs">— visita actual</span>
+            </label>
+            <input type="number" name="peso_kg" step="0.1" min="0" max="200"
+                   value="{{ ultimo_peso|default:'' }}"
+                   class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md"
+                   placeholder="Ej: 28.5">
+          </div>
+          <div class="space-y-1.5">
+            <label class="block text-sm font-semibold text-on-surface">
+              Talla (cm) <span class="font-normal text-on-surface-variant text-xs">— visita actual</span>
+            </label>
+            <input type="number" name="talla_cm" step="0.1" min="0" max="250"
+                   value="{{ ultima_talla|default:'' }}"
+                   class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md"
+                   placeholder="Ej: 115.0">
+          </div>
+        </div>
+
+        {# Protocolo Activo (tratamiento_actual) #}
+        <div class="space-y-2">
+          <label for="id_tratamiento_actual" class="block font-headline-md text-sm font-semibold text-on-surface">
+            Protocolo Activo <span class="text-error">*</span>
+          </label>
+          <p class="font-body-sm text-xs text-on-surface-variant">
+            Describe el protocolo de tratamiento principal o fase activa en curso. Se muestra con prioridad alta.
+          </p>
+          <textarea id="id_tratamiento_actual" name="tratamiento_actual" required
+            class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md h-32 resize-none shadow-inner"
+            placeholder="Ej: Fase de inducción para leucemia. Ciclo A de quimioterapia..."
+            oninput="actualizarSimulador()">{{ tratamiento_actual }}</textarea>
+        </div>
+
+        {# Pauta Médica Específica (observaciones) #}
+        <div class="space-y-2">
+          <label for="id_observaciones" class="block font-headline-md text-sm font-semibold text-on-surface">
+            Pauta Médica Específica
+          </label>
+          <p class="font-body-sm text-xs text-on-surface-variant">
+            Pautas de cuidado particulares, recomendaciones dietéticas o precauciones inmediatas.
+          </p>
+          <textarea id="id_observaciones" name="observaciones"
+            class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md h-28 resize-none shadow-inner"
+            placeholder="Ej: Tolera bien la medicación oral. Si presenta fiebre mayor a 38.5°C acudir de inmediato..."
+            oninput="actualizarSimulador()">{{ observaciones }}</textarea>
+        </div>
+      </div>
+
+      {# Información Informativa / Indicaciones Estáticas #}
+      <div class="bg-surface-container-lowest border border-outline-variant/40 rounded-2xl p-6 shadow-sm space-y-4">
+        <h4 class="font-headline-md text-sm font-semibold text-on-surface flex items-center gap-2 border-b border-outline-variant/30 pb-3">
+          <span class="material-symbols-outlined text-outline">info</span>
+          Información Adicional en el Portal de Padres
+        </h4>
+        <p class="font-body-sm text-xs text-on-surface-variant leading-relaxed">
+          Los siguientes cuidados de soporte y restricciones de seguridad se muestran de forma predeterminada a la familia en su portal para asegurar pautas mínimas de higiene y prevención en casa:
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+          <div class="p-3 bg-surface rounded-xl border border-outline-variant/20 flex gap-2">
+            <span class="material-symbols-outlined text-primary text-sm mt-0.5">water_drop</span>
+            <div>
+              <p class="font-label-sm text-xs font-semibold text-on-surface">Soporte Básico</p>
+              <p class="font-body-sm text-[10px] text-on-surface-variant">Hidratación (1L/día), Descanso regular (10-12h), Higiene y Dieta equilibrada.</p>
+            </div>
+          </div>
+          <div class="p-3 bg-surface rounded-xl border border-outline-variant/20 flex gap-2">
+            <span class="material-symbols-outlined text-error text-sm mt-0.5">warning</span>
+            <div>
+              <p class="font-label-sm text-xs font-semibold text-on-surface">Restricciones de Emergencia</p>
+              <p class="font-body-sm text-[10px] text-on-surface-variant">No administrar ibuprofeno/aspirina, evitar personas resfriadas y vacunas no aprobadas.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Acciones del Formulario #}
+      <div class="flex gap-4">
+        <button type="submit"
+          class="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint active:scale-[0.98] transition-all shadow-sm">
+          <span class="material-symbols-outlined text-lg">save</span>
+          Guardar Cambios
+        </button>
+        <a href="{% url 'seguimiento:indicaciones_admin' %}"
+          class="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container hover:text-on-surface active:scale-[0.98] transition-all">
+          Cancelar
+        </a>
+      </div>
+    </form>
+  </div>
+
+  {# COLUMNA DERECHA: Simulador Live Smartphone (5 Columnas) #}
+  <div class="lg:col-span-5 flex justify-center sticky top-20">
+    <div class="w-[320px] h-[640px] rounded-[40px] border-[10px] border-black bg-black shadow-2xl relative overflow-hidden flex flex-col shrink-0">
+      
+      {# Parlante y cámara frontal del Smartphone mock #}
+      <div class="absolute top-2 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-full z-50 flex items-center justify-center">
+        <div class="w-10 h-1 bg-neutral-800 rounded-full mr-2"></div>
+        <div class="w-2 h-2 bg-neutral-900 rounded-full"></div>
+      </div>
+      
+      {# Pantalla interna (Mock de portal de padres) #}
+      <div class="flex-1 bg-[#f5faff] overflow-y-auto pt-8 pb-4 px-3 flex flex-col gap-4 scrollbar-none relative">
+        
+        {# Barra de navegación simulada #}
+        <div class="flex justify-between items-center px-1 shrink-0">
+          <div class="flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-md bg-white border border-outline-variant/20 flex items-center justify-center">
+              <img src="{{ sistema_config.logo_aplicacion_url }}" alt="Logo" class="w-4 h-4 object-contain">
+            </span>
+            <span class="text-[10px] font-bold text-primary">{{ sistema_config.nombre_aplicacion }}</span>
+          </div>
+          <span class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-[8px] font-bold">
+            {{ paciente.iniciales }}
+          </span>
+        </div>
+
+        {# Cabecera de indicaciones simulada #}
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="material-symbols-outlined text-base text-on-surface-variant">arrow_back</span>
+          <div>
+            <h4 class="text-sm font-bold text-on-background leading-tight">Indicaciones Médicas</h4>
+            <p class="text-[9px] text-on-surface-variant leading-none mt-0.5">Cuidados para {{ paciente.nombre }}</p>
+          </div>
+        </div>
+
+        {# Banner Médico simulado #}
+        <div class="flex items-center gap-2.5 p-3 bg-[#e1f0fb]/30 border border-[#e1f0fb] rounded-xl shrink-0">
+          <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-white text-base">stethoscope</span>
+          </div>
+          <div class="min-w-0">
+            <p class="text-[9px] font-bold text-on-surface truncate">Emitidas por Dr(a). {{ request.user.last_name|default:"Martínez" }}</p>
+            <p class="text-[8px] text-on-surface-variant truncate">{{ paciente.medico_asignado.centro_medico|default:"Hospital Pediátrico Central" }}</p>
+          </div>
+        </div>
+
+        {# BLOQUE DINÁMICO 1: Protocolo Activo #}
+        <div id="simBlockTratamiento" class="bg-white rounded-xl shadow-sm border border-neutral-100 p-3 shrink-0 hidden">
+          <div class="flex gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-error-container/30 text-error flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-base">assignment</span>
+            </div>
+            <div class="flex-grow min-w-0">
+              <div class="flex items-center justify-between mb-1.5">
+                <h5 class="text-[10px] font-bold text-on-background">Protocolo Activo</h5>
+                <span class="px-1.5 py-0.5 rounded-full text-[7px] font-bold bg-error-container text-error">Alta</span>
+              </div>
+              <p id="simTextTratamiento" class="text-[9px] text-on-surface-variant leading-normal whitespace-pre-wrap"></p>
+            </div>
+          </div>
+        </div>
+
+        {# BLOQUE DINÁMICO 2: Pauta Médica Específica #}
+        <div id="simBlockObservaciones" class="bg-white rounded-xl shadow-sm border border-neutral-100 p-3 shrink-0 hidden">
+          <div class="flex gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-error-container/30 text-error flex items-center justify-center shrink-0">
+              <span class="material-symbols-outlined text-base">rate_review</span>
+            </div>
+            <div class="flex-grow min-w-0">
+              <div class="flex items-center justify-between mb-1.5">
+                <h5 class="text-[10px] font-bold text-on-background">Pauta Médica Específica</h5>
+                <span class="px-1.5 py-0.5 rounded-full text-[7px] font-bold bg-error-container text-error">Alta</span>
+              </div>
+              <p id="simTextObservaciones" class="text-[9px] text-on-surface-variant leading-normal whitespace-pre-wrap"></p>
+            </div>
+          </div>
+        </div>
+
+        {# Indicaciones Estáticas en el simulador #}
+        <div class="space-y-2">
+          {% for ind in indicaciones_estaticas %}
+          <div class="bg-white rounded-xl shadow-sm border border-neutral-100 p-3 shrink-0 opacity-80">
+            <div class="flex gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-primary-container/20 text-primary flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-base">{{ ind.icono }}</span>
+              </div>
+              <div class="flex-grow min-w-0">
+                <div class="flex items-center justify-between mb-1.5">
+                  <h5 class="text-[10px] font-bold text-on-background">{{ ind.titulo }}</h5>
+                  <span class="px-1.5 py-0.5 rounded-full text-[7px] font-bold {% if ind.prioridad == 'Alta' %}bg-error-container text-error{% else %}bg-primary-container/20 text-primary{% endif %}">
+                    {{ ind.prioridad }}
+                  </span>
+                </div>
+                <p class="text-[9px] text-on-surface-variant leading-normal">{{ ind.descripcion }}</p>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {# Restricciones estáticas en el simulador #}
+        <div class="bg-white rounded-xl shadow-sm border border-error/10 p-3 shrink-0 opacity-80 mb-2">
+          <h5 class="text-[10px] font-bold text-on-background mb-2 flex items-center gap-1">
+            <span class="material-symbols-outlined text-error text-xs">block</span>
+            Restricciones Importantes
+          </h5>
+          <ul class="space-y-1.5">
+            {% for res in restricciones|slice:":2" %}
+            <li class="flex items-start gap-1.5 p-1.5 bg-error-container/10 rounded-lg text-[8px] text-on-surface leading-tight">
+              <span class="material-symbols-outlined text-error text-[10px] mt-0.5">warning</span>
+              <span>{{ res }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      
+      {# Botón Home inferior simulado del celular #}
+      <div class="h-6 bg-black shrink-0 flex items-center justify-center pb-2">
+        <div class="w-32 h-1 bg-white/40 rounded-full"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# JavaScript para actualización en tiempo real #}
+<script>
+  function actualizarSimulador() {
+    const txtTratamiento = document.getElementById('id_tratamiento_actual').value.trim();
+    const txtObservaciones = document.getElementById('id_observaciones').value.trim();
+
+    const blockTratamiento = document.getElementById('simBlockTratamiento');
+    const textTratamiento = document.getElementById('simTextTratamiento');
+
+    const blockObservaciones = document.getElementById('simBlockObservaciones');
+    const textObservaciones = document.getElementById('simTextObservaciones');
+
+    // Actualizar Protocolo Activo
+    if (txtTratamiento.length > 0) {
+      blockTratamiento.classList.remove('hidden');
+      textTratamiento.textContent = txtTratamiento;
+    } else {
+      blockTratamiento.classList.add('hidden');
+    }
+
+    // Actualizar Pautas Específicas
+    if (txtObservaciones.length > 0) {
+      blockObservaciones.classList.remove('hidden');
+      textObservaciones.textContent = txtObservaciones;
+    } else {
+      blockObservaciones.classList.add('hidden');
+    }
+  }
+
+  // Ejecutar en la carga inicial
+  document.addEventListener('DOMContentLoaded', actualizarSimulador);
+</script>
+
+{% endblock %}

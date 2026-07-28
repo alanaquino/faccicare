@@ -1,0 +1,393 @@
+{% extends "layouts/base.html" %}
+{% block title %}Reporte PENCI-RD — {{ fecha_inicio|date:"d/m/Y" }} al {{ fecha_fin|date:"d/m/Y" }}{% endblock %}
+
+{% block extra_head %}
+<style>
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; font-size: 10.5px !important; line-height: 1.35 !important; }
+  .print-page { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+  .print-page section { margin-bottom: 14px !important; }
+  .print-page th,
+  .print-page td { padding: 5px 6px !important; font-size: 10px !important; line-height: 1.25 !important; }
+  .print-page h2 { font-size: 14px !important; }
+  .print-page h3 { font-size: 11px !important; margin-bottom: 6px !important; }
+  .page-break { page-break-before: always; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Barra de acción (no imprime) ── #}
+<div class="no-print flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Reporte Epidemiológico PENCI-RD</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-1">
+      Período: {{ fecha_inicio|date:"d/m/Y" }} — {{ fecha_fin|date:"d/m/Y" }}
+    </p>
+  </div>
+  <div class="flex items-center gap-3">
+    <form method="get" class="flex items-center gap-2">
+      <input type="date" name="fecha_inicio" value="{{ fecha_inicio|date:'Y-m-d' }}"
+             class="px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-sm text-body-sm focus:outline-none focus:ring-2 focus:ring-primary/45">
+      <span class="text-on-surface-variant font-body-sm">—</span>
+      <input type="date" name="fecha_fin" value="{{ fecha_fin|date:'Y-m-d' }}"
+             class="px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-sm text-body-sm focus:outline-none focus:ring-2 focus:ring-primary/45">
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined" style="font-size:18px;">filter_alt</span>Aplicar
+      </button>
+    </form>
+    <button onclick="window.print()"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">print</span>Imprimir / PDF
+    </button>
+    <a href="{% url 'reportes:dashboard' %}"
+       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
+    </a>
+  </div>
+</div>
+
+{# ════════════════════════════════════════════════════════════════════ #}
+{# DOCUMENTO OFICIAL                                                    #}
+{# ════════════════════════════════════════════════════════════════════ #}
+<div class="print-page print-letter print-compact bg-white text-gray-900 rounded-xl shadow-sm border border-surface-container max-w-4xl mx-auto p-10 space-y-8 mt-4">
+
+  {# ── Encabezado institucional ── #}
+  <header class="flex items-start justify-between border-b-2 border-gray-800 pb-6 gap-4">
+    <div class="flex items-start gap-4">
+      <img src="{{ sistema_config.logo_reportes_url }}" alt="FACCI" class="h-16 w-auto object-contain">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-widest text-gray-500">República Dominicana</p>
+        <p class="text-xs font-semibold uppercase tracking-widest text-gray-500">Ministerio de Salud Pública</p>
+        <h1 class="text-xl font-bold text-gray-900 mt-1">FACCI Care</h1>
+        <p class="text-sm text-gray-600">Fundación de Ayuda al Cáncer en el Cáncer Infantil</p>
+      </div>
+    </div>
+    <div class="text-right">
+      <p class="text-xs text-gray-500 uppercase tracking-wider">Reporte N.º</p>
+      <p class="text-lg font-bold text-gray-800">{{ num_reporte }}</p>
+      <p class="text-xs text-gray-500 mt-1">Generado: {{ fecha_generacion|date:"d/m/Y" }}</p>
+      <p class="text-xs text-gray-500">Por: {{ generado_por.get_full_name|default:generado_por.username }}</p>
+    </div>
+  </header>
+
+  <div class="text-center">
+    <h2 class="text-lg font-bold uppercase tracking-wider text-gray-800">
+      Informe Epidemiológico — Programa de Oncología Pediátrica
+    </h2>
+    <p class="text-sm text-gray-600 mt-1">
+      Período de análisis: <strong>{{ fecha_inicio|date:"d \d\e F \d\e Y" }}</strong>
+      al <strong>{{ fecha_fin|date:"d \d\e F \d\e Y" }}</strong>
+    </p>
+  </div>
+
+  {# ── Sección I: Incidencia ── #}
+  <section>
+    <h3 class="text-base font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-4">
+      I. Vigilancia Epidemiológica — Incidencia
+    </h3>
+    <div class="grid grid-cols-3 gap-4 mb-5">
+      <div class="border border-gray-200 rounded-lg p-4 text-center">
+        <p class="text-3xl font-bold text-gray-900">{{ total_nuevos }}</p>
+        <p class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Casos nuevos en el período</p>
+      </div>
+      <div class="border border-gray-200 rounded-lg p-4 text-center">
+        <p class="text-3xl font-bold text-gray-900">{{ total_pacientes_sistema }}</p>
+        <p class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Total en el sistema</p>
+      </div>
+      <div class="border border-gray-200 rounded-lg p-4 text-center">
+        <p class="text-3xl font-bold text-gray-900">{{ incidencia_mensual|length }}</p>
+        <p class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Meses con actividad</p>
+      </div>
+    </div>
+    {% if incidencia_mensual %}
+    <table class="w-full text-sm border-collapse border border-gray-200">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="border border-gray-200 p-2 text-left font-semibold">Mes</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">Casos</th>
+          <th class="border border-gray-200 p-2 text-left font-semibold">Distribución</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in incidencia_mensual %}
+        <tr class="{% cycle '' 'bg-gray-50' %}">
+          <td class="border border-gray-200 p-2">{{ m.mes }}</td>
+          <td class="border border-gray-200 p-2 text-center font-semibold">{{ m.casos }}</td>
+          <td class="border border-gray-200 p-2">
+            <div class="w-full bg-gray-100 rounded h-3">
+              <div class="h-3 rounded bg-blue-500" style="width:{% widthratio m.casos max_incidencia 100 %}%"></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-sm text-gray-500 italic">No se registraron nuevos casos en el período seleccionado.</p>
+    {% endif %}
+  </section>
+
+  {# ── Sección II: Distribución por sexo ── #}
+  <section>
+    <h3 class="text-base font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-4">
+      II. Distribución por Sexo
+    </h3>
+    <table class="w-full text-sm border-collapse border border-gray-200">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="border border-gray-200 p-2 text-left font-semibold">Sexo</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">N</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">%</th>
+          <th class="border border-gray-200 p-2 text-left font-semibold">Distribución</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in por_sexo %}
+        <tr class="{% cycle '' 'bg-gray-50' %}">
+          <td class="border border-gray-200 p-2">{{ s.etiqueta }}</td>
+          <td class="border border-gray-200 p-2 text-center font-semibold">{{ s.total }}</td>
+          <td class="border border-gray-200 p-2 text-center">{{ s.pct }}%</td>
+          <td class="border border-gray-200 p-2">
+            <div class="w-full bg-gray-100 rounded h-3">
+              <div class="h-3 rounded {% if s.codigo == 'M' %}bg-blue-400{% else %}bg-pink-400{% endif %}" style="width:{{ s.pct }}%"></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        <tr class="bg-gray-100 font-semibold">
+          <td class="border border-gray-200 p-2">Total</td>
+          <td class="border border-gray-200 p-2 text-center">{{ total_nuevos }}</td>
+          <td class="border border-gray-200 p-2 text-center">100%</td>
+          <td class="border border-gray-200 p-2"></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  {# ── Sección III: Distribución por grupo etario ── #}
+  <section>
+    <h3 class="text-base font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-4">
+      III. Distribución por Grupo Etario
+    </h3>
+    <table class="w-full text-sm border-collapse border border-gray-200">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="border border-gray-200 p-2 text-left font-semibold">Grupo de edad</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">N</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">%</th>
+          <th class="border border-gray-200 p-2 text-left font-semibold">Distribución</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in por_grupo_etario %}
+        <tr class="{% cycle '' 'bg-gray-50' %}">
+          <td class="border border-gray-200 p-2">{{ g.etiqueta }}</td>
+          <td class="border border-gray-200 p-2 text-center font-semibold">{{ g.total }}</td>
+          <td class="border border-gray-200 p-2 text-center">{{ g.pct }}%</td>
+          <td class="border border-gray-200 p-2">
+            <div class="w-full bg-gray-100 rounded h-3">
+              <div class="h-3 rounded bg-purple-400" style="width:{{ g.pct }}%"></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <div class="page-break"></div>
+
+  {# ── Sección IV: Distribución geográfica ── #}
+  <section class="pt-4">
+    <h3 class="text-base font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-4">
+      IV. Distribución Geográfica por Provincia
+    </h3>
+    {% if por_provincia %}
+    <table class="w-full text-sm border-collapse border border-gray-200">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="border border-gray-200 p-2 text-left font-semibold">Provincia</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">N</th>
+          <th class="border border-gray-200 p-2 text-left font-semibold">Proporción relativa</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in por_provincia %}
+        <tr class="{% cycle '' 'bg-gray-50' %}">
+          <td class="border border-gray-200 p-2">{{ p.nombre }}</td>
+          <td class="border border-gray-200 p-2 text-center font-semibold">{{ p.total }}</td>
+          <td class="border border-gray-200 p-2">
+            <div class="w-full bg-gray-100 rounded h-3">
+              <div class="h-3 rounded bg-green-500" style="width:{{ p.pct }}%"></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-sm text-gray-500 italic">Sin datos geográficos en el período.</p>
+    {% endif %}
+  </section>
+
+  {# ── Sección V: Clasificación diagnóstica ── #}
+  <section>
+    <h3 class="text-base font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-4">
+      V. Clasificación Diagnóstica (ICD-O-3)
+    </h3>
+    <table class="w-full text-sm border-collapse border border-gray-200">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="border border-gray-200 p-2 text-left font-semibold">Diagnóstico</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">ICD-O-3</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">N</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in por_diagnostico %}
+        {% if d.total > 0 %}
+        <tr class="{% cycle '' 'bg-gray-50' %}">
+          <td class="border border-gray-200 p-2">{{ d.etiqueta }}</td>
+          <td class="border border-gray-200 p-2 text-center text-gray-500 font-mono text-xs">{{ d.icdo3 }}</td>
+          <td class="border border-gray-200 p-2 text-center font-semibold">{{ d.total }}</td>
+          <td class="border border-gray-200 p-2 text-center">{{ d.pct }}%</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="text-xs text-gray-400 mt-2">
+      ICD-O-3: Clasificación Internacional de Enfermedades para Oncología, 3.ª edición (OMS/OPS).
+    </p>
+  </section>
+
+  {# ── Sección VI: Estado clínico ── #}
+  <section>
+    <h3 class="text-base font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-4">
+      VI. Estado Clínico Actual del Padrón
+      <span class="text-sm font-normal text-gray-500">(todos los pacientes registrados)</span>
+    </h3>
+    <table class="w-full text-sm border-collapse border border-gray-200">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="border border-gray-200 p-2 text-left font-semibold">Estado</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">N</th>
+          <th class="border border-gray-200 p-2 text-center font-semibold">%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in por_estado %}
+        {% if e.total > 0 %}
+        <tr class="{% cycle '' 'bg-gray-50' %}">
+          <td class="border border-gray-200 p-2">{{ e.etiqueta }}</td>
+          <td class="border border-gray-200 p-2 text-center font-semibold">{{ e.total }}</td>
+          <td class="border border-gray-200 p-2 text-center">{{ e.pct }}%</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        <tr class="bg-gray-100 font-semibold">
+          <td class="border border-gray-200 p-2">Total padrón</td>
+          <td class="border border-gray-200 p-2 text-center">{{ total_pacientes_sistema }}</td>
+          <td class="border border-gray-200 p-2 text-center">100%</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="page-break"></div>
+
+  {# ── Sección VII: Detección temprana ── #}
+  <section class="pt-4">
+    <h3 class="text-base font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-4">
+      VII. Actividades de Detección Temprana
+    </h3>
+    <table class="w-full text-sm border-collapse border border-gray-200">
+      <tbody>
+        <tr>
+          <td class="border border-gray-200 p-3 font-semibold bg-gray-50 w-64">Cribados oncológicos realizados</td>
+          <td class="border border-gray-200 p-3 text-center font-bold text-lg">{{ cribados_total }}</td>
+        </tr>
+        <tr>
+          <td class="border border-gray-200 p-3 font-semibold bg-gray-50">Cribados con resultado positivo</td>
+          <td class="border border-gray-200 p-3 text-center font-bold text-lg">{{ cribados_positivos }}</td>
+        </tr>
+        <tr>
+          <td class="border border-gray-200 p-3 font-semibold bg-gray-50">Tasa de positividad</td>
+          <td class="border border-gray-200 p-3 text-center font-bold text-lg">{{ tasa_positividad }}%</td>
+        </tr>
+        <tr>
+          <td class="border border-gray-200 p-3 font-semibold bg-gray-50">Referencias médicas realizadas</td>
+          <td class="border border-gray-200 p-3 text-center font-bold text-lg">{{ referencias_total }}</td>
+        </tr>
+        <tr>
+          <td class="border border-gray-200 p-3 font-semibold bg-gray-50">Referencias atendidas</td>
+          <td class="border border-gray-200 p-3 text-center font-bold text-lg">{{ referencias_atendidas }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  {# ── Sección VIII: Evaluación psicosocial ── #}
+  <section>
+    <h3 class="text-base font-bold uppercase tracking-wide text-gray-700 border-b border-gray-300 pb-1 mb-4">
+      VIII. Evaluación Psicosocial
+    </h3>
+    <table class="w-full text-sm border-collapse border border-gray-200">
+      <tbody>
+        <tr>
+          <td class="border border-gray-200 p-3 font-semibold bg-gray-50 w-64">Evaluaciones realizadas en el período</td>
+          <td class="border border-gray-200 p-3 text-center font-bold text-lg">{{ psico_total }}</td>
+        </tr>
+        <tr>
+          <td class="border border-gray-200 p-3 bg-gray-50 pl-6">Nivel de riesgo Bajo (0–4 pts)</td>
+          <td class="border border-gray-200 p-3 text-center">{{ psico_bajo }}</td>
+        </tr>
+        <tr>
+          <td class="border border-gray-200 p-3 bg-gray-50 pl-6">Nivel de riesgo Moderado (5–10 pts)</td>
+          <td class="border border-gray-200 p-3 text-center">{{ psico_medio }}</td>
+        </tr>
+        <tr>
+          <td class="border border-gray-200 p-3 bg-gray-50 pl-6">Nivel de riesgo Alto (11–16 pts)</td>
+          <td class="border border-gray-200 p-3 text-center font-semibold">{{ psico_alto }}</td>
+        </tr>
+        <tr>
+          <td class="border border-gray-200 p-3 bg-gray-50 pl-6">Nivel de riesgo Crítico (17–24 pts)</td>
+          <td class="border border-gray-200 p-3 text-center font-bold text-red-700">{{ psico_critico }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  {# ── Pie de firma ── #}
+  <footer class="border-t-2 border-gray-800 pt-6 mt-8">
+    <div class="grid grid-cols-3 gap-8 text-center">
+      <div>
+        <div class="border-b border-gray-400 pb-1 mb-2 h-12"></div>
+        <p class="text-xs text-gray-600 font-semibold">Elaborado por</p>
+        <p class="text-xs text-gray-500">{{ generado_por.get_full_name|default:generado_por.username }}</p>
+        <p class="text-xs text-gray-400">{{ generado_por.get_rol_display|default:"" }}</p>
+      </div>
+      <div>
+        <div class="border-b border-gray-400 pb-1 mb-2 h-12"></div>
+        <p class="text-xs text-gray-600 font-semibold">Validado por</p>
+        <p class="text-xs text-gray-400">Director/a Médico/a FACCI</p>
+      </div>
+      <div>
+        <div class="border-b border-gray-400 pb-1 mb-2 h-12"></div>
+        <p class="text-xs text-gray-600 font-semibold">Remitido a PENCI-RD</p>
+        <p class="text-xs text-gray-400">Departamento de Epidemiología — MSP</p>
+      </div>
+    </div>
+    <p class="text-center text-xs text-gray-400 mt-6">
+      FACCI Care · Sistema de información oncológica pediátrica · República Dominicana ·
+      Generado el {{ fecha_generacion|date:"d/m/Y" }}
+    </p>
+  </footer>
+
+</div>
+{% endblock %}

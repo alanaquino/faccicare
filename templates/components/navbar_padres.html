@@ -1,0 +1,191 @@
+{% load static %}
+{# ===== TOP NAVBAR — Portal de Padres ===== #}
+<header class="bg-surface-container-lowest shadow-sm sticky top-0 z-50">
+  <div class="flex justify-between items-center max-w-[1280px] mx-auto w-full px-margin-mobile md:px-margin-desktop h-16">
+
+    {# Logo #}
+    <div class="flex items-center gap-gutter">
+      <a href="{% url 'padres:estado' %}" class="flex items-center gap-2 group hover:opacity-90 transition-opacity">
+        <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm border border-outline-variant/40 overflow-hidden p-0.5 group-hover:ring-2 group-hover:ring-primary/20 transition-all">
+          <img src="{{ sistema_config.logo_aplicacion_url }}" alt="Logo App" class="w-full h-full object-contain">
+        </div>
+        <span class="font-headline-md text-headline-md font-bold text-primary">{{ sistema_config.nombre_aplicacion }}</span>
+        <span class="hidden sm:inline text-on-surface-variant font-body-sm text-body-sm ml-1">| Portal de Padres</span>
+      </a>
+
+      {# Nav links (Desktop) #}
+      <nav class="hidden md:flex gap-unit h-full items-center ml-4">
+        <a href="{% url 'padres:estado' %}"
+           class="flex items-center h-full px-4 py-5 font-label-md text-label-md border-b-2 transition-colors duration-200
+                  {% if request.resolver_match.url_name == 'estado' %}text-primary border-primary{% else %}text-on-surface-variant border-transparent hover:bg-surface-container-low{% endif %}">
+          Inicio
+        </a>
+        <a href="{% url 'padres:evolucion' %}"
+           class="flex items-center h-full px-4 py-5 font-label-md text-label-md border-b-2 transition-colors duration-200
+                  {% if request.resolver_match.url_name == 'evolucion' or request.resolver_match.url_name == 'reportar_sintomas' %}text-primary border-primary{% else %}text-on-surface-variant border-transparent hover:bg-surface-container-low{% endif %}">
+          Evolución
+        </a>
+        <a href="{% url 'padres:indicaciones' %}"
+           class="flex items-center h-full px-4 py-5 font-label-md text-label-md border-b-2 transition-colors duration-200
+                  {% if request.resolver_match.url_name == 'indicaciones' %}text-primary border-primary{% else %}text-on-surface-variant border-transparent hover:bg-surface-container-low{% endif %}">
+          Indicaciones
+        </a>
+        <a href="{% url 'padres:documentos' %}"
+           class="flex items-center h-full px-4 py-5 font-label-md text-label-md border-b-2 transition-colors duration-200
+                  {% if request.resolver_match.url_name == 'documentos' or request.resolver_match.url_name == 'subir_documento' or request.resolver_match.url_name == 'subir_documento_solicitud' %}text-primary border-primary{% else %}text-on-surface-variant border-transparent hover:bg-surface-container-low{% endif %}">
+          Documentos
+        </a>
+        <a href="{% url 'padres:recursos_educativos' %}"
+           class="flex items-center h-full px-4 py-5 font-label-md text-label-md border-b-2 transition-colors duration-200
+                  {% if request.resolver_match.url_name == 'recursos_educativos' %}text-primary border-primary{% else %}text-on-surface-variant border-transparent hover:bg-surface-container-low{% endif %}">
+          Recursos
+        </a>
+      </nav>
+    </div>
+
+    {# Acciones #}
+    <div class="flex items-center gap-stack-sm">
+      <div class="relative">
+        <button onclick="toggleNotificacionesDropdown(event)" id="btnBell" aria-label="Notificaciones"
+           class="p-2 text-primary rounded-full hover:bg-surface-container-low transition-colors duration-200 scale-95 active:scale-90 relative flex items-center justify-center">
+          <span id="bellIcon" class="material-symbols-outlined icon-fill" style="font-variation-settings: 'FILL' 0;">notifications</span>
+          <span id="bellBadge" class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full {% if unread_notifications_count == 0 %}hidden{% endif %}"></span>
+        </button>
+        
+        {# Floating Panel Dropdown #}
+        <div id="dropdownNotificaciones" class="absolute right-0 mt-2 w-80 sm:w-96 bg-white/95 backdrop-blur-md rounded-2xl border border-surface-container shadow-2xl z-[1000] overflow-hidden dropdown-transition origin-top-right">
+          {# Dropdown Header #}
+          <div class="flex items-center justify-between px-5 py-4 border-b border-surface-variant shrink-0 bg-surface-container-lowest">
+            <span class="font-label-md text-sm font-bold text-on-background">Notificaciones</span>
+            <div class="flex items-center gap-3">
+              <a href="{% url 'notificaciones' %}" class="text-xs text-primary font-medium hover:underline">Ver todas</a>
+              <button onclick="marcarTodasLeidasDropdown(event)" class="text-xs text-primary font-medium hover:underline">
+                Marcar todas leídas
+              </button>
+            </div>
+          </div>
+          {# Dropdown Items List #}
+          <div id="listaNotificacionesDropdown" class="max-h-[360px] overflow-y-auto divide-y divide-surface-container bg-surface-container-lowest scrollbar-thin">
+            <div class="py-12 text-center text-on-surface-variant flex flex-col items-center justify-center">
+              <span class="material-symbols-outlined text-outline-variant text-4xl mb-2 animate-spin">sync</span>
+              <span class="text-xs">Cargando notificaciones...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="p-2 text-primary rounded-full hover:bg-surface-container-low transition-colors duration-200 scale-95 active:scale-90 hidden sm:block">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">help</span>
+      </button>
+      {# Avatar usuario #}
+      <div class="relative ml-2">
+        <button onclick="togglePerfilDropdown(event)" id="btnPerfil" aria-label="Mi Cuenta"
+           class="w-9 h-9 rounded-full border-2 border-primary-container overflow-hidden shrink-0 cursor-pointer hover:ring-2 hover:ring-primary-container/50 transition-all bg-primary-container flex items-center justify-center relative">
+          {% if request.user.foto_perfil %}
+          <img src="{{ request.user.foto_perfil.url }}" alt="Avatar" class="w-full h-full object-cover">
+          {% else %}
+          <span class="text-sm font-bold text-on-primary-container">{{ request.user.iniciales }}</span>
+          {% endif %}
+        </button>
+
+        {# Dropdown de Perfil Estilo Google #}
+        <div id="dropdownPerfil" class="absolute right-0 mt-2 w-[340px] bg-white/95 backdrop-blur-md text-on-background rounded-[28px] border border-surface-container shadow-2xl z-[1000] overflow-hidden dropdown-transition origin-top-right">
+          {# Header: Email & Close #}
+          <div class="flex justify-between items-center px-6 py-4 border-b border-surface-container bg-surface-container-lowest">
+            <span class="text-sm font-medium text-on-surface-variant truncate max-w-[240px]">{{ request.user.email }}</span>
+            <button onclick="togglePerfilDropdown(event)" class="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container-low transition-colors flex items-center justify-center">
+              <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+          </div>
+
+          {# Cuerpo central #}
+          <div class="p-6 flex flex-col items-center text-center">
+            {# Avatar grande con anillo multicolor de Google #}
+            <div class="relative mb-4 group">
+              {# Anillo con gradiente circular de los colores de la marca/sistema #}
+              <div class="absolute inset-0 -m-1.5 rounded-full p-[3px] bg-gradient-to-tr from-primary via-secondary to-tertiary">
+              </div>
+              {# Foto real o iniciales #}
+              <div class="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white bg-primary-container flex items-center justify-center">
+                {% if request.user.foto_perfil %}
+                <img src="{{ request.user.foto_perfil.url }}" alt="Foto Grande" class="w-full h-full object-cover">
+                {% else %}
+                <span class="text-3xl font-bold text-on-primary-container">{{ request.user.iniciales }}</span>
+                {% endif %}
+              </div>
+              {# Botón de cámara (Editar) superpuesto al estilo Google #}
+              <a href="{% url 'padres:editar_perfil' %}" title="Cambiar foto de perfil"
+                 class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-surface-container-high border-2 border-white text-on-surface hover:bg-surface-container transition-colors flex items-center justify-center shadow-lg cursor-pointer">
+                <span class="material-symbols-outlined text-base">photo_camera</span>
+              </a>
+            </div>
+
+            {# Saludo #}
+            <h4 class="text-xl font-semibold text-on-surface">¡Hola, {{ request.user.first_name|default:request.user.username }}!</h4>
+            <p class="text-xs text-on-surface-variant mt-1 mb-4">{{ request.user.get_rol_display|default:"Padre / Tutor" }}</p>
+
+            {# Botón principal redondeado "Ver mi perfil completo" #}
+            <a href="{% url 'padres:perfil' %}"
+               class="w-full py-3 px-4 rounded-full border border-outline-variant hover:bg-surface-container-low text-sm font-semibold text-primary transition-colors duration-200">
+              Ver mi perfil completo
+            </a>
+          </div>
+
+          {# Acciones inferiores #}
+          <div class="px-6 py-4 border-t border-surface-container bg-surface-container-lowest flex flex-col gap-2">
+            <a href="{% url 'padres:editar_perfil' %}" class="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-container-low text-sm text-on-surface transition-colors">
+              <span class="material-symbols-outlined text-lg text-primary">manage_accounts</span>
+              <span>Editar configuración de perfil</span>
+            </a>
+            <a href="{% url 'auth_app:logout' %}" class="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-error-container/20 text-sm text-error transition-colors">
+              <span class="material-symbols-outlined text-lg text-error">logout</span>
+              <span>Cerrar sesión de mi cuenta</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        (function() {
+          let isPerfilDropdownOpen = false;
+
+          window.togglePerfilDropdown = function(event) {
+            if (event) event.stopPropagation();
+            const dropdown = document.getElementById('dropdownPerfil');
+            if (!dropdown) return;
+
+            isPerfilDropdownOpen = !isPerfilDropdownOpen;
+            if (isPerfilDropdownOpen) {
+              // Cerrar otros dropdowns si estuvieran abiertos
+              const notifDropdown = document.getElementById('dropdownNotificaciones');
+              if (notifDropdown) notifDropdown.classList.remove('dropdown-open');
+
+              dropdown.classList.add('dropdown-open');
+            } else {
+              cerrarPerfilDropdown();
+            }
+          };
+
+          function cerrarPerfilDropdown() {
+            const dropdown = document.getElementById('dropdownPerfil');
+            if (!dropdown) return;
+            dropdown.classList.remove('dropdown-open');
+            isPerfilDropdownOpen = false;
+          }
+
+          // Cerrar al hacer clic afuera
+          document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('dropdownPerfil');
+            const btnPerfil = document.getElementById('btnPerfil');
+            if (dropdown && !dropdown.contains(e.target) && btnPerfil && !btnPerfil.contains(e.target)) {
+              if (isPerfilDropdownOpen) cerrarPerfilDropdown();
+            }
+          });
+
+          window.cerrarPerfilDropdown = cerrarPerfilDropdown;
+        })();
+      </script>
+    </div>
+
+  </div>
+</header>

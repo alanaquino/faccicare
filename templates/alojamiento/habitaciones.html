@@ -1,0 +1,157 @@
+{% extends "layouts/base.html" %}
+{% block title %}Habitaciones — Casa FACCI{% endblock %}
+{% block content %}
+
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  <div class="flex items-center gap-4">
+    <a href="{% url 'alojamiento:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Habitaciones</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant mt-1">Casa FACCI — Administración de habitaciones.</p>
+    </div>
+  </div>
+</div>
+
+{# KPIs #}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="material-symbols-outlined text-secondary" style="font-size:18px;">meeting_room</span>
+      <p class="font-label-md text-label-md text-on-surface-variant">Total habitaciones</p>
+    </div>
+    <p class="font-headline-xl text-headline-xl text-on-background">{{ total_hab }}</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="material-symbols-outlined text-primary" style="font-size:18px;">toggle_on</span>
+      <p class="font-label-md text-label-md text-on-surface-variant">Habilitadas</p>
+    </div>
+    <p class="font-headline-xl text-headline-xl text-on-background">{{ activas_count }}</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="material-symbols-outlined text-primary" style="font-size:18px;">door_open</span>
+      <p class="font-label-md text-label-md text-on-surface-variant">Con cupo disponible</p>
+    </div>
+    <p class="font-headline-xl text-headline-xl {% if disponibles == 0 %}text-error{% else %}text-primary{% endif %}">{{ disponibles }}</p>
+  </div>
+</div>
+
+{# Alta de habitación #}
+{% if request.user.puede_gestionar_alojamiento %}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+  <h3 class="font-title-md text-title-md text-on-background mb-4 flex items-center gap-2">
+    <span class="material-symbols-outlined text-primary" style="font-size:20px;">add_home</span>
+    Agregar habitación
+  </h3>
+  <form method="post" class="grid grid-cols-1 md:grid-cols-[1fr_140px_1.5fr_auto] gap-3 items-end">
+    {% csrf_token %}
+    <div>
+      <label class="block font-label-md text-label-md text-on-surface mb-1.5">Nombre / Número <span class="text-error">*</span></label>
+      <input type="text" name="nombre" required maxlength="80"
+             class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-md text-body-md"
+             placeholder="Habitación 6 — Ala Sur">
+    </div>
+    <div>
+      <label class="block font-label-md text-label-md text-on-surface mb-1.5">Capacidad <span class="text-error">*</span></label>
+      <input type="number" name="capacidad" required min="1" max="20" value="2"
+             class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-md text-body-md">
+    </div>
+    <div>
+      <label class="block font-label-md text-label-md text-on-surface mb-1.5">Descripción</label>
+      <input type="text" name="descripcion" maxlength="200"
+             class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-md text-body-md"
+             placeholder="Planta baja, baño privado…">
+    </div>
+    <button type="submit"
+            class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap">
+      <span class="material-symbols-outlined" style="font-size:18px;">add</span>Agregar
+    </button>
+  </form>
+</div>
+{% endif %}
+
+{# Tabla de habitaciones #}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container-low text-on-surface-variant font-label-md text-label-md border-b border-surface-container">
+          <th class="p-4 font-semibold">Habitación</th>
+          <th class="p-4 font-semibold">Descripción</th>
+          <th class="p-4 font-semibold">Ocupación</th>
+          <th class="p-4 font-semibold">Estado</th>
+          {% if request.user.puede_gestionar_alojamiento %}
+          <th class="p-4 font-semibold text-right">Acciones</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-container font-body-sm text-body-sm">
+        {% for h in habitaciones %}
+        <tr class="hover:bg-surface-container-low transition-colors">
+          <td class="p-4">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container shrink-0">
+                <span class="material-symbols-outlined" style="font-size:20px;">bed</span>
+              </div>
+              <p class="font-label-md text-label-md text-on-surface">{{ h.nombre }}</p>
+            </div>
+          </td>
+          <td class="p-4 text-on-surface-variant">{{ h.descripcion|default:"—" }}</td>
+          <td class="p-4 text-on-surface">{{ h.ocupantes_actuales }}/{{ h.capacidad }} personas</td>
+          <td class="p-4">
+            {% if not h.activa %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+              <span class="w-2 h-2 rounded-full bg-outline"></span>Deshabilitada
+            </span>
+            {% elif h.disponible %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-container/30 text-primary font-label-sm text-label-sm">
+              <span class="w-2 h-2 rounded-full bg-primary"></span>Disponible
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-error-container/30 text-error font-label-sm text-label-sm">
+              <span class="w-2 h-2 rounded-full bg-error"></span>Sin cupo
+            </span>
+            {% endif %}
+          </td>
+          {% if request.user.puede_gestionar_alojamiento %}
+          <td class="p-4">
+            <div class="flex items-center justify-end gap-1">
+              <form method="post" action="{% url 'alojamiento:habitacion_toggle' h.pk %}">
+                {% csrf_token %}
+                <button type="submit"
+                        class="inline-flex items-center justify-center p-2 rounded-lg text-on-surface-variant hover:bg-surface-container"
+                        title="{% if h.activa %}Deshabilitar{% else %}Habilitar{% endif %}">
+                  <span class="material-symbols-outlined">{% if h.activa %}toggle_on{% else %}toggle_off{% endif %}</span>
+                </button>
+              </form>
+              <form method="post" action="{% url 'alojamiento:habitacion_eliminar' h.pk %}"
+                    onsubmit="return confirm('¿Eliminar la habitación &quot;{{ h.nombre|escapejs }}&quot;? Esta acción no se puede deshacer.');">
+                {% csrf_token %}
+                <button type="submit"
+                        class="inline-flex items-center justify-center p-2 rounded-lg text-error hover:bg-error-container/20"
+                        title="Eliminar">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="py-16 text-center text-on-surface-variant">
+            <span class="material-symbols-outlined text-5xl block mb-3 text-outline">meeting_room</span>
+            <p class="font-body-md text-body-md">No hay habitaciones registradas.</p>
+            <p class="font-body-sm text-body-sm mt-1">Use el formulario de arriba para agregar la primera.</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

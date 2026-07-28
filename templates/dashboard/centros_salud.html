@@ -1,0 +1,337 @@
+{% extends "layouts/base.html" %}
+{% block title %}Centros de Salud{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-stack-md">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-surface">Red de Centros de Salud</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-2">
+      {{ total }} centros integrados para derivacion oncologica.
+      {% if sin_coordenadas %}
+        <span class="ml-2 text-error font-label-md text-label-md">{{ sin_coordenadas }} sin coordenadas</span>
+      {% endif %}
+    </p>
+  </div>
+  <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+    <form method="get" class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+      <div class="relative flex-1 md:w-64">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+        <input class="w-full pl-10 pr-4 py-2 bg-surface border border-outline-variant rounded-lg font-body-sm text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-all outline-none"
+               data-live-filter=".centro-card" placeholder="Buscar por centro, ciudad..." type="search" name="q" value="{{ filtro_search }}">
+      </div>
+      <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm hover:bg-surface-tint transition-colors">
+        Buscar
+      </button>
+      {% if filtro_search %}
+      <a href="{% url 'centros_salud' %}" class="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors text-center">
+        Limpiar
+      </a>
+      {% endif %}
+    </form>
+    {% if request.user.rol == 'ADMIN' %}
+    <button type="button" onclick="abrirModal()"
+            class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors flex items-center gap-2 whitespace-nowrap">
+      <span class="material-symbols-outlined">add</span>
+      Nuevo Centro
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+  <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-surface-variant shadow-sm relative isolate" style="height:440px;">
+    <div id="mapa-centros" style="width:100%;height:100%;border-radius:inherit;"></div>
+    <div class="absolute bottom-4 left-4 z-[400] bg-white/90 backdrop-blur-sm rounded-lg border border-surface-variant px-3 py-2 flex flex-wrap gap-4 shadow-sm pointer-events-none">
+      <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#006a62]"></div><span class="font-label-sm text-label-sm text-on-surface text-xs">Hospital</span></div>
+      <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#6d4ea2]"></div><span class="font-label-sm text-label-sm text-on-surface text-xs">Clinica</span></div>
+      <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#2563eb]"></div><span class="font-label-sm text-label-sm text-on-surface text-xs">Unidad</span></div>
+      <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#6d7a77]"></div><span class="font-label-sm text-label-sm text-on-surface text-xs">Otro</span></div>
+    </div>
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-xl border border-surface-variant p-stack-md shadow-sm">
+    <h3 class="font-headline-md text-headline-md text-on-surface mb-4">Estado de la Red</h3>
+    <div class="space-y-4">
+      <div>
+        <div class="flex justify-between items-end mb-1">
+          <span class="font-label-md text-label-md text-on-surface-variant">Centros activos</span>
+          <span class="font-body-sm text-body-sm text-on-surface font-semibold">{{ total }} registrados</span>
+        </div>
+        <div class="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
+          <div class="h-full bg-primary rounded-full" style="width:{% if total %}100{% else %}0{% endif %}%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between items-end mb-1">
+          <span class="font-label-md text-label-md text-on-surface-variant">Sin coordenadas</span>
+          <span class="font-body-sm text-body-sm text-on-surface font-semibold">{{ sin_coordenadas }}</span>
+        </div>
+        <div class="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
+          <div class="h-full bg-error rounded-full" style="width:{% if total %}{% widthratio sin_coordenadas total 100 %}{% else %}0{% endif %}%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mt-8">
+  <div class="flex justify-between items-center mb-6">
+    <h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Directorio de Centros</h3>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for centro in centros %}
+    <div class="centro-card bg-surface-container-lowest rounded-xl p-6 border border-surface-variant/40 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow {% if not centro.activo %}opacity-75{% endif %}">
+      <div>
+        <div class="flex justify-between items-start gap-3">
+          {% if centro.tipo == 'hospital' %}
+          <div class="w-12 h-12 rounded-xl bg-[#006a62]/10 flex items-center justify-center text-[#006a62]"><span class="material-symbols-outlined text-2xl">local_hospital</span></div>
+          {% elif centro.tipo == 'clinica' %}
+          <div class="w-12 h-12 rounded-xl bg-[#6d4ea2]/10 flex items-center justify-center text-[#6d4ea2]"><span class="material-symbols-outlined text-2xl">medical_services</span></div>
+          {% elif centro.tipo == 'unidad_atencion' %}
+          <div class="w-12 h-12 rounded-xl bg-[#2563eb]/10 flex items-center justify-center text-[#2563eb]"><span class="material-symbols-outlined text-2xl">home_health</span></div>
+          {% else %}
+          <div class="w-12 h-12 rounded-xl bg-[#6d7a77]/10 flex items-center justify-center text-[#6d7a77]"><span class="material-symbols-outlined text-2xl">location_on</span></div>
+          {% endif %}
+
+          <div class="flex items-center gap-2">
+            <span class="rounded px-2.5 py-0.5 text-xs font-semibold border border-outline-variant text-on-surface-variant">{{ centro.get_tipo_display }}</span>
+            {% if request.user.rol == 'ADMIN' %}
+            <a href="{% url 'editar_centro' centro.id %}"
+               class="w-8 h-8 rounded-full hover:bg-surface-container-low text-on-surface-variant hover:text-primary flex items-center justify-center transition-colors"
+               title="Editar">
+              <span class="material-symbols-outlined text-base">edit</span>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <h4 class="font-headline-md text-headline-md text-on-surface font-bold mt-4 line-clamp-2">{{ centro.nombre }}</h4>
+        <div class="flex items-center gap-1 text-on-surface-variant text-sm mt-1.5">
+          <span class="material-symbols-outlined text-base">location_on</span>
+          <span class="truncate">{{ centro.municipio|default:"Sin municipio" }}, {{ centro.provincia|default:"Sin provincia" }}</span>
+        </div>
+        {% if centro.direccion %}
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-2 line-clamp-2">{{ centro.direccion }}</p>
+        {% endif %}
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <a href="{% url 'ver_centro' centro.id %}" class="flex-1 border border-primary text-primary hover:bg-primary/5 rounded-lg py-2.5 font-semibold text-sm flex items-center justify-center gap-2 transition-colors">
+          <span class="material-symbols-outlined text-base">visibility</span>
+          Ver Centro
+        </a>
+        {% if centro.telefono %}
+        <a href="tel:{{ centro.telefono }}" class="border border-primary text-primary hover:bg-primary/5 p-2.5 rounded-lg flex items-center justify-center transition-colors" title="Llamar">
+          <span class="material-symbols-outlined text-xl">call</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full bg-surface-container-lowest border border-surface-container rounded-xl py-16 text-center text-on-surface-variant flex flex-col items-center">
+      <span class="material-symbols-outlined text-5xl mb-3 text-outline">local_hospital</span>
+      <p class="font-body-md text-body-md">{% if filtro_search %}No hay centros que coincidan con la busqueda.{% else %}No hay centros de salud registrados.{% endif %}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .modal-panel { max-height: 90vh; }
+  .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,.15); }
+  .leaflet-popup-content { margin: 12px 16px; font-family: 'Inter', sans-serif; }
+  .popup-nombre { font-size: 14px; font-weight: 600; color: #0f1d25; margin-bottom: 2px; }
+  .popup-detalle { font-size: 12px; color: #6d7a77; line-height: 1.6; }
+  .popup-badge { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #e0f5f3; color: #006a62; }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+function abrirModal(id, nombre, tipo, provincia, municipio, direccion, telefono, correo, activo) {
+  document.getElementById('modal-titulo').textContent = id ? 'Editar Centro de Salud' : 'Nuevo Centro de Salud';
+  document.getElementById('modal-centro-id').value = id || '';
+  document.getElementById('f-nombre').value = nombre || '';
+  document.getElementById('f-tipo').value = tipo || 'hospital';
+  document.getElementById('f-provincia').value = provincia || '';
+  document.getElementById('f-municipio').value = municipio || '';
+  document.getElementById('f-direccion').value = direccion || '';
+  document.getElementById('f-telefono').value = telefono || '';
+  document.getElementById('f-correo').value = correo || '';
+  document.getElementById('f-activo').checked = activo !== false;
+  document.getElementById('modal-centro').classList.remove('hidden');
+}
+
+function cerrarModal() {
+  document.getElementById('modal-centro').classList.add('hidden');
+}
+
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return '';
+}
+
+const COLORES_CENTRO = {
+  hospital: '#006a62',
+  clinica: '#6d4ea2',
+  unidad_atencion: '#2563eb',
+  centro_diagnostico: '#0ea5e9',
+  otro: '#6d7a77',
+};
+
+function crearIconoCentro(tipo) {
+  const color = COLORES_CENTRO[tipo] || COLORES_CENTRO.otro;
+  return L.divIcon({
+    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="28" height="36">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24S24 21 24 12C24 5.37 18.63 0 12 0z" fill="${color}" stroke="white" stroke-width="1.5"/>
+      <circle cx="12" cy="12" r="5" fill="white"/>
+      <path d="M12 9v3H9v2h3v3h2v-3h3v-2h-3V9z" fill="${color}"/>
+    </svg>`,
+    iconSize: [28, 36],
+    iconAnchor: [14, 36],
+    popupAnchor: [0, -38],
+    className: '',
+  });
+}
+
+function inicializarMapaCentros() {
+  const el = document.getElementById('mapa-centros');
+  if (!el) return null;
+  if (window.facciCentrosMap) return window.facciCentrosMap;
+
+  window.facciCentrosMap = L.map(el, { zoomControl: true }).setView([18.735, -70.163], 8);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(window.facciCentrosMap);
+  window.facciCentrosLayer = L.layerGroup().addTo(window.facciCentrosMap);
+  return window.facciCentrosMap;
+}
+
+async function cargarCentrosMapa() {
+  const mapa = inicializarMapaCentros();
+  if (!mapa) return;
+  window.facciCentrosLayer.clearLayers();
+
+  const response = await fetch("{% url 'api-centros-salud-mapa' %}", { headers: { 'Accept': 'application/json' } });
+  if (!response.ok) return;
+
+  const centros = await response.json();
+  const markers = [];
+  centros.forEach((centro) => {
+    if (!centro.latitud || !centro.longitud) return;
+    const popup = `
+      <div class="popup-nombre">${centro.nombre}</div>
+      <div class="popup-detalle">${centro.tipo_display || centro.tipo}</div>
+      <div class="popup-detalle">${[centro.municipio, centro.provincia].filter(Boolean).join(', ')}</div>
+      ${centro.telefono ? `<div class="popup-detalle">Tel. ${centro.telefono}</div>` : ''}
+      <span class="popup-badge">Activo</span>`;
+    const marker = L.marker([centro.latitud, centro.longitud], { icon: crearIconoCentro(centro.tipo) })
+      .bindPopup(popup)
+      .addTo(window.facciCentrosLayer);
+    markers.push(marker);
+  });
+
+  if (markers.length > 1) {
+    mapa.fitBounds(L.featureGroup(markers).getBounds().pad(0.25));
+  } else if (markers.length === 1) {
+    mapa.setView(markers[0].getLatLng(), 11);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('modal-centro');
+  if (modal) {
+    modal.addEventListener('click', function (e) {
+      if (e.target === this) cerrarModal();
+    });
+  }
+  cargarCentrosMapa();
+});
+</script>
+{% endblock %}
+
+{% block modals %}
+<div id="modal-centro" class="hidden fixed inset-0 z-[1050] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+  <div class="bg-surface-container-lowest rounded-xl shadow-xl w-full max-w-lg flex flex-col modal-panel">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant shrink-0">
+      <h3 id="modal-titulo" class="font-headline-md text-headline-md text-on-surface">Nuevo Centro de Salud</h3>
+      <button type="button" onclick="cerrarModal()" class="p-2 rounded-full hover:bg-surface-container-low text-on-surface-variant transition-colors">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <form method="post" action="{% url 'centros_salud' %}" class="overflow-y-auto flex-1 p-6 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="centro_id" id="modal-centro-id">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="f-nombre">Nombre del centro *</label>
+          <input id="f-nombre" name="nombre" required type="text"
+                 class="w-full rounded-lg border border-outline-variant px-4 py-2.5 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                 placeholder="Ej. Hospital Pediatrico Central">
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="f-tipo">Tipo</label>
+          <select id="f-tipo" name="tipo"
+                  class="w-full appearance-none rounded-lg border border-outline-variant px-4 py-2.5 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+            {% for val, label in tipos %}
+            <option value="{{ val }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="f-telefono">Telefono</label>
+          <input id="f-telefono" name="telefono" type="text"
+                 class="w-full rounded-lg border border-outline-variant px-4 py-2.5 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                 placeholder="809-000-0000">
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="f-provincia">Provincia</label>
+          <input id="f-provincia" name="provincia" type="text"
+                 class="w-full rounded-lg border border-outline-variant px-4 py-2.5 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                 placeholder="Santo Domingo">
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="f-municipio">Municipio</label>
+          <input id="f-municipio" name="municipio" type="text"
+                 class="w-full rounded-lg border border-outline-variant px-4 py-2.5 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                 placeholder="Distrito Nacional">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="f-direccion">Direccion</label>
+          <input id="f-direccion" name="direccion" type="text"
+                 class="w-full rounded-lg border border-outline-variant px-4 py-2.5 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                 placeholder="Calle / Av. ...">
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="f-correo">Correo electronico</label>
+          <input id="f-correo" name="correo" type="email"
+                 class="w-full rounded-lg border border-outline-variant px-4 py-2.5 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                 placeholder="contacto@centro.org">
+        </div>
+        <div class="sm:col-span-2 flex items-center gap-3">
+          <input id="f-activo" name="activo" type="checkbox" checked
+                 class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary">
+          <label class="font-label-md text-label-md text-on-surface" for="f-activo">Centro activo</label>
+        </div>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="button" onclick="cerrarModal()"
+                class="flex-1 py-2.5 rounded-lg border border-outline-variant text-on-surface font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="flex-1 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors">
+          Guardar Centro
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

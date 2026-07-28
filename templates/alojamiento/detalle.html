@@ -1,0 +1,256 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ estancia.codigo }} — Casa FACCI{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-4">
+  <a href="{% url 'alojamiento:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div class="flex-1">
+    <div class="flex items-center gap-3">
+      <h2 class="font-headline-lg text-headline-lg text-on-background">{{ estancia.codigo }}</h2>
+      {% if estancia.estado == 'ACTIVA' %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-container/30 text-primary font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-primary"></span>Activa
+      </span>
+      {% elif estancia.estado == 'COMPLETADA' %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-outline"></span>Completada
+      </span>
+      {% else %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container/30 text-error font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-error"></span>Cancelada
+      </span>
+      {% endif %}
+    </div>
+    <p class="font-body-md text-body-md text-on-surface-variant">
+      {{ estancia.habitacion.nombre }} · Ingreso: {{ estancia.fecha_ingreso|date:"d/m/Y" }}
+      {% if estancia.noches is not None %} · {{ estancia.noches }} noche(s){% endif %}
+    </p>
+  </div>
+  <div class="relative" id="acciones-dropdown-wrap">
+    <button type="button" id="btn-acciones"
+            onclick="toggleDropdown('acciones-menu')"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors shadow-sm whitespace-nowrap">
+      <span class="material-symbols-outlined" style="font-size:18px;">settings</span>
+      <span>Acciones</span>
+      <span class="material-symbols-outlined text-sm">expand_more</span>
+    </button>
+    <div id="acciones-menu"
+         class="hidden absolute right-0 top-full mt-1.5 w-56 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg z-20 py-1 overflow-hidden">
+      
+      <a href="{% url 'pacientes:expediente' estancia.paciente.pk %}"
+         class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined text-[18px]">person</span>
+        <span>Expediente</span>
+      </a>
+      
+      <div class="border-t border-outline-variant/30 my-1"></div>
+      
+      <a href="{% url 'alojamiento:formulario_estancia' estancia.pk %}"
+         class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined text-[18px]">description</span>
+        <span>Ver formulario</span>
+      </a>
+      <a href="{% url 'alojamiento:formulario_estancia_pdf' estancia.pk %}"
+         class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined text-[18px]">download</span>
+        <span>Descargar PDF</span>
+      </a>
+      <a href="{% url 'alojamiento:formulario_estancia' estancia.pk %}?print=1"
+         class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined text-[18px]">print</span>
+        <span>Imprimir formulario</span>
+      </a>
+      
+      <div class="border-t border-outline-variant/30 my-1"></div>
+      
+      {% if request.user.puede_gestionar_alojamiento %}
+      {% if estancia.estado == 'ACTIVA' %}
+      <a href="{% url 'alojamiento:editar' estancia.pk %}"
+         class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined text-[18px]">edit</span>
+        <span>Editar estadía</span>
+      </a>
+      {% endif %}
+      <a href="{% url 'alojamiento:entrega_habitacion' estancia.pk %}"
+         class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined text-[18px]">inventory_2</span>
+        <span>Entrega habitación</span>
+      </a>
+      {% endif %}
+      <a href="{% url 'alojamiento:entrega_habitacion_pdf' estancia.pk %}"
+         class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+        <span>Entrega PDF</span>
+      </a>
+      <a href="{% url 'alojamiento:entrega_habitacion_imprimir' estancia.pk %}"
+         class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined text-[18px]">print</span>
+        <span>Imprimir entrega</span>
+      </a>
+      
+      {% if request.user.puede_gestionar_alojamiento and estancia.estado == 'ACTIVA' %}
+      <div class="border-t border-outline-variant/30 my-1"></div>
+      <a href="{% url 'alojamiento:checkout' estancia.pk %}"
+         class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-error hover:bg-error-container/10 transition-colors">
+        <span class="material-symbols-outlined text-[18px] text-error">logout</span>
+        <span>Registrar egreso</span>
+      </a>
+      {% endif %}
+      
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+  {# ── Paciente ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-center gap-3 p-4 border-b border-surface-container bg-surface-container-low">
+      <span class="material-symbols-outlined text-primary" style="font-size:20px;">child_care</span>
+      <h3 class="font-title-md text-title-md text-on-background">Paciente</h3>
+    </div>
+    <dl class="divide-y divide-surface-container">
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Nombre</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.paciente.nombre_completo }}</dd>
+      </div>
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Código</dt>
+        <dd class="font-label-md text-label-md text-primary text-right font-mono">{{ estancia.paciente.codigo_paciente }}</dd>
+      </div>
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Edad</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.paciente.edad }}</dd>
+      </div>
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Provincia</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.paciente.provincia }}</dd>
+      </div>
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Estado clínico</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.paciente.get_estado_actual_display }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  {# ── Acompañante y estancia ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-center gap-3 p-4 border-b border-surface-container bg-surface-container-low">
+      <span class="material-symbols-outlined text-secondary" style="font-size:20px;">person</span>
+      <h3 class="font-title-md text-title-md text-on-background">Acompañante y alojamiento</h3>
+    </div>
+    <dl class="divide-y divide-surface-container">
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Acompañante</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.acompanante_nombre }}</dd>
+      </div>
+      {% if estancia.acompanante_parentesco %}
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Parentesco</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.acompanante_parentesco }}</dd>
+      </div>
+      {% endif %}
+      {% if estancia.acompanante_telefono %}
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Teléfono</dt>
+        <dd class="font-label-md text-label-md text-primary text-right">
+          <a href="tel:{{ estancia.acompanante_telefono }}">{{ estancia.acompanante_telefono }}</a>
+        </dd>
+      </div>
+      {% endif %}
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Habitación</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.habitacion.nombre }}</dd>
+      </div>
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Motivo</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.get_motivo_display }}</dd>
+      </div>
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Fecha de ingreso</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.fecha_ingreso|date:"d/m/Y" }}</dd>
+      </div>
+      {% if estancia.fecha_egreso_prevista %}
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Egreso previsto</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.fecha_egreso_prevista|date:"d/m/Y" }}</dd>
+      </div>
+      {% endif %}
+      {% if estancia.fecha_egreso_real %}
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Egreso real</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ estancia.fecha_egreso_real|date:"d/m/Y" }}</dd>
+      </div>
+      {% endif %}
+      {% if estancia.noches is not None %}
+      <div class="flex justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Total noches</dt>
+        <dd class="font-headline-sm text-headline-sm text-on-surface text-right">{{ estancia.noches }}</dd>
+      </div>
+      {% endif %}
+    </dl>
+  </div>
+
+</div>
+
+{% if estancia.observaciones %}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+  <h3 class="font-title-md text-title-md text-on-background mb-2 flex items-center gap-2">
+    <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px;">notes</span>Observaciones
+  </h3>
+  <p class="font-body-md text-body-md text-on-surface whitespace-pre-wrap">{{ estancia.observaciones }}</p>
+</div>
+{% endif %}
+
+{% if otras_estancias %}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+  <div class="p-5 border-b border-surface-container">
+    <h3 class="font-title-md text-title-md text-on-background">Estancias anteriores del mismo paciente</h3>
+  </div>
+  <table class="w-full text-left border-collapse">
+    <thead>
+      <tr class="bg-surface-container-low text-on-surface-variant font-label-md text-label-md border-b border-surface-container">
+        <th class="p-4">Código</th><th class="p-4">Habitación</th><th class="p-4">Ingreso</th><th class="p-4">Noches</th><th class="p-4">Estado</th><th class="p-4 text-right">Ver</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-surface-container font-body-sm text-body-sm">
+      {% for e in otras_estancias %}
+      <tr class="hover:bg-surface-container-low">
+        <td class="p-4 text-on-surface-variant font-mono">{{ e.codigo }}</td>
+        <td class="p-4 text-on-surface">{{ e.habitacion.nombre }}</td>
+        <td class="p-4 text-on-surface-variant">{{ e.fecha_ingreso|date:"d/m/Y" }}</td>
+        <td class="p-4 text-on-surface">{% with n=e.noches %}{% if n is not None %}{{ n }}{% else %}—{% endif %}{% endwith %}</td>
+        <td class="p-4 text-on-surface-variant">{{ e.get_estado_display }}</td>
+        <td class="p-4 text-right"><a href="{% url 'alojamiento:detalle' e.pk %}" class="text-primary hover:underline font-label-md text-label-md">Ver</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function toggleDropdown(id) {
+    const menu = document.getElementById(id);
+    if (menu) {
+      menu.classList.toggle('hidden');
+    }
+  }
+
+  // Cerrar dropdown al hacer clic fuera
+  document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('acciones-dropdown-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      const menu = document.getElementById('acciones-menu');
+      if (menu) {
+        menu.classList.add('hidden');
+      }
+    }
+  });
+</script>
+{% endblock %}

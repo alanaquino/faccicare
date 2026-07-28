@@ -1,0 +1,211 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Vista previa - Matrices Operativas{% endblock %}
+{% block content %}
+
+<div class="flex flex-col gap-gutter">
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <a href="{% url 'matrices' %}?{{ report.query_string }}"
+         class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant"
+         aria-label="Volver a matrices">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </a>
+      <div>
+        <h2 class="font-headline-lg text-headline-lg text-on-background">Matrices Operativas</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant">Vista previa del reporte institucional.</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'matrices_descargar_pdf' %}?{{ report.query_string }}"
+         class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+        <span class="material-symbols-outlined text-lg">picture_as_pdf</span>
+        Descargar PDF
+      </a>
+      <a href="{% url 'matrices' %}?{{ report.query_string }}"
+         class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+        <span class="material-symbols-outlined text-lg">arrow_back</span>
+        Volver
+      </a>
+    </div>
+  </div>
+
+  <section class="print-doc print-page print-letter print-compact bg-surface-container-lowest border border-outline-variant/50 rounded-xl shadow-sm overflow-hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-[180px_1fr_260px] gap-4 p-6 bg-surface-container-low/40 border-b border-outline-variant/50">
+      <div class="flex items-center justify-center lg:justify-start">
+        <img src="{{ sistema_config.logo_reportes_url }}" alt="Logo FACCI" class="print-logo max-h-20 object-contain">
+      </div>
+      <div class="text-center lg:text-left">
+        <p class="font-label-md text-label-md text-primary uppercase tracking-wide">FACCI Care</p>
+        <h1 class="font-headline-lg text-headline-lg text-on-background mt-1">Reporte de Matrices Operativas</h1>
+        <p class="font-body-md text-body-md text-on-surface-variant mt-2">Fundacion Amigos Contra el Cancer Infantil</p>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-sm">
+        <div class="rounded-lg bg-surface px-3 py-2 border border-outline-variant/50">
+          <p class="font-label-sm text-label-sm text-on-surface-variant">Codigo</p>
+          <p class="font-label-md text-label-md text-on-surface">{{ report.codigo_documento }}</p>
+        </div>
+        <div class="rounded-lg bg-surface px-3 py-2 border border-outline-variant/50">
+          <p class="font-label-sm text-label-sm text-on-surface-variant">Version</p>
+          <p class="font-label-md text-label-md text-on-surface">{{ report.version }}</p>
+        </div>
+        <div class="rounded-lg bg-surface px-3 py-2 border border-outline-variant/50 col-span-2">
+          <p class="font-label-sm text-label-sm text-on-surface-variant">Fecha</p>
+          <p class="font-label-md text-label-md text-on-surface">{{ report.fecha_generacion_label }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-outline-variant/50">
+      <div>
+        <p class="font-label-sm text-label-sm text-on-surface-variant">Periodo</p>
+        <p class="font-label-lg text-label-lg text-on-surface">{{ report.periodo_label }}</p>
+      </div>
+      <div>
+        <p class="font-label-sm text-label-sm text-on-surface-variant">Generado por</p>
+        <p class="font-label-lg text-label-lg text-on-surface">{{ report.generado_por }}</p>
+      </div>
+      <div>
+        <p class="font-label-sm text-label-sm text-on-surface-variant">Rango</p>
+        <p class="font-label-lg text-label-lg text-on-surface">{{ report.fecha_inicio|date:"d/m/Y" }} - {{ report.fecha_fin|date:"d/m/Y" }}</p>
+      </div>
+    </div>
+
+    {% if report.sin_datos %}
+    <div class="mx-6 mt-6 p-4 rounded-lg border border-outline-variant/50 bg-surface-container-low flex items-start gap-3">
+      <span class="material-symbols-outlined text-primary">info</span>
+      <div>
+        <p class="font-label-md text-label-md text-on-surface">Sin datos suficientes para el periodo seleccionado</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">El reporte se puede generar, pero algunos indicadores apareceran como sin datos.</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="p-6">
+      <h3 class="font-headline-md text-headline-md text-on-surface mb-4">Resumen ejecutivo</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+        <div class="rounded-lg border border-surface-container p-4 bg-surface">
+          <p class="font-label-sm text-label-sm text-on-surface-variant">Cribados</p>
+          <p class="font-headline-md text-headline-md text-primary mt-1">{{ report.total_cribados_periodo }}</p>
+        </div>
+        <div class="rounded-lg border border-surface-container p-4 bg-surface">
+          <p class="font-label-sm text-label-sm text-on-surface-variant">T. medio</p>
+          <p class="font-headline-md text-headline-md text-primary mt-1">{{ report.tiempo_medio_label }}</p>
+        </div>
+        <div class="rounded-lg border border-surface-container p-4 bg-surface">
+          <p class="font-label-sm text-label-sm text-on-surface-variant">Exito ingreso</p>
+          <p class="font-headline-md text-headline-md text-secondary mt-1">{{ report.tasa_exito_label }}</p>
+        </div>
+        <div class="rounded-lg border border-surface-container p-4 bg-surface">
+          <p class="font-label-sm text-label-sm text-on-surface-variant">Alertas abiertas</p>
+          <p class="font-headline-md text-headline-md text-error mt-1">{{ report.alertas_abiertas_total }}</p>
+        </div>
+        <div class="rounded-lg border border-surface-container p-4 bg-surface">
+          <p class="font-label-sm text-label-sm text-on-surface-variant">Regiones</p>
+          <p class="font-headline-md text-headline-md text-tertiary mt-1">{{ report.regiones_evaluadas }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-surface-container-lowest border border-outline-variant/50 rounded-xl shadow-sm overflow-hidden">
+    <div class="p-5 border-b border-outline-variant/50 bg-surface-container-low/40">
+      <h3 class="font-headline-md text-headline-md text-on-surface">Indicadores principales</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-surface text-on-surface-variant font-label-md text-label-md">
+          <tr>
+            <th class="p-4">Indicador</th>
+            <th class="p-4">Valor</th>
+            <th class="p-4">Meta institucional</th>
+            <th class="p-4">Estado</th>
+            <th class="p-4">Observacion</th>
+          </tr>
+        </thead>
+        <tbody class="font-body-md text-body-md">
+          {% for item in report.indicadores %}
+          <tr class="border-t border-outline-variant/30">
+            <td class="p-4 font-medium text-on-surface">{{ item.nombre }}</td>
+            <td class="p-4 text-on-surface">{{ item.valor }}</td>
+            <td class="p-4 text-on-surface-variant">{{ item.meta }}</td>
+            <td class="p-4">
+              <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-surface-container text-on-surface border border-outline-variant/40">{{ item.estado }}</span>
+            </td>
+            <td class="p-4 text-on-surface-variant">{{ item.observacion }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-gutter">
+    <section class="bg-surface-container-lowest border border-outline-variant/50 rounded-xl shadow-sm overflow-hidden">
+      <div class="p-5 border-b border-outline-variant/50 bg-surface-container-low/40">
+        <h3 class="font-headline-md text-headline-md text-on-surface">Carga de trabajo por region</h3>
+      </div>
+      <div class="p-5 space-y-4">
+        {% if report.provincias_data %}
+          {% for region in report.provincias_data %}
+          <div>
+            <div class="flex justify-between font-label-md text-label-md mb-1.5">
+              <span class="text-on-surface">{{ region.nombre }}</span>
+              <span class="text-on-surface-variant">{{ region.total }} pac. · {{ region.porcentaje }}%</span>
+            </div>
+            <div class="h-3 rounded-full bg-surface-container-high overflow-hidden">
+              <div class="h-full rounded-full bg-primary" style="width: {{ region.barra }}%;"></div>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">{{ region.estado }}</p>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="p-5 rounded-lg border border-outline-variant/50 bg-surface-container-low text-center">
+            <span class="material-symbols-outlined text-primary">map</span>
+            <p class="font-label-md text-label-md text-on-surface mt-2">Sin datos regionales</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">No hay pacientes registrados en el periodo.</p>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="bg-surface-container-lowest border border-outline-variant/50 rounded-xl shadow-sm overflow-hidden">
+      <div class="p-5 border-b border-outline-variant/50 bg-surface-container-low/40">
+        <h3 class="font-headline-md text-headline-md text-on-surface">Alertas operativas</h3>
+      </div>
+      <div class="p-5 space-y-3">
+        {% if report.alertas_operativas %}
+          {% for alerta in report.alertas_operativas %}
+          <div class="p-4 rounded-lg border border-outline-variant/50 bg-surface">
+            <div class="flex justify-between gap-3">
+              <h4 class="font-label-md text-label-md text-on-surface">{{ alerta.titulo }}</h4>
+              <span class="shrink-0 font-label-sm text-label-sm text-error">{{ alerta.nivel }}</span>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">{{ alerta.descripcion }}</p>
+            <p class="font-body-sm text-body-sm text-on-surface mt-2"><strong>Accion:</strong> {{ alerta.accion }}</p>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="p-5 rounded-lg border border-outline-variant/50 bg-surface-container-low text-center">
+            <span class="material-symbols-outlined text-primary">task_alt</span>
+            <p class="font-label-md text-label-md text-on-surface mt-2">Sin alertas abiertas</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">No hay alertas operativas para el periodo.</p>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <section class="bg-surface-container-lowest border border-outline-variant/50 rounded-xl shadow-sm p-5">
+    <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Observaciones</h3>
+    <p class="font-body-md text-body-md text-on-surface-variant">
+      Este reporte consolida indicadores operativos de cribado, referencias, carga regional y alertas abiertas. Los valores dependen de los registros disponibles en FACCI Care para el periodo seleccionado.
+    </p>
+    <div class="mt-5 pt-4 border-t border-outline-variant/50 flex flex-col md:flex-row md:items-center justify-between gap-2 text-on-surface-variant font-body-sm text-body-sm">
+      <span>Fundacion Amigos Contra el Cancer Infantil - FACCI Care</span>
+      <span>Fecha y hora de impresion: {{ report.fecha_generacion_label }}</span>
+    </div>
+  </section>
+</div>
+
+{% endblock %}

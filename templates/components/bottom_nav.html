@@ -1,0 +1,37 @@
+{# ===== BOTTOM NAVBAR — Mobile Only ===== #}
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface-container-lowest shadow-[0_-4px_10px_rgba(0,0,0,0.05)] rounded-t-xl border-t border-surface-container-high/50">
+
+  {% with app=request.resolver_match.app_name %}
+
+  <a href="{% url 'home' %}"
+     class="flex flex-col items-center justify-center font-label-sm text-label-sm px-4 py-1 rounded-full transition-colors active:scale-95
+            {% if app == 'dashboard' %}bg-secondary-container text-on-secondary-container scale-110{% else %}text-on-surface-variant hover:bg-surface-container-high{% endif %}">
+    <span class="material-symbols-outlined mb-1">dashboard</span>
+    <span>Inicio</span>
+  </a>
+
+  <a href="{% url 'pacientes:lista' %}"
+     class="flex flex-col items-center justify-center font-label-sm text-label-sm px-4 py-1 rounded-full transition-colors active:scale-95
+            {% if app == 'pacientes' %}bg-secondary-container text-on-secondary-container scale-110{% else %}text-on-surface-variant hover:bg-surface-container-high{% endif %}">
+    <span class="material-symbols-outlined mb-1">child_care</span>
+    <span>Pacientes</span>
+  </a>
+
+  <a href="{% url 'alertas' %}"
+     class="flex flex-col items-center justify-center font-label-sm text-label-sm px-4 py-1 rounded-full transition-colors active:scale-95 relative
+            {% if request.resolver_match.url_name == 'alertas' %}bg-secondary-container text-on-secondary-container scale-110{% else %}text-on-surface-variant hover:bg-surface-container-high{% endif %}">
+    <span class="material-symbols-outlined mb-1">notifications_active</span>
+    <span>Alertas</span>
+    <span class="absolute top-1 right-3 w-2 h-2 bg-error rounded-full"></span>
+  </a>
+
+  <a href="{% url 'usuarios:perfil' %}"
+     class="flex flex-col items-center justify-center font-label-sm text-label-sm px-4 py-1 rounded-full transition-colors active:scale-95
+            {% if request.resolver_match.url_name == 'perfil' %}bg-secondary-container text-on-secondary-container scale-110{% else %}text-on-surface-variant hover:bg-surface-container-high{% endif %}">
+    <span class="material-symbols-outlined mb-1">person</span>
+    <span>Perfil</span>
+  </a>
+
+  {% endwith %}
+
+</nav>

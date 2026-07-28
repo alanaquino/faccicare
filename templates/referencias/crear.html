@@ -1,0 +1,197 @@
+{% extends "layouts/base.html" %}
+{% block title %}Nueva Referencia Medica{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-4">
+  <a href="{% url 'referencias:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Nueva Referencia Medica</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Complete los datos para derivar al paciente a un centro especializado.</p>
+  </div>
+</div>
+
+<form action="{% url 'referencias:crear' %}" method="post">
+  {% csrf_token %}
+  <input type="hidden" name="cribado_id" id="id_cribado_id" value="{% if cribado %}{{ cribado.pk }}{% endif %}">
+  {% if paciente_preseleccionado and not cribado %}
+  <input type="hidden" name="paciente" value="{{ paciente_preseleccionado.pk }}">
+  {% endif %}
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+    <div class="lg:col-span-2 space-y-gutter">
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">child_care</span>
+          Datos del paciente
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Paciente a referir <span class="text-error">*</span></label>
+            {% if paciente_preseleccionado %}
+            <div class="px-4 py-3 rounded-lg border border-primary-container bg-primary-container/20">
+              <p class="font-label-md text-label-md text-on-surface">{{ paciente_preseleccionado.nombre_completo }}</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">{{ paciente_preseleccionado.codigo_paciente }} &middot; {{ paciente_preseleccionado.edad }} &middot; {{ paciente_preseleccionado.provincia }}</p>
+            </div>
+            {% else %}
+            <select name="paciente" id="id_paciente_referencia" required data-searchable
+                    class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+              <option value="">Seleccionar paciente...</option>
+              {% for paciente in pacientes %}
+              <option value="{{ paciente.pk }}"
+                      {% if paciente.cribado_reciente %}
+                      data-cribado-id="{{ paciente.cribado_reciente.pk }}"
+                      data-cribado-label="{{ paciente.cribado_reciente.fecha_evaluacion|date:'d/m/Y' }} - {{ paciente.cribado_reciente.get_nivel_riesgo_display }}"
+                      data-cribado-score="{{ paciente.cribado_reciente.puntaje_total }}/{{ score_maximo }}"
+                      {% endif %}>{{ paciente.nombre_completo }} - {{ paciente.codigo_paciente }} - {{ paciente.edad }}</option>
+              {% endfor %}
+            </select>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Cribado FACCI</label>
+            <input readonly id="id_cribado_resumen"
+                   class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface-variant font-body-md text-body-md"
+                   value="{% if cribado %}{{ cribado.fecha_evaluacion|date:'d/m/Y' }} - {{ cribado.get_nivel_riesgo_display }}{% else %}No vinculado{% endif %}">
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Score FACCI</label>
+            <input readonly id="id_cribado_score"
+                   class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface-variant font-body-md text-body-md"
+                   value="{% if cribado %}{{ cribado.puntaje_total }}/{{ score_maximo }}{% else %}N/D{% endif %}">
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary">local_hospital</span>
+          Hospital y especialista destino
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Hospital destino <span class="text-error">*</span></label>
+            <select name="hospital_destino" required
+                    class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+              <option value="">Seleccionar hospital...</option>
+              {% for centro in hospitales %}
+              <option value="{{ centro.id }}"
+                {% if forloop.first and cribado %}selected{% endif %}>
+                {{ centro.nombre }}{% if centro.municipio %} · {{ centro.municipio }}{% endif %}
+              </option>
+              {% empty %}
+              <option disabled>No hay centros registrados en el sistema</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Especialidad requerida</label>
+            <select name="especialidad"
+                    class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+              {% for especialidad in especialidades %}
+              <option>{{ especialidad }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Medico especialista</label>
+            <select name="especialista_destino"
+                    class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+              <option value="">Por asignar</option>
+              {% for especialista in especialistas %}
+              <option value="{{ especialista.pk }}">{{ especialista.nombre_completo }}{% if especialista.especialidad %} - {{ especialista.especialidad }}{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Prioridad <span class="text-error">*</span></label>
+            <select name="prioridad" required
+                    class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+              {% for valor, etiqueta in prioridades %}
+              <option value="{{ valor }}" {% if cribado and cribado.nivel_riesgo == 'ALTO' and valor == 'URGENTE' %}selected{% endif %}>{{ etiqueta }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Fecha propuesta de cita</label>
+            <input name="fecha_cita" type="datetime-local"
+                   class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-tertiary">note_alt</span>
+          Descripcion clinica
+        </h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Motivo de referencia <span class="text-error">*</span></label>
+            <textarea name="motivo_referencia" required rows="5"
+                      class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md resize-none"
+                      placeholder="Describa sintomas, hallazgos y justificacion clinica.">{{ motivo_sugerido }}</textarea>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Observaciones adicionales</label>
+            <textarea name="observaciones" rows="3"
+                      class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md resize-none"
+                      placeholder="Estudios realizados, contexto familiar o instrucciones de traslado."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-gutter">
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 sticky top-20">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-4">Enviar referencia</h3>
+        {% if cribado and cribado.nivel_riesgo == 'ALTO' %}
+        <div class="mb-4 p-3 bg-error-container/30 border border-error/30 rounded-lg">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-error" style="font-size:18px;">emergency</span>
+            <span class="font-label-md text-label-md text-error">Urgente - 24 horas</span>
+          </div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">El cribado marco riesgo alto y requiere derivacion prioritaria.</p>
+        </div>
+        {% endif %}
+        <div class="space-y-3">
+          <button type="submit"
+                  class="w-full bg-primary text-on-primary py-3 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined" style="font-size:18px;">send</span>
+            Crear referencia
+          </button>
+          <a href="{% if paciente_preseleccionado %}{% url 'pacientes:expediente' paciente_preseleccionado.pk %}?tab=referencias{% else %}{% url 'referencias:lista' %}{% endif %}"
+             class="w-full border border-outline-variant text-on-surface-variant py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center justify-center gap-2">
+            Cancelar
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const pacienteSelect = document.getElementById('id_paciente_referencia');
+  if (!pacienteSelect) return;
+
+  const cribadoId = document.getElementById('id_cribado_id');
+  const cribadoResumen = document.getElementById('id_cribado_resumen');
+  const cribadoScore = document.getElementById('id_cribado_score');
+
+  function vincularCribadoDelPaciente() {
+    const opcion = pacienteSelect.options[pacienteSelect.selectedIndex];
+    const tieneCribado = opcion && opcion.dataset.cribadoId;
+
+    cribadoId.value = tieneCribado ? opcion.dataset.cribadoId : '';
+    cribadoResumen.value = tieneCribado ? opcion.dataset.cribadoLabel : 'No vinculado';
+    cribadoScore.value = tieneCribado ? opcion.dataset.cribadoScore : 'N/D';
+  }
+
+  pacienteSelect.addEventListener('change', vincularCribadoDelPaciente);
+  vincularCribadoDelPaciente();
+});
+</script>
+
+{% endblock %}

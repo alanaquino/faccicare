@@ -1,0 +1,184 @@
+{% extends "layouts/base.html" %}
+{% load facci_filters %}
+{% block title %}Subir Documento{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex items-center gap-4">
+  <a href="{% url 'documentos:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Subir Documento Medico</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Adjunte estudios, laboratorios, referencias o cualquier documento clinico.</p>
+  </div>
+</div>
+
+<form action="{% url 'documentos:subir' %}" method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+    {# Columna principal #}
+    <div class="lg:col-span-2 space-y-gutter">
+
+      {# Zona de carga de archivos #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">upload_file</span>
+          Seleccionar Archivo
+        </h3>
+
+        {# Dropzone #}
+        <div class="border-2 border-dashed border-outline-variant rounded-xl p-10 text-center hover:border-primary hover:bg-primary-container/5 transition-all cursor-pointer" id="dropzone">
+          <span class="material-symbols-outlined text-outline-variant mb-3 block" style="font-size:48px;">cloud_upload</span>
+          <p class="font-headline-md text-headline-md text-on-surface-variant mb-2">Arrastre un archivo aqui</p>
+          <p class="font-body-sm text-body-sm text-outline mb-4">o haga clic para seleccionar</p>
+          <input type="file" name="archivo" class="hidden" id="file-input" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" required/>
+          <button type="button"
+                  onclick="document.getElementById('file-input').click()"
+                  class="px-6 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+            Seleccionar archivo
+          </button>
+          <p class="font-body-sm text-body-sm text-outline mt-3">PDF, JPG, PNG, DOCX - maximo 20 MB</p>
+        </div>
+
+        {# Preview del archivo seleccionado #}
+        <div id="file-preview" style="display:none;" class="mt-4 p-4 bg-surface-container-low rounded-lg border border-surface-container flex items-center gap-3">
+          <div class="w-10 h-10 bg-error-container/30 rounded-lg flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-error" style="font-size:20px;">picture_as_pdf</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-label-md text-label-md text-on-surface truncate" id="file-name">Archivo.pdf</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant" id="file-size">0 MB</p>
+          </div>
+          <button type="button" class="text-outline-variant hover:text-error transition-colors" onclick="limpiarArchivo()">
+            <span class="material-symbols-outlined" style="font-size:20px;">close</span>
+          </button>
+        </div>
+      </div>
+
+      {# Metadatos del documento #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary">info</span>
+          Informacion del Documento
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Paciente asociado *</label>
+            <select name="paciente" data-searchable class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md" required>
+              <option value="">Seleccionar paciente...</option>
+              {% if paciente_preseleccionado %}
+              <option value="{{ paciente_preseleccionado.id }}" selected>{{ paciente_preseleccionado.nombre_completo }} ({{ paciente_preseleccionado.cedula }})</option>
+              {% endif %}
+              {% for paciente in pacientes %}
+              {% if not paciente_preseleccionado or paciente_preseleccionado.pk != paciente.pk %}
+              <option value="{{ paciente.id }}">{{ paciente.nombre_completo }} ({{ paciente.cedula }})</option>
+              {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Tipo de documento *</label>
+            <select name="tipo_documento" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md" required>
+              <option value="">Seleccionar tipo...</option>
+              {% for value, label in tipos_documento %}
+              <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Fecha del documento *</label>
+            <input class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="date" name="fecha_documento" required/>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Descripcion / Nombre del estudio</label>
+            <input class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="text" name="descripcion" placeholder="Ej: Resonancia Magnetica Cerebral con contraste"/>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="flex items-start gap-3 p-4 rounded-xl border border-outline-variant bg-surface-container-low cursor-pointer">
+              <input type="checkbox" name="visible_padre"
+                     class="mt-1 rounded border-outline-variant text-primary focus:ring-primary">
+              <span>
+                <span class="block font-label-md text-label-md text-on-surface">Compartir con el padre/tutor</span>
+                <span class="block font-body-sm text-body-sm text-on-surface-variant">Permite consultar este documento desde el Portal Padres.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    {# Columna lateral #}
+    <div class="space-y-gutter">
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 sticky top-20">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-4">Guardar Documento</h3>
+
+        <div class="space-y-3">
+          <button type="submit"
+                  class="w-full bg-primary text-on-primary py-3 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined" style="font-size:18px;">upload</span>
+            Subir Documento
+          </button>
+          <a href="{% url 'documentos:lista' %}"
+             class="w-full border border-outline-variant text-on-surface-variant py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center justify-center gap-2 block text-center">
+            Cancelar
+          </a>
+        </div>
+
+        <div class="mt-4 p-3 bg-surface-container rounded-lg">
+          <p class="font-body-sm text-body-sm text-on-surface-variant text-center">
+            Los documentos son encriptados y almacenados de forma segura conforme a HIPAA.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</form>
+
+<script>
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('file-input');
+  const preview = document.getElementById('file-preview');
+
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = 'var(--md-sys-color-primary)';
+  });
+
+  dropzone.addEventListener('dragleave', () => {
+    dropzone.style.borderColor = 'var(--md-sys-color-outline-variant)';
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = 'var(--md-sys-color-outline-variant)';
+    if (e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      mostrarPreview();
+    }
+  });
+
+  fileInput.addEventListener('change', mostrarPreview);
+
+  function mostrarPreview() {
+    const file = fileInput.files[0];
+    if (file) {
+      document.getElementById('file-name').textContent = file.name;
+      const size = (file.size / (1024 * 1024)).toFixed(1);
+      document.getElementById('file-size').textContent = size + ' MB';
+      preview.style.display = 'flex';
+    }
+  }
+
+  function limpiarArchivo() {
+    fileInput.value = '';
+    preview.style.display = 'none';
+  }
+</script>
+
+{% endblock %}

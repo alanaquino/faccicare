@@ -1,0 +1,88 @@
+{% extends "layouts/base.html" %}
+{% block title %}Solicitudes de Documentos{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Solicitudes de Documentos</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Gestione solicitudes de estudios y laboratorios</p>
+  </div>
+</div>
+
+{# Filtros #}
+<form method="get" class="flex gap-3">
+  <select name="estado" class="px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+    <option value="">Todos los estados</option>
+    {% for value, label in estados %}
+    <option value="{{ value }}" {% if value == filtro_estado %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+    Filtrar
+  </button>
+  {% if filtro_estado %}
+  <a href="{% url 'documentos:solicitudes' %}" class="px-5 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+    Limpiar
+  </a>
+  {% endif %}
+</form>
+
+{# Tabla de solicitudes #}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="border-b border-surface-container bg-surface-container">
+          <th class="px-6 py-4 text-left font-label-md text-label-md text-on-surface">Paciente</th>
+          <th class="px-6 py-4 text-left font-label-md text-label-md text-on-surface">Estudio Solicitado</th>
+          <th class="px-6 py-4 text-left font-label-md text-label-md text-on-surface">Solicitado por</th>
+          <th class="px-6 py-4 text-left font-label-md text-label-md text-on-surface">Estado</th>
+          <th class="px-6 py-4 text-left font-label-md text-label-md text-on-surface">Fecha</th>
+          <th class="px-6 py-4 text-center font-label-md text-label-md text-on-surface">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for solicitud in solicitudes %}
+        <tr class="border-b border-surface-container hover:bg-surface-container-low transition-colors">
+          <td class="px-6 py-4 font-body-md text-body-md text-on-surface">
+            <a href="{% url 'pacientes:expediente' solicitud.paciente.id %}" class="text-primary hover:underline">
+              {{ solicitud.paciente.nombre_completo }}
+            </a>
+          </td>
+          <td class="px-6 py-4 font-body-md text-body-md text-on-surface">{{ solicitud.titulo }}</td>
+          <td class="px-6 py-4 font-body-md text-body-md text-on-surface">{{ solicitud.medico_solicitante.get_full_name }}</td>
+          <td class="px-6 py-4">
+            <span class="inline-block px-3 py-1 rounded-full font-label-sm text-label-sm
+                         {% if solicitud.estado == 'PENDIENTE' %}bg-warning-container/30 text-warning
+                         {% elif solicitud.estado == 'SUBIDO' %}bg-success-container/30 text-success
+                         {% elif solicitud.estado == 'REVISADO' %}bg-primary-container/30 text-primary
+                         {% elif solicitud.estado == 'CORRECCION' %}bg-error-container/30 text-error
+                         {% else %}bg-surface-container text-on-surface{% endif %}">
+              {{ solicitud.get_estado_display }}
+            </span>
+          </td>
+          <td class="px-6 py-4 font-body-sm text-body-sm text-on-surface-variant">
+            {{ solicitud.created_at|date:"d/m/Y" }}
+          </td>
+          <td class="px-6 py-4 text-center">
+            <a href="{% if solicitud.documento_asociado %}{% url 'documentos:detalle' solicitud.documento_asociado.id %}{% else %}{% url 'pacientes:expediente' solicitud.paciente.id %}{% endif %}" class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-primary hover:bg-primary-container/20 transition-colors font-label-sm text-label-sm">
+              <span class="material-symbols-outlined" style="font-size:18px;">visibility</span> Ver
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="px-6 py-12 text-center">
+            <span class="material-symbols-outlined text-outline-variant text-4xl block mb-3">inbox</span>
+            <p class="font-headline-md text-headline-md text-on-surface-variant">Sin solicitudes</p>
+            <p class="font-body-md text-body-md text-outline mt-2">No hay solicitudes que mostrar</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,377 @@
+{% extends "layouts/base.html" %}
+{% block title %}Editar Paciente{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex items-center gap-4">
+  <a href="{% url 'pacientes:expediente' paciente.id %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Editar Paciente</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Modifique los datos del paciente. Los cambios se guardarán inmediatamente.</p>
+  </div>
+</div>
+
+{# Alert Banner #}
+<div class="flex items-start gap-3 p-4 bg-tertiary-container/20 border border-tertiary-container/40 rounded-xl">
+  <span class="material-symbols-outlined text-tertiary mt-0.5">info</span>
+  <div>
+    <p class="font-label-md text-label-md text-on-background">Editando expediente de: <strong>{{ paciente.nombre }} {{ paciente.apellido }}</strong></p>
+    <p class="font-body-sm text-body-sm text-on-surface-variant">ID de paciente: {{ paciente.codigo_paciente }} &middot; Último acceso: {{ ultima_visita }}</p>
+  </div>
+</div>
+
+{# Formulario #}
+<form action="" method="post">
+  {% csrf_token %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+    {# Columna principal #}
+    <div class="lg:col-span-2 space-y-gutter">
+
+      {# SECCIÓN 1: Datos del Paciente #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">child_care</span>
+          Datos del Paciente
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Nombre <span class="text-error">*</span></label>
+            <input name="nombres" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="text" value="{{ paciente.nombres }}" required/>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Apellido <span class="text-error">*</span></label>
+            <input name="apellidos" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="text" value="{{ paciente.apellidos }}" required/>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Fecha de Nacimiento <span class="text-error">*</span></label>
+            <input name="fecha_nacimiento" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="date" value="{{ paciente.fecha_nacimiento|date:'Y-m-d' }}" required/>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Sexo <span class="text-error">*</span></label>
+            <select name="sexo" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md" required>
+              <option value="M" {% if paciente.sexo == 'M' %}selected{% endif %}>Masculino</option>
+              <option value="F" {% if paciente.sexo == 'F' %}selected{% endif %}>Femenino</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Provincia <span class="text-error">*</span></label>
+            <select name="provincia" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md" required>
+              <option value="">Seleccionar provincia...</option>
+              {% for prov in provincias %}
+              <option {% if prov == paciente.provincia %}selected{% endif %}>{{ prov }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Tipo de Sangre</label>
+            <select name="tipo_sangre" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+              <option value="">Seleccionar...</option>
+              {% for tipo in tipos_sangre %}
+              <option {% if tipo == paciente.tipo_sangre %}selected{% endif %}>{{ tipo }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Dirección</label>
+            <input name="direccion" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="text" value="{{ paciente.direccion|default:'' }}"/>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Alergias conocidas</label>
+            <textarea name="alergias" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md h-20 resize-none">{{ paciente.alergias }}</textarea>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Antecedentes médicos</label>
+            <textarea name="antecedentes_medicos" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md h-20 resize-none">{{ paciente.antecedentes_medicos }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      {# SECCIÓN 2: Datos del Tutor #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary">family_restroom</span>
+          Datos del Padre/Tutor
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Nombre del tutor <span class="text-error">*</span></label>
+            <input name="tutor_nombre" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="text" value="{{ paciente.padre_tutor.usuario.get_full_name }}" required/>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Tipo de Documento</label>
+            <select name="tutor_tipo_documento" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+              <option value="CEDULA" {% if paciente.padre_tutor.usuario.tipo_documento == "CEDULA" %}selected{% endif %}>Cédula</option>
+              <option value="PASAPORTE" {% if paciente.padre_tutor.usuario.tipo_documento == "PASAPORTE" %}selected{% endif %}>Pasaporte</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Número de Documento</label>
+            <input name="tutor_cedula" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="text" value="{{ paciente.padre_tutor.usuario.cedula|default:'' }}"/>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Teléfono <span class="text-error">*</span></label>
+            <input name="tutor_telefono" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="tel" value="{{ paciente.padre_tutor.usuario.telefono|default:'' }}" required/>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Correo electrónico</label>
+            <input name="tutor_email" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="email" value="{{ paciente.padre_tutor.usuario.email|default:'' }}"/>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Dirección <span class="text-error">*</span></label>
+            <input name="tutor_direccion" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                   type="text" value="{{ paciente.padre_tutor.direccion|default:'' }}" required/>
+          </div>
+        </div>
+      </div>
+
+      {# SECCIÓN 3: Asignación Médica #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-tertiary">stethoscope</span>
+          Asignación Médica
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Médico Asignado</label>
+            <select name="medico_asignado" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+              <option value="">Sin asignar</option>
+              {% for medico in medicos %}
+              <option value="{{ medico.id }}" {% if paciente.medico_asignado and medico.id == paciente.medico_asignado.id %}selected{% endif %}>
+                {{ medico.get_full_name }} ({{ medico.get_rol_display }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Estado del caso</label>
+            <select name="estado_actual" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+              {% for valor, etiqueta in estados %}
+              <option value="{{ valor }}" {% if paciente.estado_actual == valor %}selected{% endif %}>{{ etiqueta }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    {# COLUMNA LATERAL #}
+    <div class="space-y-gutter lg:sticky lg:top-20 self-start">
+
+      {# Acciones #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-4">Acciones</h3>
+        <div class="space-y-3">
+          <button type="submit"
+                  class="w-full bg-primary text-on-primary py-3 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+            Guardar Cambios
+          </button>
+          <a href="{% url 'pacientes:expediente' paciente.id %}"
+             class="w-full border border-outline-variant text-on-surface-variant py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center justify-center gap-2 block text-center">
+            Cancelar
+          </a>
+          {% if puede_resetear_pin %}
+          <button type="button" onclick="abrirModalResetPin()"
+                  class="w-full border border-outline-variant text-on-surface py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined" style="font-size:18px;">key</span>
+            Resetear PIN del padre
+          </button>
+          {% endif %}
+          <div class="pt-2 border-t border-surface-container">
+            <button type="button"
+                    class="w-full border border-error/30 text-error py-3 rounded-lg font-label-md text-label-md hover:bg-error-container/30 transition-colors flex items-center justify-center gap-2">
+              <span class="material-symbols-outlined" style="font-size:18px;">archive</span>
+              Archivar paciente
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {# Info rápida #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+        <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-3">Información del expediente</h3>
+        <div class="space-y-2 text-body-sm font-body-sm">
+          <div class="flex justify-between py-1.5 border-b border-surface-container">
+            <span class="text-on-surface-variant">ID Paciente</span>
+            <span class="text-on-background font-medium">{{ paciente.codigo_paciente }}</span>
+          </div>
+          <div class="flex justify-between py-1.5 border-b border-surface-container">
+            <span class="text-on-surface-variant">Fecha de registro</span>
+            <span class="text-on-background font-medium">{{ fecha_registro }}</span>
+          </div>
+          <div class="flex justify-between py-1.5 border-b border-surface-container">
+            <span class="text-on-surface-variant">Último cribado</span>
+            <span class="text-on-background font-medium">{{ ultima_visita }}</span>
+          </div>
+          <div class="flex justify-between py-1.5">
+            <span class="text-on-surface-variant">Cribados totales</span>
+            <span class="text-on-background font-medium">{{ cribados_count }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</form>
+
+{# ── Modal: confirmar reseteo de PIN ── #}
+{% if puede_resetear_pin %}
+<div id="modalResetPin" class="fixed inset-0 z-[1050] flex items-center justify-center bg-black/40 backdrop-blur-sm hidden p-4" onclick="if(event.target===this)cerrarModalResetPin()">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-xl border border-surface-container w-full max-w-md p-6">
+    <div class="flex items-start gap-3 mb-4">
+      <span class="material-symbols-outlined text-error">key</span>
+      <div>
+        <h3 class="font-headline-md text-headline-md text-on-background">Resetear PIN del padre/tutor</h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Se generará un nuevo PIN de 6 dígitos.</p>
+      </div>
+    </div>
+    <div class="flex items-start gap-2 p-3 bg-error-container/20 border border-error/30 rounded-lg mb-5">
+      <span class="material-symbols-outlined text-error" style="font-size:18px;">warning</span>
+      <p class="font-body-sm text-body-sm text-on-surface">
+        El padre tiene una sola cuenta de acceso. Resetear el PIN afecta el ingreso al portal de
+        <strong>todos</strong> sus hijos/pacientes asociados, no solo este. El PIN actual dejará de funcionar.
+      </p>
+    </div>
+    <form method="post" action="{% url 'pacientes:resetear_pin' paciente.id %}" class="flex justify-end gap-3" onsubmit="this.querySelector('button[type=submit]').disabled = true;">
+      {% csrf_token %}
+      <button type="button" onclick="cerrarModalResetPin()"
+              class="px-4 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+        Cancelar
+      </button>
+      <button type="submit"
+              class="px-4 py-2.5 rounded-lg bg-error text-on-error font-label-md text-label-md hover:opacity-90 transition-opacity flex items-center gap-2">
+        <span class="material-symbols-outlined" style="font-size:18px;">key</span>
+        Generar nuevo PIN
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{# ── Modal: PIN generado (un solo uso) ── #}
+{% if pin_reseteado %}
+<div id="modalPinGenerado" class="fixed inset-0 z-[1050] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onclick="if(event.target===this)cerrarModalPinGenerado()">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-xl border border-surface-container w-full max-w-md p-6 text-center">
+    <div class="w-12 h-12 rounded-full bg-tertiary-container/40 flex items-center justify-center mx-auto mb-3">
+      <span class="material-symbols-outlined text-tertiary">check_circle</span>
+    </div>
+    <h3 class="font-headline-md text-headline-md text-on-background mb-1">PIN reseteado correctamente</h3>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mb-5">Nuevo PIN para {{ pin_reseteado.tutor }}</p>
+    <div class="flex items-center justify-center gap-2 mb-2">
+      <span id="pinValor" class="font-headline-lg text-headline-lg font-bold tracking-[0.3em] text-primary">{{ pin_reseteado.pin }}</span>
+      <button type="button" onclick="copiarPin()" title="Copiar"
+              class="p-2 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant">
+        <span class="material-symbols-outlined" style="font-size:20px;">content_copy</span>
+      </button>
+    </div>
+    <p id="pinCopiado" class="font-body-sm text-body-sm text-tertiary mb-4 hidden">Copiado al portapapeles</p>
+    <div class="flex items-start gap-2 p-3 bg-tertiary-container/20 border border-tertiary-container/40 rounded-lg mb-5 text-left">
+      <span class="material-symbols-outlined text-tertiary" style="font-size:18px;">info</span>
+      <p class="font-body-sm text-body-sm text-on-surface">Anótelo y entréguelo al padre. Por seguridad no se volverá a mostrar.</p>
+    </div>
+    <button type="button" onclick="cerrarModalPinGenerado()"
+            class="w-full bg-primary text-on-primary py-2.5 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors">
+      Entendido
+    </button>
+  </div>
+</div>
+{% endif %}
+
+{% if puede_resetear_pin or pin_reseteado %}
+<script>
+  function abrirModalResetPin() {
+    document.getElementById('modalResetPin').classList.remove('hidden');
+  }
+  function cerrarModalResetPin() {
+    document.getElementById('modalResetPin').classList.add('hidden');
+  }
+  function cerrarModalPinGenerado() {
+    const m = document.getElementById('modalPinGenerado');
+    if (m) m.remove();
+  }
+  function copiarPin() {
+    const pin = document.getElementById('pinValor').textContent.trim();
+    navigator.clipboard.writeText(pin).then(function () {
+      const aviso = document.getElementById('pinCopiado');
+      if (aviso) {
+        aviso.classList.remove('hidden');
+        setTimeout(function () { aviso.classList.add('hidden'); }, 2000);
+      }
+    }).catch(function () { /* clipboard no disponible (origen no seguro) */ });
+  }
+</script>
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const tipoDocSelect = document.querySelector('[name="tutor_tipo_documento"]');
+    const docInput = document.querySelector('[name="tutor_cedula"]');
+
+    if (!tipoDocSelect || !docInput) return;
+
+    function formatCedula(val) {
+        let digits = val.replace(/\D/g, "");
+        if (digits.length > 11) {
+            digits = digits.substring(0, 11);
+        }
+        let formatted = "";
+        if (digits.length > 0) {
+            formatted += digits.substring(0, Math.min(digits.length, 3));
+        }
+        if (digits.length > 3) {
+            formatted += "-" + digits.substring(3, Math.min(digits.length, 10));
+        }
+        if (digits.length > 10) {
+            formatted += "-" + digits.substring(10, Math.min(digits.length, 11));
+        }
+        return formatted;
+    }
+
+    function handleInput(e) {
+        if (tipoDocSelect.value === "CEDULA") {
+            const cursorPosition = docInput.selectionStart;
+            const originalLength = docInput.value.length;
+            
+            const formatted = formatCedula(docInput.value);
+            docInput.value = formatted;
+            
+            const newLength = formatted.length;
+            const diff = newLength - originalLength;
+            docInput.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
+        }
+    }
+
+    docInput.addEventListener("input", handleInput);
+
+    tipoDocSelect.addEventListener("change", function() {
+        if (tipoDocSelect.value === "CEDULA") {
+            docInput.placeholder = "001-0000000-0";
+            docInput.value = formatCedula(docInput.value);
+        } else {
+            docInput.placeholder = "Ej: RD123456";
+            docInput.value = docInput.value.replace(/-/g, "");
+        }
+    });
+
+    if (tipoDocSelect.value === "CEDULA") {
+        docInput.placeholder = "001-0000000-0";
+        docInput.value = formatCedula(docInput.value);
+    } else {
+        docInput.placeholder = "Ej: RD123456";
+    }
+});
+</script>
+{% endblock %}

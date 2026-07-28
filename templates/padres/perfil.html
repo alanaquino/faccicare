@@ -1,0 +1,228 @@
+{% extends "layouts/base_padres.html" %}
+{% block title %}Mi Perfil — FACCI Care{% endblock %}
+
+{% block content %}
+<div class="md:px-8 max-w-5xl mx-auto w-full space-y-6">
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="flex items-center gap-3 p-4 rounded-xl border
+    {% if message.tags == 'success' %}bg-[#e8f5e9] border-green-300 text-green-800
+    {% else %}bg-error-container/30 border-error/30 text-on-error-container{% endif %}">
+    <span class="material-symbols-outlined">
+      {% if message.tags == 'success' %}check_circle{% else %}error{% endif %}
+    </span>
+    <span class="font-body-md text-body-md">{{ message }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {# Cabecera #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Mi Perfil Familiar</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant">Información personal y datos de contacto.</p>
+    </div>
+    <div class="flex gap-3">
+      <a href="{% url 'padres:estado' %}"
+         class="flex items-center gap-2 px-4 py-2 rounded-xl border border-outline-variant bg-surface hover:bg-surface-container transition-all text-on-surface-variant font-label-md text-label-md active:scale-95 duration-150">
+        <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
+        Volver
+      </a>
+      <a href="{% url 'padres:editar_perfil' %}"
+         class="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-on-primary hover:bg-surface-tint hover:shadow-md transition-all font-label-md text-label-md active:scale-95 duration-150">
+        <span class="material-symbols-outlined" style="font-size:18px;">edit</span>
+        Editar Perfil
+      </a>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    {# Columna principal #}
+    <div class="lg:col-span-2 space-y-6">
+
+      {# Avatar + nombre #}
+      <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-container p-6">
+        <div class="flex items-center gap-5">
+          <div class="w-20 h-20 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-md font-bold text-2xl">
+            {{ tutor.iniciales }}
+          </div>
+          <div>
+            <h3 class="font-headline-md text-headline-md text-on-surface">{{ tutor.nombre }}</h3>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">{{ tutor.relacion }}</p>
+            <span class="mt-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-container/30 text-primary font-label-sm text-xs">
+              <span class="material-symbols-outlined" style="font-size:13px;">verified_user</span>
+              Tutor registrado
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {# Datos personales #}
+      <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-container p-6 space-y-5">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">person</span>
+          Información Personal
+        </h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          <div class="space-y-1">
+            <p class="font-label-sm text-label-sm text-on-surface-variant">Nombre Completo</p>
+            <p class="font-body-md text-body-md text-on-surface font-medium">{{ tutor.nombre }}</p>
+          </div>
+
+          <div class="space-y-1">
+            <p class="font-label-sm text-label-sm text-on-surface-variant">{{ tutor.tipo_documento|default:"Cédula" }}</p>
+            <p class="font-body-md text-body-md text-on-surface font-medium">{{ tutor.cedula }}</p>
+          </div>
+
+          <div class="space-y-1">
+            <p class="font-label-sm text-label-sm text-on-surface-variant">Correo Electrónico</p>
+            <p class="font-body-md text-body-md text-on-surface font-medium break-all">{{ tutor.email }}</p>
+          </div>
+
+          <div class="space-y-1">
+            <p class="font-label-sm text-label-sm text-on-surface-variant">Teléfono Móvil</p>
+            <p class="font-body-md text-body-md text-on-surface font-medium">{{ tutor.telefono }}</p>
+          </div>
+
+          <div class="space-y-1">
+            <p class="font-label-sm text-label-sm text-on-surface-variant">Provincia</p>
+            <p class="font-body-md text-body-md text-on-surface font-medium">{{ tutor.provincia }}</p>
+          </div>
+
+          <div class="space-y-1">
+            <p class="font-label-sm text-label-sm text-on-surface-variant">Municipio</p>
+            <p class="font-body-md text-body-md text-on-surface font-medium">{{ tutor.municipio }}</p>
+          </div>
+
+          <div class="sm:col-span-2 space-y-1">
+            <p class="font-label-sm text-label-sm text-on-surface-variant">Dirección de Residencia</p>
+            <p class="font-body-md text-body-md text-on-surface font-medium">{{ tutor.direccion }}</p>
+          </div>
+
+          <div class="space-y-1">
+            <p class="font-label-sm text-label-sm text-on-surface-variant">Ocupación</p>
+            <p class="font-body-md text-body-md text-on-surface font-medium">{{ tutor.ocupacion }}</p>
+          </div>
+
+          <div class="space-y-1">
+            <p class="font-label-sm text-label-sm text-on-surface-variant">Relación / Parentesco</p>
+            <p class="font-body-md text-body-md text-on-surface font-medium">{{ tutor.relacion }}</p>
+          </div>
+
+        </div>
+      </div>
+
+      {# Contacto de emergencia #}
+      <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-container p-6 space-y-4">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary">contact_phone</span>
+          Contacto de Emergencia
+        </h3>
+
+        {% if tutor.contacto_emergencia and tutor.contacto_emergencia != '—' %}
+        <div class="flex items-center gap-3.5 p-4 bg-surface rounded-2xl border border-surface-container">
+          <div class="w-10 h-10 rounded-full bg-secondary-container/30 text-secondary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined">person</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-label-md text-label-md text-on-surface truncate">{{ tutor.contacto_emergencia }}</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">Contacto de emergencia &middot; <strong>{{ tutor.telefono_emergencia }}</strong></p>
+          </div>
+          {% if tutor.telefono_emergencia and tutor.telefono_emergencia != '—' %}
+          <a href="tel:{{ tutor.telefono_emergencia }}"
+             class="p-2 rounded-xl text-secondary hover:bg-secondary-container/20 transition-all">
+            <span class="material-symbols-outlined" style="font-size:18px;">phone</span>
+          </a>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="flex items-center gap-3 p-4 bg-surface-container/30 rounded-2xl border border-dashed border-outline-variant text-on-surface-variant">
+          <span class="material-symbols-outlined">info</span>
+          <p class="font-body-sm text-body-sm">No hay contacto de emergencia registrado.
+            <a href="{% url 'padres:editar_perfil' %}" class="text-primary underline underline-offset-2">Agregar ahora</a>
+          </p>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>
+
+    {# Columna lateral: ficha del paciente #}
+    <div class="space-y-6">
+
+      <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-container overflow-hidden">
+        <div class="bg-gradient-to-br from-primary-container/20 to-primary/10 px-6 py-5 border-b border-surface-container flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-md mb-3 font-semibold text-lg relative">
+            <span>{{ paciente.iniciales }}</span>
+            <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></span>
+          </div>
+          <h4 class="font-headline-md text-headline-md text-on-surface font-bold">{{ paciente.nombre }}</h4>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ paciente.edad }} &middot; {{ paciente.diagnostico }}</p>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <div class="flex justify-between items-center py-2 border-b border-neutral-100">
+            <span class="font-label-sm text-label-sm text-on-surface-variant">Estado</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-primary-container/30 text-primary font-bold text-xs">{{ paciente.estado }}</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-neutral-100">
+            <span class="font-label-sm text-label-sm text-on-surface-variant">Grupo sanguíneo</span>
+            <span class="font-body-sm text-body-sm font-semibold text-on-surface">{{ paciente.grupo_sanguineo }}</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-neutral-100">
+            <span class="font-label-sm text-label-sm text-on-surface-variant">Alergias</span>
+            <span class="font-body-sm text-body-sm font-semibold text-error">{{ paciente.alergias }}</span>
+          </div>
+          <div class="py-2 border-b border-neutral-100">
+            <span class="font-label-sm text-label-sm text-on-surface-variant block mb-1">Médico tratante</span>
+            <span class="font-body-sm text-body-sm font-semibold text-on-surface flex items-center gap-1">
+              <span class="material-symbols-outlined text-primary" style="font-size:16px;">stethoscope</span>
+              {{ paciente.medico }}
+            </span>
+          </div>
+          <div class="py-2">
+            <span class="font-label-sm text-label-sm text-on-surface-variant block mb-1">Centro hospitalario</span>
+            <span class="font-body-sm text-body-sm font-semibold text-on-surface flex items-center gap-1">
+              <span class="material-symbols-outlined text-secondary" style="font-size:16px;">local_hospital</span>
+              {{ paciente.hospital }}
+            </span>
+          </div>
+
+          <div class="pt-2 grid grid-cols-2 gap-2">
+            <a href="{% url 'padres:reportar_sintomas' %}"
+               class="flex items-center justify-center gap-1 py-2 px-3 rounded-xl bg-primary-container/20 text-primary font-label-sm text-xs hover:bg-primary-container/40 transition-colors">
+              <span class="material-symbols-outlined" style="font-size:14px;">report</span>
+              Reportar
+            </a>
+            <a href="{% url 'padres:indicaciones' %}"
+               class="flex items-center justify-center gap-1 py-2 px-3 rounded-xl border border-outline-variant text-on-surface-variant font-label-sm text-xs hover:bg-surface-container transition-colors">
+              <span class="material-symbols-outlined" style="font-size:14px;">assignment</span>
+              Cuidados
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {# Acceso rápido #}
+      <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-container p-5 space-y-3">
+        <h4 class="font-label-lg text-label-lg text-on-surface-variant">Acciones rápidas</h4>
+        <a href="{% url 'padres:editar_perfil' %}"
+           class="flex items-center gap-3 p-3 rounded-2xl hover:bg-surface-container transition-colors group">
+          <span class="material-symbols-outlined text-primary">edit</span>
+          <span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">Editar información</span>
+        </a>
+        <a href="{% url 'padres:alertas' %}"
+           class="flex items-center gap-3 p-3 rounded-2xl hover:bg-surface-container transition-colors group">
+          <span class="material-symbols-outlined text-tertiary">notifications</span>
+          <span class="font-body-md text-body-md text-on-surface group-hover:text-tertiary transition-colors">Mis alertas</span>
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

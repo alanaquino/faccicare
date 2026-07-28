@@ -1,0 +1,123 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ titulo_pagina }}{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-3 mb-4">
+  <a href="{% url 'seguimiento:lista' %}"
+     class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant shrink-0">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Registrar Seguimiento Clínico</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">
+      Registrar una nueva consulta clínica y programar la próxima fecha de seguimiento.
+    </p>
+  </div>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+    {# Columna principal #}
+    <div class="lg:col-span-2 space-y-gutter">
+
+      {# Datos del Seguimiento #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-5">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">analytics</span>
+          Datos del Seguimiento
+        </h3>
+
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+            Paciente <span class="text-error">*</span>
+          </label>
+          <select name="paciente" required
+                  class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+            <option value="">— Seleccionar Paciente —</option>
+            {% for p in pacientes %}
+            <option value="{{ p.id }}" {% if p.id|stringformat:"s" == paciente_preseleccionado_id %}selected{% endif %}>
+              {{ p.nombre_completo }} (Código: {{ p.codigo_paciente }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+            Observaciones del Médico <span class="text-error">*</span>
+          </label>
+          <textarea name="observaciones" rows="4" required
+                    placeholder="Escriba las observaciones del seguimiento clínico, estado físico, evolución, etc..."
+                    class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"></textarea>
+        </div>
+      </div>
+
+    </div>
+
+    {# Columna lateral: Programar próximo seguimiento #}
+    <div class="space-y-gutter">
+      
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-5">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary">calendar_today</span>
+          Próximo Seguimiento
+        </h3>
+
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+            Próxima Fecha de Seguimiento <span class="text-error">*</span>
+          </label>
+          <input type="datetime-local" name="proxima_fecha_seguimiento" required
+                 class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+        </div>
+
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+            Médico Asignado
+          </label>
+          <select name="medico_seguimiento"
+                  class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+            <option value="">— Seleccionar Médico —</option>
+            {% for m in medicos_disponibles %}
+            <option value="{{ m.id }}" {% if m == request.user %}selected{% endif %}>
+              {{ m.get_full_name|default:m.username }} ({% if m.especialidad %}{{ m.especialidad }}{% else %}{{ m.get_rol_display }}{% endif %})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+            Lugar / Centro de Salud
+          </label>
+          <select name="lugar_seguimiento"
+                  class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+            <option value="">— Seleccionar Centro —</option>
+            {% for c in centros_disponibles %}
+            <option value="{{ c.id }}">{{ c.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="pt-4">
+          <button type="submit"
+                  class="w-full py-3 rounded-full bg-primary text-on-primary font-label-lg text-label-lg hover:bg-surface-tint hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined">save</span>
+            Guardar Seguimiento
+          </button>
+          
+          <a href="{% url 'seguimiento:lista' %}"
+             class="w-full mt-2 py-3 rounded-full border border-outline-variant text-on-surface-variant font-label-lg text-label-lg hover:bg-surface-container transition-all flex items-center justify-center gap-2">
+            Cancelar
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</form>
+
+{% endblock %}

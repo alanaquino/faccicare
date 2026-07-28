@@ -1,0 +1,124 @@
+{% extends "layouts/base.html" %}
+{% block title %}{% if es_edicion %}Editar estancia{% else %}Nueva estancia{% endif %} — Casa FACCI{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-4">
+  <a href="{% url 'alojamiento:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">{% if es_edicion %}Editar estancia{% else %}Registrar estancia{% endif %}</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Casa FACCI — Alojamiento familiar</p>
+  </div>
+</div>
+
+<form method="post" class="mt-6 space-y-6">
+  {% csrf_token %}
+  <input type="hidden" name="referencia_id" value="{{ prefill_data.referencia_id|default:'' }}">
+
+  {# ── Paciente y habitación ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div>
+      <label class="block font-label-md text-label-md text-on-surface mb-1.5">Paciente <span class="text-error">*</span></label>
+      <select name="paciente" required data-searchable {% if es_edicion %}disabled{% endif %}
+              class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+        <option value="">— Seleccionar paciente —</option>
+        {% if paciente_preseleccionado %}
+        <option value="{{ paciente_preseleccionado.pk }}" selected>{{ paciente_preseleccionado.nombre_completo }} · {{ paciente_preseleccionado.codigo_paciente }}</option>
+        {% endif %}
+        {% for p in pacientes %}
+        {% if not paciente_preseleccionado or paciente_preseleccionado.pk != p.pk %}
+        <option value="{{ p.pk }}">
+          {{ p.nombre_completo }} · {{ p.codigo_paciente }}
+        </option>
+        {% endif %}
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block font-label-md text-label-md text-on-surface mb-1.5">Habitación <span class="text-error">*</span></label>
+      <select name="habitacion" required
+              class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+        <option value="">— Seleccionar habitación —</option>
+        {% for h in habitaciones %}
+        <option value="{{ h.pk }}"
+                {% if not h.disponible and prefill_data.habitacion_id != h.pk %}disabled{% endif %}
+                {% if prefill_data.habitacion_id == h.pk or prefill_data.habitacion_id|stringformat:"s" == h.pk|stringformat:"s" %}selected{% endif %}>
+          {{ h.nombre }} — {{ h.ocupantes_actuales }}/{{ h.capacidad }} personas
+          {% if not h.disponible %}(sin cupo){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block font-label-md text-label-md text-on-surface mb-1.5">Motivo de la estancia</label>
+      <select name="motivo"
+              class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+        {% for v, e in motivos %}
+        <option value="{{ v }}" {% if prefill_data.motivo == v %}selected{% endif %}>{{ e }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  {# ── Acompañante ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-center gap-3 p-5 border-b border-surface-container bg-surface-container-low">
+      <span class="material-symbols-outlined text-primary" style="font-size:20px;">person</span>
+      <h3 class="font-headline-md text-headline-md text-on-background">Datos del acompañante</h3>
+    </div>
+    <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div class="md:col-span-2">
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Nombre completo <span class="text-error">*</span></label>
+        <input type="text" name="acompanante_nombre" required placeholder="Nombre del acompañante"
+               value="{{ prefill_data.acompanante_nombre|default:'' }}"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+      </div>
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Parentesco</label>
+        <input type="text" name="acompanante_parentesco" placeholder="Madre, padre, tío/a…"
+               value="{{ prefill_data.acompanante_parentesco|default:'' }}"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+      </div>
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">Teléfono</label>
+        <input type="tel" name="acompanante_telefono" placeholder="809-000-0000"
+               value="{{ prefill_data.acompanante_telefono|default:'' }}"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+      </div>
+    </div>
+  </div>
+
+  {# ── Fechas ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div>
+      <label class="block font-label-md text-label-md text-on-surface mb-1.5">Fecha de ingreso <span class="text-error">*</span></label>
+      <input type="date" name="fecha_ingreso" value="{{ prefill_data.fecha_ingreso|default:hoy }}" required
+             class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+    </div>
+    <div>
+      <label class="block font-label-md text-label-md text-on-surface mb-1.5">Fecha de egreso prevista</label>
+      <input type="date" name="fecha_egreso_prevista" value="{{ prefill_data.fecha_egreso_prevista|default:'' }}"
+             class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md">
+    </div>
+    <div class="md:col-span-2">
+      <label class="block font-label-md text-label-md text-on-surface mb-1.5">Observaciones</label>
+      <textarea name="observaciones" rows="3"
+                class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-body-md text-body-md"
+                placeholder="Necesidades especiales, notas de ingreso…">{{ prefill_data.observaciones|default:'' }}</textarea>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-end gap-3">
+    <a href="{% url 'alojamiento:lista' %}"
+       class="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined">close</span>Cancelar
+    </a>
+    <button type="submit"
+            class="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined">save</span>{% if es_edicion %}Guardar cambios{% else %}Registrar estancia{% endif %}
+    </button>
+  </div>
+</form>
+
+{% endblock %}

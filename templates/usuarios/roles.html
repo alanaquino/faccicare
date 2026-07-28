@@ -1,0 +1,79 @@
+{% extends "layouts/base.html" %}
+{% block title %}Gestión de Roles{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="flex items-center gap-4">
+    <a href="{% url 'usuarios:gestion' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Roles y Permisos</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant">{{ roles|length }} roles definidos en el sistema</p>
+    </div>
+  </div>
+</div>
+
+{# Cards de roles #}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+  {% for rol in roles %}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+
+    {# Cabecera del rol #}
+    <div class="flex items-center gap-4 p-5 border-b border-surface-container
+                {% if rol.color == 'primary' %}bg-primary-container/15
+                {% elif rol.color == 'secondary' %}bg-secondary-container/15
+                {% elif rol.color == 'tertiary' %}bg-tertiary-container/15
+                {% elif rol.color == 'error' %}bg-error-container/15
+                {% else %}bg-surface-container-low{% endif %}">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0
+                  {% if rol.color == 'primary' %}bg-primary text-on-primary
+                  {% elif rol.color == 'secondary' %}bg-secondary text-on-secondary
+                  {% elif rol.color == 'tertiary' %}bg-tertiary text-on-tertiary
+                  {% elif rol.color == 'error' %}bg-error text-on-error
+                  {% else %}bg-surface-container-high text-on-surface-variant{% endif %}">
+        <span class="material-symbols-outlined" style="font-size:22px;">{{ rol.icono }}</span>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center justify-between">
+          <h3 class="font-headline-md text-headline-md text-on-background">{{ rol.nombre }}</h3>
+          <span class="font-label-sm text-label-sm text-on-surface-variant">{{ rol.cantidad }} usuarios</span>
+        </div>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">{{ rol.descripcion }}</p>
+      </div>
+    </div>
+
+    {# Permisos #}
+    <div class="p-5">
+      <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-3">Permisos incluidos</p>
+      <ul class="space-y-2">
+        {% for permiso in rol.permisos %}
+        <li class="flex items-center gap-3">
+          <span class="material-symbols-outlined
+                       {% if rol.color == 'primary' %}text-primary
+                       {% elif rol.color == 'secondary' %}text-secondary
+                       {% elif rol.color == 'tertiary' %}text-tertiary
+                       {% elif rol.color == 'error' %}text-error
+                       {% else %}text-on-surface-variant{% endif %}"
+                style="font-size:16px;">check_circle</span>
+          <span class="font-body-sm text-body-sm text-on-surface">{{ permiso }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="mt-4 pt-4 border-t border-surface-container flex gap-2">
+        <button class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+          Editar permisos
+        </button>
+        <button class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined" style="font-size:16px;">group</span>
+          {{ rol.cantidad }}
+        </button>
+      </div>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

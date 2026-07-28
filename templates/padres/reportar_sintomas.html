@@ -1,0 +1,131 @@
+{% extends "layouts/base_padres.html" %}
+{% block title %}Reportar Síntomas — FACCI Care{% endblock %}
+{% block content %}
+
+<div class="md:px-8 max-w-3xl mx-auto w-full space-y-6">
+
+  {# Cabecera y retroceder #}
+  <div class="flex items-center gap-4">
+    <a href="{% url 'padres:evolucion' %}" 
+       class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant flex items-center justify-center border border-outline-variant/20 shadow-sm"
+       title="Volver a evolución clínica">
+      <span class="material-symbols-outlined text-xl">arrow_back</span>
+    </a>
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Reportar Síntomas</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant mt-0.5">Paciente: <strong>{{ paciente.nombre }}</strong></p>
+    </div>
+  </div>
+
+  {# Aviso de emergencia destacada en rojo #}
+  <div class="flex items-start gap-4 p-5 rounded-2xl bg-error-container/30 border border-error/30 shadow-sm">
+    <div class="w-10 h-10 rounded-full bg-error flex items-center justify-center shrink-0 text-white">
+      <span class="material-symbols-outlined text-lg">emergency</span>
+    </div>
+    <div>
+      <p class="font-label-md text-md font-bold text-error">¿Es una emergencia médica?</p>
+      <p class="font-body-sm text-xs text-on-surface-variant mt-1 leading-relaxed">
+        Si su hijo tiene dificultad severa para respirar, fiebre muy alta (40°C o más), convulsiones o pérdida del conocimiento, llame inmediatamente al **911** o diríjase a emergencias de forma urgente.
+      </p>
+    </div>
+  </div>
+
+  {# Formulario de reporte real #}
+  <form action="{% url 'padres:reportar_sintomas' %}" method="post" class="space-y-6">
+    {% csrf_token %}
+
+    {# Bloque 1: Información del reporte #}
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container p-6 space-y-4">
+      <h3 class="font-headline-md text-md font-bold text-on-background flex items-center gap-2 border-b border-surface-container pb-3">
+        <span class="material-symbols-outlined text-primary">info</span>
+        Información del Reporte
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="space-y-1.5">
+          <label class="block font-label-md text-sm font-semibold text-on-surface">Fecha de inicio de síntomas</label>
+          <input name="fecha_inicio" required
+                 class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md shadow-inner"
+                 type="date" id="id_fecha_inicio"/>
+        </div>
+        <div class="space-y-1.5">
+          <label class="block font-label-md text-sm font-semibold text-on-surface">Gravedad percibida</label>
+          <select name="gravedad" 
+                  class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md shadow-inner">
+            <option value="Leve">Leve — no interfiere con actividades en casa</option>
+            <option value="Moderada">Moderada — limita algunas actividades normales</option>
+            <option value="Severa">Severa — requiere atención pronta y descanso</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    {# Bloque 2: Categorías de síntomas checklist #}
+    <div class="space-y-4">
+      {% for categoria in categorias %}
+      <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container overflow-hidden">
+        <div class="flex items-center gap-3 p-4 bg-surface-container-low border-b border-surface-container">
+          <span class="material-symbols-outlined text-primary text-xl">{{ categoria.icono }}</span>
+          <h3 class="font-headline-md text-sm font-bold text-on-background">{{ categoria.nombre }}</h3>
+        </div>
+        <div class="p-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {% for sintoma in categoria.sintomas %}
+            <label class="flex items-center gap-3 p-3.5 rounded-xl border border-surface-container hover:bg-surface-container-low cursor-pointer transition-colors select-none group">
+              <input type="checkbox" name="sintoma_{{ sintoma.id }}" 
+                     class="w-5 h-5 text-primary border-outline-variant rounded focus:ring-primary/50 cursor-pointer group-hover:border-primary transition-colors"/>
+              <span class="font-body-md text-sm text-on-surface group-hover:text-primary transition-colors">{{ sintoma.label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# Bloque 3: Descripción detallada libre #}
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container p-6 space-y-4">
+      <h3 class="font-headline-md text-md font-bold text-on-background flex items-center gap-2 border-b border-surface-container pb-3">
+        <span class="material-symbols-outlined text-tertiary">note_alt</span>
+        Descripción Adicional
+      </h3>
+      <p class="font-body-sm text-xs text-on-surface-variant">
+        Explique brevemente cómo se encuentra su hijo, si ha tenido otros malestares, o cualquier detalle que el médico deba conocer.
+      </p>
+      <textarea name="descripcion" 
+                class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md h-32 resize-none shadow-inner"
+                placeholder="Ej: Mateo empezó a quejarse de dolor de cabeza en la tarde. Le dimos descanso y tomamos su temperatura..."></textarea>
+    </div>
+
+    {# Botones de acción #}
+    <div class="flex flex-col sm:flex-row gap-4">
+      <button type="submit"
+              class="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint active:scale-[0.98] transition-all shadow-sm text-base">
+        <span class="material-symbols-outlined">send</span>
+        Enviar Reporte de Síntomas
+      </button>
+      <a href="{% url 'padres:evolucion' %}"
+         class="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-all text-base">
+        Cancelar
+      </a>
+    </div>
+  </form>
+
+</div>
+
+<script>
+  // Poner por defecto la fecha de hoy en el datepicker de inicio de síntomas
+  document.addEventListener('DOMContentLoaded', function() {
+    const picker = document.getElementById('id_fecha_inicio');
+    if (picker && !picker.value) {
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      let mm = hoy.getMonth() + 1;
+      let dd = hoy.getDate();
+      if (mm < 10) mm = '0' + mm;
+      if (dd < 10) dd = '0' + dd;
+      picker.value = yyyy + '-' + mm + '-' + dd;
+    }
+  });
+</script>
+
+{% endblock %}

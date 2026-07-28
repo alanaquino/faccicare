@@ -1,0 +1,132 @@
+{% extends "layouts/base.html" %}
+{% load facci_filters %}
+{% block title %}Timeline — {{ paciente.nombre }}{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="flex items-center gap-4">
+    <a href="{% url 'seguimiento:seguimiento' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-full bg-error-container flex items-center justify-center shrink-0">
+        <span class="font-headline-md text-headline-md text-error">{{ paciente.iniciales }}</span>
+      </div>
+      <div>
+        <h2 class="font-headline-lg text-headline-lg text-on-background">Timeline — {{ paciente.nombre }}</h2>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">{{ paciente.diagnostico }} &middot; Desde {{ paciente.fecha_inicio }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="flex gap-2">
+    <button onclick="window.print()"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">print</span>
+      Imprimir
+    </button>
+    {% if request.user.puede_hacer_cribado %}
+    <a href="{% url 'cribado:cuestionario' %}"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+      Agregar evento
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+{# Resumen rápido #}
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+  <div class="bg-surface-container-lowest rounded-xl border border-surface-container p-4 text-center">
+    <span class="font-headline-xl text-headline-xl text-primary">{{ eventos|length }}</span>
+    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mt-1">Eventos registrados</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl border border-surface-container p-4 text-center">
+    <span class="font-headline-xl text-headline-xl text-secondary">12</span>
+    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mt-1">Días en seguimiento</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl border border-surface-container p-4 text-center">
+    <span class="font-headline-xl text-headline-xl text-tertiary">3</span>
+    <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mt-1">Médicos involucrados</p>
+  </div>
+  <div class="bg-error-container/20 rounded-xl border border-error/20 p-4 text-center">
+    <span class="font-headline-xl text-headline-xl text-error">Alto</span>
+    <p class="font-label-sm text-label-sm text-error uppercase tracking-wide mt-1">Nivel de riesgo</p>
+  </div>
+</div>
+
+{# Filtros de tipo de evento #}
+<div class="flex items-center gap-2 overflow-x-auto pb-1 bg-surface-container-lowest rounded-xl border border-surface-container p-4">
+  <span class="font-label-md text-label-md text-on-surface-variant shrink-0">Mostrar:</span>
+  {% for tipo in 'Todos,Cribado FACCI,Consulta Oncológica,Laboratorio,Imagen Diagnóstica,Plan Terapéutico,Referencia Médica'|split:',' %}
+  <button class="shrink-0 px-4 py-1.5 rounded-full font-label-sm text-label-sm border transition-all
+                 {% if forloop.first %}bg-primary text-on-primary border-primary{% else %}border-outline-variant text-on-surface-variant hover:bg-surface-container{% endif %}">
+    {{ tipo }}
+  </button>
+  {% endfor %}
+</div>
+
+{# Timeline vertical #}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+  <div class="relative">
+    {# Línea vertical de la timeline #}
+    <div class="absolute left-6 top-6 bottom-6 w-0.5 bg-surface-container-highest"></div>
+
+    <div class="space-y-0">
+      {% for evento in eventos %}
+      <div class="relative flex items-start gap-6 pb-8 last:pb-0">
+
+        {# Punto en la línea de tiempo #}
+        <div class="relative z-10 w-12 h-12 rounded-full shrink-0 flex items-center justify-center shadow-sm border-4 border-surface-container-lowest
+                    {% if evento.color == 'error' %}bg-error text-on-error
+                    {% elif evento.color == 'secondary' %}bg-secondary text-on-secondary
+                    {% elif evento.color == 'tertiary' %}bg-tertiary text-on-tertiary
+                    {% else %}bg-primary text-on-primary{% endif %}">
+          <span class="material-symbols-outlined icon-fill" style="font-size:20px;">{{ evento.icono }}</span>
+        </div>
+
+        {# Contenido del evento #}
+        <div class="flex-1 min-w-0 pt-1">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 mb-2">
+            <div>
+              <h4 class="font-headline-md text-headline-md text-on-background">{{ evento.tipo }}</h4>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">{{ evento.medico }}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="material-symbols-outlined text-outline-variant" style="font-size:16px;">calendar_today</span>
+              <span class="font-body-sm text-body-sm text-on-surface-variant">{{ evento.fecha }}</span>
+              <span class="font-body-sm text-body-sm text-on-surface-variant">{{ evento.hora }}</span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl border
+                      {% if evento.color == 'error' %}bg-error-container/15 border-error/20
+                      {% elif evento.color == 'secondary' %}bg-secondary-container/15 border-secondary/20
+                      {% elif evento.color == 'tertiary' %}bg-tertiary-container/15 border-tertiary/20
+                      {% else %}bg-primary-container/15 border-primary/20{% endif %}">
+            <p class="font-body-md text-body-md text-on-surface">{{ evento.descripcion }}</p>
+          </div>
+
+          {# Tipo badge #}
+          <div class="mt-2">
+            <span class="inline-block px-2 py-0.5 rounded-full font-label-sm text-label-sm
+                         {% if evento.color == 'error' %}bg-error-container text-error
+                         {% elif evento.color == 'secondary' %}bg-secondary-container/40 text-secondary
+                         {% elif evento.color == 'tertiary' %}bg-tertiary-container/40 text-tertiary
+                         {% else %}bg-primary-container/30 text-primary{% endif %}">
+              {{ evento.tipo }}
+            </span>
+          </div>
+        </div>
+
+      </div>
+      {% empty %}
+      <div class="text-center py-12">
+        <span class="material-symbols-outlined text-outline-variant text-5xl block mb-3">timeline</span>
+        <p class="font-headline-md text-headline-md text-on-surface-variant">Sin eventos registrados</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

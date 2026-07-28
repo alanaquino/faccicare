@@ -1,0 +1,344 @@
+{% extends "layouts/base.html" %}
+{% block title %}Nuevo Paciente{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-4">
+  <a href="{% url 'pacientes:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Registrar Nuevo Paciente</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Complete el formulario con los datos del paciente y su tutor.</p>
+  </div>
+</div>
+
+<div class="flex items-center gap-2 overflow-x-auto pb-2">
+  {% for paso in "123"|make_list %}
+  <div class="flex items-center gap-2 shrink-0">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center font-label-md text-label-md {% if forloop.first %}bg-primary text-on-primary{% else %}bg-surface-container text-on-surface-variant{% endif %}">
+      {{ paso }}
+    </div>
+    <span class="font-label-md text-label-md text-on-surface-variant">
+      {% if forloop.first %}Datos Personales{% elif forloop.counter == 2 %}Datos del Tutor{% else %}Informacion Clinica{% endif %}
+    </span>
+    {% if not forloop.last %}<span class="text-outline-variant ml-2">-</span>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% if form.non_field_errors %}
+<div class="rounded-xl border border-error/30 bg-error-container/20 p-4 text-error font-body-sm text-body-sm">
+  {{ form.non_field_errors }}
+</div>
+{% endif %}
+
+<form action="{% url 'pacientes:registro' %}" method="post" novalidate>
+  {% csrf_token %}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+    <div class="lg:col-span-2 space-y-gutter">
+
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">child_care</span>
+          Datos del Paciente
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.nombres.id_for_label }}">Nombre</label>
+            {{ form.nombres }}
+            {% if form.nombres.errors %}<p class="mt-1 text-error text-body-sm">{{ form.nombres.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.apellidos.id_for_label }}">Apellido</label>
+            {{ form.apellidos }}
+            {% if form.apellidos.errors %}<p class="mt-1 text-error text-body-sm">{{ form.apellidos.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.fecha_nacimiento.id_for_label }}">Fecha de Nacimiento</label>
+            {{ form.fecha_nacimiento }}
+            {% if form.fecha_nacimiento.errors %}<p class="mt-1 text-error text-body-sm">{{ form.fecha_nacimiento.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.sexo.id_for_label }}">Sexo</label>
+            {{ form.sexo }}
+            {% if form.sexo.errors %}<p class="mt-1 text-error text-body-sm">{{ form.sexo.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.provincia.id_for_label }}">Provincia</label>
+            {{ form.provincia }}
+            {% if form.provincia.errors %}<p class="mt-1 text-error text-body-sm">{{ form.provincia.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.municipio.id_for_label }}">Municipio</label>
+            {{ form.municipio }}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.tipo_sangre.id_for_label }}">Tipo de Sangre</label>
+            {{ form.tipo_sangre }}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.peso.id_for_label }}">Peso (kg)</label>
+            {{ form.peso }}
+            {% if form.peso.errors %}<p class="mt-1 text-error text-body-sm">{{ form.peso.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.altura.id_for_label }}">Altura (cm)</label>
+            {{ form.altura }}
+            {% if form.altura.errors %}<p class="mt-1 text-error text-body-sm">{{ form.altura.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.escuela.id_for_label }}">Escuela</label>
+            {{ form.escuela }}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.seguro_medico.id_for_label }}">Seguro medico</label>
+            {{ form.seguro_medico }}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.numero_seguro.id_for_label }}">Numero de seguro</label>
+            {{ form.numero_seguro }}
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.direccion.id_for_label }}">Direccion del paciente</label>
+            {{ form.direccion }}
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.alergias.id_for_label }}">Alergias conocidas</label>
+            {{ form.alergias }}
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.antecedentes_medicos.id_for_label }}">Antecedentes medicos</label>
+            {{ form.antecedentes_medicos }}
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary">family_restroom</span>
+          Datos del Padre/Tutor
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.tutor_nombre.id_for_label }}">Nombre del tutor</label>
+            {{ form.tutor_nombre }}
+            {% if form.tutor_nombre.errors %}<p class="mt-1 text-error text-body-sm">{{ form.tutor_nombre.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.tutor_tipo_documento.id_for_label }}">Tipo de Documento</label>
+            {{ form.tutor_tipo_documento }}
+            {% if form.tutor_tipo_documento.errors %}<p class="mt-1 text-error text-body-sm">{{ form.tutor_tipo_documento.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.tutor_cedula.id_for_label }}">Número de Documento</label>
+            {{ form.tutor_cedula }}
+            {% if form.tutor_cedula.errors %}<p class="mt-1 text-error text-body-sm">{{ form.tutor_cedula.errors|striptags }}</p>{% endif %}
+            <p id="tutor-cedula-status" class="mt-1 text-body-sm hidden"></p>
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.tutor_telefono.id_for_label }}">Telefono</label>
+            {{ form.tutor_telefono }}
+            {% if form.tutor_telefono.errors %}<p class="mt-1 text-error text-body-sm">{{ form.tutor_telefono.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.tutor_email.id_for_label }}">Correo electronico</label>
+            {{ form.tutor_email }}
+            {% if form.tutor_email.errors %}<p class="mt-1 text-error text-body-sm">{{ form.tutor_email.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.parentesco.id_for_label }}">Parentesco</label>
+            {{ form.parentesco }}
+            {% if form.parentesco.errors %}<p class="mt-1 text-error text-body-sm">{{ form.parentesco.errors|striptags }}</p>{% endif %}
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.tutor_direccion.id_for_label }}">Direccion</label>
+            {{ form.tutor_direccion }}
+            {% if form.tutor_direccion.errors %}<p class="mt-1 text-error text-body-sm">{{ form.tutor_direccion.errors|striptags }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+          <span class="material-symbols-outlined text-tertiary">stethoscope</span>
+          Asignacion Medica
+        </h3>
+        <div>
+          <label class="block font-label-md text-label-md text-on-surface mb-1.5" for="{{ form.medico_asignado.id_for_label }}">Medico Asignado</label>
+          {{ form.medico_asignado }}
+          {% if form.medico_asignado.errors %}<p class="mt-1 text-error text-body-sm">{{ form.medico_asignado.errors|striptags }}</p>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-gutter">
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 sticky top-20">
+        <h3 class="font-headline-md text-headline-md text-on-background mb-4">Resumen del Registro</h3>
+        <div class="space-y-3 text-body-sm font-body-sm">
+          <div class="flex justify-between py-2 border-b border-surface-container">
+            <span class="text-on-surface-variant">Nombre</span>
+            <span class="text-on-background font-medium">{{ form.nombres.value|default:"-" }} {{ form.apellidos.value|default:"" }}</span>
+          </div>
+          <div class="flex justify-between py-2 border-b border-surface-container">
+            <span class="text-on-surface-variant">Provincia</span>
+            <span class="text-on-background font-medium">{{ form.provincia.value|default:"-" }}</span>
+          </div>
+          <div class="flex justify-between py-2">
+            <span class="text-on-surface-variant">Tutor</span>
+            <span class="text-on-background font-medium">{{ form.tutor_nombre.value|default:"-" }}</span>
+          </div>
+        </div>
+        <div class="mt-5 space-y-3">
+          <button type="submit" class="w-full bg-primary text-on-primary py-3 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+            Guardar Paciente
+          </button>
+          <a href="{% url 'pacientes:lista' %}" class="w-full border border-outline-variant text-on-surface-variant py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center justify-center gap-2">
+            Cancelar
+          </a>
+        </div>
+        <div class="mt-4 p-3 bg-primary-container/20 rounded-lg">
+          <p class="font-body-sm text-body-sm text-on-surface-variant text-center">
+            Al registrar el paciente, se le asignara un ID unico y se podra iniciar el cribado FACCI.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const tipoDocSelect = document.querySelector('[name="tutor_tipo_documento"]');
+    const docInput = document.querySelector('[name="tutor_cedula"]');
+    const cedulaStatus = document.getElementById("tutor-cedula-status");
+    const tutorNombreInput = document.querySelector('[name="tutor_nombre"]');
+    const tutorTelefonoInput = document.querySelector('[name="tutor_telefono"]');
+    const tutorEmailInput = document.querySelector('[name="tutor_email"]');
+    const tutorDireccionInput = document.querySelector('[name="tutor_direccion"]');
+    const parentescoSelect = document.querySelector('[name="parentesco"]');
+
+    if (!tipoDocSelect || !docInput) return;
+
+    function formatCedula(val) {
+        let digits = val.replace(/\D/g, "");
+        if (digits.length > 11) {
+            digits = digits.substring(0, 11);
+        }
+        let formatted = "";
+        if (digits.length > 0) {
+            formatted += digits.substring(0, Math.min(digits.length, 3));
+        }
+        if (digits.length > 3) {
+            formatted += "-" + digits.substring(3, Math.min(digits.length, 10));
+        }
+        if (digits.length > 10) {
+            formatted += "-" + digits.substring(10, Math.min(digits.length, 11));
+        }
+        return formatted;
+    }
+
+    let ultimaCedulaConsultada = null;
+    let camposAutocompletados = false;
+
+    function limpiarCamposTutor() {
+        if (tutorNombreInput) tutorNombreInput.value = "";
+        if (tutorTelefonoInput) tutorTelefonoInput.value = "";
+        if (tutorEmailInput) tutorEmailInput.value = "";
+        if (tutorDireccionInput) tutorDireccionInput.value = "";
+        if (parentescoSelect) parentescoSelect.selectedIndex = 0;
+        camposAutocompletados = false;
+    }
+
+    function ocultarEstadoCedula() {
+        if (!cedulaStatus) return;
+        cedulaStatus.textContent = "";
+        cedulaStatus.className = "mt-1 text-body-sm hidden";
+        ultimaCedulaConsultada = null;
+        if (camposAutocompletados) limpiarCamposTutor();
+    }
+
+    function mostrarEstadoCedula(mensaje, tipo) {
+        if (!cedulaStatus) return;
+        cedulaStatus.textContent = mensaje;
+        cedulaStatus.className = "mt-1 text-body-sm " + (tipo === "error" ? "text-error" : "text-tertiary");
+    }
+
+    async function verificarCedulaTutor(cedula) {
+        if (cedula === ultimaCedulaConsultada) return;
+        ultimaCedulaConsultada = cedula;
+        let response;
+        try {
+            response = await fetch("{% url 'pacientes:verificar_tutor_cedula' %}?cedula=" + encodeURIComponent(cedula));
+        } catch (err) {
+            return;
+        }
+        if (!response.ok) return;
+        const data = await response.json();
+        if (docInput.value !== cedula) return;
+
+        if (!data.match) {
+            ocultarEstadoCedula();
+            return;
+        }
+        if (!data.valido) {
+            mostrarEstadoCedula(data.mensaje, "error");
+            if (camposAutocompletados) limpiarCamposTutor();
+            return;
+        }
+        const etiquetaPacientes = data.pacientes_asignados === 1 ? "paciente asignado" : "pacientes asignados";
+        mostrarEstadoCedula(
+            "Esta cédula ya pertenece a un tutor registrado con " + data.pacientes_asignados + " " + etiquetaPacientes + ". Si continúa, este paciente también quedará asignado a ese tutor.",
+            "info"
+        );
+        if (tutorNombreInput) tutorNombreInput.value = data.nombre;
+        if (tutorTelefonoInput) tutorTelefonoInput.value = data.telefono;
+        if (tutorEmailInput) tutorEmailInput.value = data.email;
+        if (tutorDireccionInput) tutorDireccionInput.value = data.direccion;
+        if (parentescoSelect && data.parentesco) parentescoSelect.value = data.parentesco;
+        camposAutocompletados = true;
+    }
+
+    function handleInput(e) {
+        if (tipoDocSelect.value === "CEDULA") {
+            const cursorPosition = docInput.selectionStart;
+            const originalLength = docInput.value.length;
+
+            const formatted = formatCedula(docInput.value);
+            docInput.value = formatted;
+
+            const newLength = formatted.length;
+            const diff = newLength - originalLength;
+            docInput.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
+
+            const digits = docInput.value.replace(/\D/g, "");
+            if (digits.length === 11) {
+                verificarCedulaTutor(docInput.value);
+            } else {
+                ocultarEstadoCedula();
+            }
+        }
+    }
+
+    docInput.addEventListener("input", handleInput);
+
+    tipoDocSelect.addEventListener("change", function() {
+        if (tipoDocSelect.value === "CEDULA") {
+            docInput.placeholder = "001-0000000-0";
+            docInput.value = formatCedula(docInput.value);
+        } else {
+            docInput.placeholder = "Ej: RD123456";
+            docInput.value = docInput.value.replace(/-/g, "");
+            ocultarEstadoCedula();
+        }
+    });
+
+    if (tipoDocSelect.value === "CEDULA") {
+        docInput.placeholder = "001-0000000-0";
+        docInput.value = formatCedula(docInput.value);
+    } else {
+        docInput.placeholder = "Ej: RD123456";
+    }
+});
+</script>
+{% endblock %}

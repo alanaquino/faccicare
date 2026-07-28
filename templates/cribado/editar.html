@@ -1,0 +1,178 @@
+{% extends "layouts/base.html" %}
+{% block title %}Editar Cribado{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-4">
+  <a href="{% url 'cribado:detalle' cribado.pk %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Editar Cribado</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">{{ cribado.paciente.nombre_completo }} &middot; {{ cribado.fecha_evaluacion|date:"d/m/Y H:i" }}</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-4">
+    <p class="font-label-md text-label-md text-on-surface-variant">Paciente</p>
+    <p class="font-headline-md text-headline-md text-on-surface mt-1">{{ cribado.paciente.nombre_completo }}</p>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">{{ cribado.paciente.codigo_paciente }} &middot; {{ cribado.paciente.edad }} años</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-4">
+    <p class="font-label-md text-label-md text-on-surface-variant">Médico original</p>
+    <p class="font-headline-md text-headline-md text-on-surface mt-1">{{ cribado.medico.nombre_completo }}</p>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Evaluador</p>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-4">
+    <p class="font-label-md text-label-md text-on-surface-variant">Puntuación actual</p>
+    <p class="font-headline-md text-headline-md text-primary mt-1">{{ cribado.puntaje_total }} / {{ score_maximo }}</p>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">{{ cribado.get_nivel_riesgo_display }}</p>
+  </div>
+</div>
+
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 mt-6">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-label-md text-label-md text-on-surface">Progreso de síntomas</span>
+    <span class="font-label-md text-label-md text-primary" id="progreso-label">0 / {{ score_maximo }} síntomas</span>
+  </div>
+  <div class="w-full h-2 bg-surface-container rounded-full overflow-hidden">
+    <div class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%" id="barra-progreso"></div>
+  </div>
+</div>
+
+<form action="{% url 'cribado:editar' cribado.pk %}" method="post" id="cribado-form" class="mt-6 space-y-6">
+  {% csrf_token %}
+
+  {% for seccion in secciones %}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-center gap-3 p-5 border-b border-surface-container bg-surface-container-low">
+      <div class="w-10 h-10 rounded-lg bg-primary-container/30 flex items-center justify-center">
+        <span class="material-symbols-outlined text-primary" style="font-size:20px;">{{ seccion.icono }}</span>
+      </div>
+      <div>
+        <h3 class="font-headline-md text-headline-md text-on-background">{{ seccion.titulo }}</h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">{{ seccion.preguntas|length }} signos a evaluar</p>
+      </div>
+    </div>
+
+    <div class="divide-y divide-surface-container">
+      {% for pregunta in seccion.preguntas %}
+      <div class="p-5 hover:bg-surface-container-low transition-colors">
+        <div class="flex flex-col sm:flex-row sm:items-start gap-4">
+          <div class="flex items-center gap-4 shrink-0 pt-0.5">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="{{ pregunta.campo }}" value="si"
+                     {% if pregunta.presente %}checked{% endif %}
+                     class="w-4 h-4 text-error border-outline-variant focus:ring-error/50 cribado-radio"
+                     data-peso="1"/>
+              <span class="font-label-md text-label-md text-error">Sí</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="{{ pregunta.campo }}" value="no"
+                     {% if not pregunta.presente %}checked{% endif %}
+                     class="w-4 h-4 text-primary border-outline-variant focus:ring-primary/50 cribado-radio"
+                     data-peso="0"/>
+              <span class="font-label-md text-label-md text-on-surface-variant">No</span>
+            </label>
+          </div>
+          <div class="flex-1">
+            <p class="font-body-md text-body-md text-on-surface">{{ pregunta.texto }}</p>
+            {% if pregunta.alarma_mayor %}
+            <span class="inline-block mt-1 px-2 py-0.5 bg-error-container/40 text-error rounded-full font-label-sm text-label-sm">Señal de alarma mayor</span>
+            {% else %}
+            <span class="inline-block mt-1 px-2 py-0.5 bg-secondary-container/40 text-secondary rounded-full font-label-sm text-label-sm">Señal importante</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-4">
+    <div>
+      <label for="tipo_cancer_sospechado" class="block font-label-md text-label-md text-on-surface mb-1.5">
+        Tipo de cáncer sospechado
+        <span class="font-body-sm text-body-sm text-on-surface-variant font-normal">(opcional)</span>
+      </label>
+      <select name="tipo_cancer_sospechado" id="tipo_cancer_sospechado"
+              class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+        <option value="">— Sin especificar —</option>
+        {% for valor, etiqueta in tipos_cancer %}
+        <option value="{{ valor }}" {% if cribado.tipo_cancer_sospechado == valor %}selected{% endif %}>{{ etiqueta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="observaciones" class="block font-label-md text-label-md text-on-surface mb-1.5">Observaciones clínicas</label>
+      <textarea name="observaciones" id="observaciones" rows="4"
+                class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+                placeholder="Registre contexto clínico, evolución, antecedentes relevantes o comentarios del tutor.">{{ cribado.observaciones }}</textarea>
+    </div>
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-primary-container/40 p-6">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <p class="font-label-md text-label-md text-on-surface-variant mb-1">Puntuación recalculada</p>
+        <div class="flex items-baseline gap-2">
+          <span class="font-headline-xl text-headline-xl text-primary" id="score-display">{{ cribado.puntaje_total }}</span>
+          <span class="font-body-md text-body-md text-on-surface-variant">/ {{ score_maximo }} puntos</span>
+        </div>
+        <div id="nivel-display" class="mt-2">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full
+            {% if cribado.nivel_riesgo == 'ALTO' %}bg-error-container text-error{% elif cribado.nivel_riesgo == 'MEDIO' %}bg-secondary-container/40 text-secondary{% else %}bg-primary-container/30 text-primary{% endif %}
+            font-label-md text-label-md">
+            <span class="w-2 h-2 rounded-full {% if cribado.nivel_riesgo == 'ALTO' %}bg-error{% elif cribado.nivel_riesgo == 'MEDIO' %}bg-secondary{% else %}bg-primary{% endif %}"></span>
+            Riesgo {{ cribado.get_nivel_riesgo_display|lower }}
+          </span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <a href="{% url 'cribado:detalle' cribado.pk %}" class="flex-1 sm:flex-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined">close</span>
+          Cancelar
+        </a>
+        <button type="submit" class="flex-1 sm:flex-auto flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+          <span class="material-symbols-outlined">check_circle</span>
+          Guardar cambios
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+(function () {
+  const scoreMaximo = {{ score_maximo }};
+
+  function actualizarScore() {
+    let score = 0;
+    document.querySelectorAll('.cribado-radio:checked').forEach(r => {
+      score += parseInt(r.dataset.peso || 0, 10);
+    });
+
+    document.getElementById('score-display').textContent = score;
+
+    const pct = scoreMaximo ? (score / scoreMaximo) * 100 : 0;
+    document.getElementById('barra-progreso').style.width = pct + '%';
+    document.getElementById('progreso-label').textContent = score + ' / ' + scoreMaximo + ' síntomas';
+
+    let nivel;
+    if (score >= 6) {
+      nivel = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-error font-label-md text-label-md"><span class="w-2 h-2 rounded-full bg-error"></span>Riesgo alto</span>';
+    } else if (score >= 3) {
+      nivel = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container/40 text-secondary font-label-md text-label-md"><span class="w-2 h-2 rounded-full bg-secondary"></span>Riesgo moderado</span>';
+    } else {
+      nivel = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-container/30 text-primary font-label-md text-label-md"><span class="w-2 h-2 rounded-full bg-primary"></span>Riesgo bajo</span>';
+    }
+    document.getElementById('nivel-display').innerHTML = nivel;
+  }
+
+  document.querySelectorAll('.cribado-radio').forEach(r => r.addEventListener('change', actualizarScore));
+  actualizarScore();
+})();
+</script>
+
+{% endblock %}

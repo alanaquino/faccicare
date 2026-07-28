@@ -1,0 +1,228 @@
+{% extends base_template %}
+{% block title %}Notificaciones{% endblock %}
+{% block content %}
+
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="flex items-center gap-4">
+    <a href="{{ back_url }}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Notificaciones</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant">
+        <span id="contadorSinLeer">{{ sin_leer }}</span> sin leer
+      </p>
+    </div>
+  </div>
+  <button onclick="marcarTodasLeidas()" id="btnMarcarTodas"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors {% if sin_leer == 0 %}opacity-50 pointer-events-none{% endif %}">
+    <span class="material-symbols-outlined" style="font-size:18px;">done_all</span>
+    Marcar todas como leidas
+  </button>
+</div>
+
+<form method="get" class="bg-surface-container-lowest border border-surface-container rounded-xl p-4 grid grid-cols-1 md:grid-cols-5 gap-3">
+  <label class="flex flex-col gap-1">
+    <span class="font-label-sm text-label-sm text-on-surface-variant">Estado</span>
+    <select name="estado" class="rounded-lg border-outline-variant text-body-sm">
+      <option value="">Todas</option>
+      <option value="no_leidas" {% if filtros.estado == "no_leidas" %}selected{% endif %}>No leidas</option>
+      <option value="leidas" {% if filtros.estado == "leidas" %}selected{% endif %}>Leidas</option>
+    </select>
+  </label>
+  <label class="flex flex-col gap-1">
+    <span class="font-label-sm text-label-sm text-on-surface-variant">Tipo</span>
+    <select name="tipo" class="rounded-lg border-outline-variant text-body-sm">
+      <option value="">Todos</option>
+      {% for value,label in tipos %}
+      <option value="{{ value }}" {% if filtros.tipo == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="flex flex-col gap-1">
+    <span class="font-label-sm text-label-sm text-on-surface-variant">Prioridad</span>
+    <select name="prioridad" class="rounded-lg border-outline-variant text-body-sm">
+      <option value="">Todas</option>
+      {% for value,label in prioridades %}
+      <option value="{{ value }}" {% if filtros.prioridad == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="flex flex-col gap-1">
+    <span class="font-label-sm text-label-sm text-on-surface-variant">Desde</span>
+    <input type="date" name="desde" value="{{ filtros.desde }}" class="rounded-lg border-outline-variant text-body-sm">
+  </label>
+  <label class="flex flex-col gap-1">
+    <span class="font-label-sm text-label-sm text-on-surface-variant">Hasta</span>
+    <input type="date" name="hasta" value="{{ filtros.hasta }}" class="rounded-lg border-outline-variant text-body-sm">
+  </label>
+  <div class="md:col-span-5 flex items-center justify-end gap-2">
+    <a href="{% url 'notificaciones' %}" class="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">Limpiar</a>
+    <button class="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors">Filtrar</button>
+  </div>
+</form>
+
+<div class="space-y-3">
+  {% for notif in notificaciones %}
+  <div id="alerta-{{ notif.id }}" data-leida="{% if notif.leida %}true{% else %}false{% endif %}"
+       class="bg-surface-container-lowest rounded-xl border {% if not notif.leida %}border-primary/30 shadow-sm{% else %}border-surface-container{% endif %} hover:shadow-md transition-shadow">
+    <div class="flex items-start gap-4 p-5">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0
+                  {% if notif.color == 'error' %}bg-error-container/30 text-error
+                  {% elif notif.color == 'primary' %}bg-primary-container/30 text-primary
+                  {% elif notif.color == 'secondary' %}bg-secondary-container/30 text-secondary
+                  {% elif notif.color == 'tertiary' %}bg-tertiary-container/30 text-tertiary
+                  {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+        <span class="material-symbols-outlined icon-fill" style="font-size:24px;">{{ notif.icono }}</span>
+      </div>
+
+      <div class="flex-1 min-w-0">
+        <div class="flex items-start justify-between gap-2 mb-1">
+          <div class="min-w-0">
+            <h4 class="font-label-md text-label-md text-on-surface">{{ notif.titulo }}</h4>
+            <div class="flex flex-wrap items-center gap-2 mt-1">
+              <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-[10px]">{{ notif.get_tipo_display }}</span>
+              <span class="px-2 py-0.5 rounded-full font-label-sm text-[10px]
+                           {% if notif.prioridad == 'critica' or notif.prioridad == 'alta' %}bg-error-container text-on-error-container
+                           {% elif notif.prioridad == 'media' %}bg-secondary-container/40 text-on-secondary-container
+                           {% else %}bg-primary-container/20 text-primary{% endif %}">
+                {{ notif.get_prioridad_display }}
+              </span>
+              {% if notif.modulo %}
+              <span class="font-label-sm text-[10px] text-outline">{{ notif.modulo }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="font-body-sm text-body-sm text-on-surface-variant">{{ notif.tiempo }}</span>
+            {% if not notif.leida %}
+            <span id="dot-{{ notif.id }}" class="w-2.5 h-2.5 rounded-full bg-primary shrink-0"></span>
+            {% endif %}
+          </div>
+        </div>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">{{ notif.mensaje }}</p>
+
+        <div class="flex flex-wrap gap-2 mt-3">
+          {% if notif.accion_url %}
+          <a href="{{ notif.abrir_url }}"
+             class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-label-sm text-label-sm transition-colors text-xs
+                    {% if notif.color == 'error' %}bg-error text-on-error hover:bg-error/80
+                    {% elif notif.color == 'tertiary' %}bg-tertiary text-on-tertiary hover:bg-tertiary/80
+                    {% else %}bg-primary text-on-primary hover:bg-surface-tint{% endif %}">
+            <span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span>
+            {{ notif.accion_texto|default:"Ver detalles" }}
+          </a>
+          {% endif %}
+          <button onclick="alternarLeido('{{ notif.id }}')" id="btnLeido-{{ notif.id }}"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors text-xs">
+            <span class="material-symbols-outlined {% if not notif.leida %}text-primary{% else %}text-neutral-400{% endif %}" style="font-size:14px;" id="iconLeido-{{ notif.id }}">
+              {% if not notif.leida %}check{% else %}mark_email_unread{% endif %}
+            </span>
+            <span id="textLeido-{{ notif.id }}">{% if not notif.leida %}Marcar leida{% else %}Marcar no leida{% endif %}</span>
+          </button>
+          <button onclick="archivarNotificacion('{{ notif.id }}')"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-error-container/30 hover:text-error transition-colors text-xs">
+            <span class="material-symbols-outlined" style="font-size:14px;">archive</span>
+            Archivar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="bg-surface-container-lowest rounded-xl border border-surface-container p-12 text-center">
+    <span class="material-symbols-outlined text-outline-variant text-5xl block mb-3">notifications_off</span>
+    <p class="font-headline-md text-headline-md text-on-surface-variant">Sin notificaciones</p>
+    <p class="font-body-md text-body-md text-outline mt-2">Esta al dia con todas sus notificaciones.</p>
+  </div>
+  {% endfor %}
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="flex items-center justify-center gap-2">
+  {% if page_obj.has_previous %}
+  <a class="px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container"
+     href="?page={{ page_obj.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}">Anterior</a>
+  {% endif %}
+  <span class="font-body-sm text-body-sm text-on-surface-variant">Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+  <a class="px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container"
+     href="?page={{ page_obj.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}">Siguiente</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function actualizarContadores(data) {
+    const total = data.sin_leer || 0;
+    const textCont = document.getElementById('contadorSinLeer');
+    if (textCont) textCont.textContent = total;
+    const btnAll = document.getElementById('btnMarcarTodas');
+    if (btnAll) {
+      btnAll.classList.toggle('opacity-50', total === 0);
+      btnAll.classList.toggle('pointer-events-none', total === 0);
+    }
+  }
+
+  async function alternarLeido(id) {
+    const card = document.getElementById(`alerta-${id}`);
+    if (!card) return;
+    const leida = card.getAttribute('data-leida') === 'true';
+    const url = leida
+      ? `/mensajes/notificaciones/marcar-no-leida/${id}/`
+      : `/mensajes/notificaciones/marcar-leida/${id}/`;
+    const response = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } });
+    if (!response.ok) return;
+    const data = await response.json();
+    const ahoraLeida = !leida;
+    card.setAttribute('data-leida', ahoraLeida ? 'true' : 'false');
+    card.className = `bg-surface-container-lowest rounded-xl border ${ahoraLeida ? 'border-surface-container' : 'border-primary/30 shadow-sm'} hover:shadow-md transition-shadow`;
+    const dot = document.getElementById(`dot-${id}`);
+    if (ahoraLeida && dot) dot.remove();
+    if (!ahoraLeida && !dot) {
+      const target = card.querySelector('.flex.items-center.gap-2.shrink-0');
+      if (target) target.insertAdjacentHTML('beforeend', `<span id="dot-${id}" class="w-2.5 h-2.5 rounded-full bg-primary shrink-0"></span>`);
+    }
+    const icon = document.getElementById(`iconLeido-${id}`);
+    const text = document.getElementById(`textLeido-${id}`);
+    if (icon) icon.textContent = ahoraLeida ? 'mark_email_unread' : 'check';
+    if (text) text.textContent = ahoraLeida ? 'Marcar no leida' : 'Marcar leida';
+    actualizarContadores(data);
+  }
+
+  async function archivarNotificacion(id) {
+    const response = await fetch(`/mensajes/notificaciones/eliminar/${id}/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    const card = document.getElementById(`alerta-${id}`);
+    if (card) {
+      card.classList.add('transition-all', 'duration-300', 'opacity-0', 'scale-95');
+      setTimeout(() => card.remove(), 300);
+    }
+    actualizarContadores(data);
+  }
+
+  async function marcarTodasLeidas() {
+    const response = await fetch('/mensajes/notificaciones/marcar-todas-leidas/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    document.querySelectorAll('[id^="alerta-"]').forEach((card) => {
+      card.setAttribute('data-leida', 'true');
+      card.className = 'bg-surface-container-lowest rounded-xl border border-surface-container hover:shadow-md transition-shadow';
+    });
+    document.querySelectorAll('[id^="dot-"]').forEach((dot) => dot.remove());
+    document.querySelectorAll('[id^="textLeido-"]').forEach((item) => item.textContent = 'Marcar no leida');
+    document.querySelectorAll('[id^="iconLeido-"]').forEach((item) => item.textContent = 'mark_email_unread');
+    actualizarContadores(data);
+  }
+</script>
+{% endblock %}

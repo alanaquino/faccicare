@@ -1,0 +1,284 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ evaluacion.codigo }} — Evaluación Psicosocial{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-4">
+  <a href="{% url 'psicosocial:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div class="flex-1">
+    <div class="flex items-center gap-3">
+      <h2 class="font-headline-lg text-headline-lg text-on-background">{{ evaluacion.codigo }}</h2>
+      {% if evaluacion.nivel_riesgo == 'CRITICO' %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-error font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-error"></span>{{ evaluacion.get_nivel_riesgo_display }}
+      </span>
+      {% elif evaluacion.nivel_riesgo == 'ALTO' %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container/40 text-secondary font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-secondary"></span>{{ evaluacion.get_nivel_riesgo_display }}
+      </span>
+      {% elif evaluacion.nivel_riesgo == 'MEDIO' %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-tertiary-container/30 text-tertiary font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-tertiary"></span>{{ evaluacion.get_nivel_riesgo_display }}
+      </span>
+      {% else %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-container/30 text-primary font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-primary"></span>{{ evaluacion.get_nivel_riesgo_display }}
+      </span>
+      {% endif %}
+    </div>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-0.5">
+      {{ evaluacion.paciente.nombre_completo }} · {{ evaluacion.fecha_evaluacion|date:"d/m/Y" }} · Evaluador: {{ evaluacion.evaluador.nombre_completo|default:"—" }}
+    </p>
+  </div>
+  <a href="{% url 'pacientes:expediente' evaluacion.paciente.pk %}"
+     class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+    <span class="material-symbols-outlined" style="font-size:18px;">person</span>Expediente
+  </a>
+</div>
+
+{# ── Puntaje ── #}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+  <div class="flex items-center justify-between mb-3">
+    <span class="font-label-md text-label-md text-on-surface-variant">Puntaje de riesgo psicosocial</span>
+    <span class="font-headline-lg text-headline-lg text-on-background">
+      {{ evaluacion.puntaje_total }}<span class="font-body-md text-body-md text-on-surface-variant"> / 24</span>
+    </span>
+  </div>
+  <div class="w-full h-3 bg-surface-container rounded-full overflow-hidden">
+    {% with pct=evaluacion.puntaje_total|floatformat:0 %}
+    <div class="h-full rounded-full
+      {% if evaluacion.nivel_riesgo == 'CRITICO' %}bg-error
+      {% elif evaluacion.nivel_riesgo == 'ALTO' %}bg-secondary
+      {% elif evaluacion.nivel_riesgo == 'MEDIO' %}bg-tertiary
+      {% else %}bg-primary{% endif %}"
+      style="width:{{ evaluacion.puntaje_total|floatformat:0 }}{% widthratio evaluacion.puntaje_total 24 100 %}%"></div>
+    {% endwith %}
+  </div>
+  <p class="font-body-sm text-body-sm text-on-surface-variant mt-2">Bajo: 0–4 · Moderado: 5–10 · Alto: 11–16 · Crítico: 17–24</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+  {# ── Situación económica ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-center gap-3 p-4 border-b border-surface-container bg-surface-container-low">
+      <span class="material-symbols-outlined text-secondary" style="font-size:20px;">payments</span>
+      <h3 class="font-title-md text-title-md text-on-background">Situación económica</h3>
+    </div>
+    <dl class="divide-y divide-surface-container">
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Ingreso mensual</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ evaluacion.get_ingreso_mensual_display }}</dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Seguro médico</dt>
+        <dd class="font-label-md text-label-md {% if evaluacion.tiene_seguro_medico %}text-primary{% else %}text-error{% endif %} text-right">
+          {% if evaluacion.tiene_seguro_medico %}Sí{% else %}No{% endif %}
+        </dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Dificultad medicamentos</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ evaluacion.get_dificultad_medicamentos_display }}</dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Dificultad transporte</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ evaluacion.get_dificultad_transporte_display }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  {# ── Condiciones del hogar ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-center gap-3 p-4 border-b border-surface-container bg-surface-container-low">
+      <span class="material-symbols-outlined text-tertiary" style="font-size:20px;">home</span>
+      <h3 class="font-title-md text-title-md text-on-background">Condiciones del hogar</h3>
+    </div>
+    <dl class="divide-y divide-surface-container">
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Tipo de vivienda</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ evaluacion.get_tipo_vivienda_display|default:"—" }}</dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Condición de la vivienda</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ evaluacion.get_condicion_vivienda_display }}</dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Personas en el hogar</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ evaluacion.personas_en_hogar }}</dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Hacinamiento</dt>
+        <dd class="font-label-md text-label-md {% if evaluacion.hacinamiento %}text-error{% else %}text-primary{% endif %} text-right">
+          {% if evaluacion.hacinamiento %}Sí{% else %}No{% endif %}
+        </dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Faltan servicios básicos</dt>
+        <dd class="font-label-md text-label-md {% if evaluacion.servicios_basicos_ausentes %}text-error{% else %}text-primary{% endif %} text-right">
+          {% if evaluacion.servicios_basicos_ausentes %}Sí{% else %}No{% endif %}
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  {# ── Red de apoyo ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-center gap-3 p-4 border-b border-surface-container bg-surface-container-low">
+      <span class="material-symbols-outlined text-primary" style="font-size:20px;">groups</span>
+      <h3 class="font-title-md text-title-md text-on-background">Red de apoyo social</h3>
+    </div>
+    <dl class="divide-y divide-surface-container">
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Apoyo familiar</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ evaluacion.get_apoyo_familiar_display }}</dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Cuidador principal</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">
+          {{ evaluacion.cuidador_principal_nombre|default:"No especificado" }}
+          {% if evaluacion.parentesco_cuidador %}
+          <span class="block font-body-sm text-on-surface-variant">{{ evaluacion.get_parentesco_cuidador_display }}</span>
+          {% endif %}
+        </dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Cuidador único</dt>
+        <dd class="font-label-md text-label-md {% if evaluacion.cuidador_es_unico %}text-error{% else %}text-primary{% endif %} text-right">
+          {% if evaluacion.cuidador_es_unico %}Sí{% else %}No{% endif %}
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  {# ── Bienestar del cuidador ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-center gap-3 p-4 border-b border-surface-container bg-surface-container-low">
+      <span class="material-symbols-outlined text-secondary" style="font-size:20px;">psychology</span>
+      <h3 class="font-title-md text-title-md text-on-background">Bienestar del cuidador</h3>
+    </div>
+    <dl class="divide-y divide-surface-container">
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Estado emocional</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">{{ evaluacion.get_estado_emocional_cuidador_display }}</dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Perdió empleo por el cuidado</dt>
+        <dd class="font-label-md text-label-md {% if evaluacion.cuidador_perdio_trabajo %}text-error{% else %}text-primary{% endif %} text-right">
+          {% if evaluacion.cuidador_perdio_trabajo %}Sí{% else %}No{% endif %}
+        </dd>
+      </div>
+      <div class="flex items-start justify-between p-4 gap-4">
+        <dt class="font-body-sm text-body-sm text-on-surface-variant">Requiere apoyo psicológico</dt>
+        <dd class="font-label-md text-label-md text-on-surface text-right">
+          {% if evaluacion.cuidador_requiere_apoyo_psicologico %}Sí{% else %}No{% endif %}
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  {# ── Impacto en el paciente ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden md:col-span-2">
+    <div class="flex items-center gap-3 p-4 border-b border-surface-container bg-surface-container-low">
+      <span class="material-symbols-outlined text-error" style="font-size:20px;">child_care</span>
+      <h3 class="font-title-md text-title-md text-on-background">Impacto en el paciente</h3>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-surface-container">
+      <dl class="p-4 space-y-3">
+        <div class="flex items-start justify-between gap-4">
+          <dt class="font-body-sm text-body-sm text-on-surface-variant">En edad escolar</dt>
+          <dd class="font-label-md text-label-md text-on-surface">{% if evaluacion.nino_en_edad_escolar %}Sí{% else %}No aplica{% endif %}</dd>
+        </div>
+      </dl>
+      <dl class="p-4 space-y-3">
+        <div class="flex items-start justify-between gap-4">
+          <dt class="font-body-sm text-body-sm text-on-surface-variant">Abandono escolar</dt>
+          <dd class="font-label-md text-label-md {% if evaluacion.abandono_escolar %}text-error{% else %}text-primary{% endif %}">
+            {% if evaluacion.abandono_escolar %}Sí{% else %}No{% endif %}
+          </dd>
+        </div>
+      </dl>
+      <dl class="p-4 space-y-3">
+        <div class="flex items-start justify-between gap-4">
+          <dt class="font-body-sm text-body-sm text-on-surface-variant">Impacto emocional</dt>
+          <dd class="font-label-md text-label-md text-on-surface">{{ evaluacion.get_impacto_emocional_paciente_display }}</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+
+</div>
+
+{# ── Plan de intervención ── #}
+{% if evaluacion.necesidades_identificadas or evaluacion.acciones_recomendadas or evaluacion.observaciones %}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-4">
+  <div class="flex items-center gap-3 mb-2">
+    <span class="material-symbols-outlined text-tertiary">assignment</span>
+    <h3 class="font-title-md text-title-md text-on-background">Plan de intervención</h3>
+    {% if evaluacion.requiere_seguimiento_social %}
+    <span class="inline-flex items-center gap-1.5 ml-auto px-3 py-1 rounded-full bg-secondary-container/40 text-secondary font-label-sm text-label-sm">
+      <span class="material-symbols-outlined" style="font-size:14px;">schedule</span>
+      Seguimiento requerido{% if evaluacion.proxima_evaluacion %}: {{ evaluacion.proxima_evaluacion|date:"d/m/Y" }}{% endif %}
+    </span>
+    {% endif %}
+  </div>
+  {% if evaluacion.necesidades_identificadas %}
+  <div>
+    <p class="font-label-md text-label-md text-on-surface-variant mb-1">Necesidades identificadas</p>
+    <p class="font-body-md text-body-md text-on-surface whitespace-pre-wrap">{{ evaluacion.necesidades_identificadas }}</p>
+  </div>
+  {% endif %}
+  {% if evaluacion.acciones_recomendadas %}
+  <div class="pt-4 border-t border-surface-container">
+    <p class="font-label-md text-label-md text-on-surface-variant mb-1">Acciones recomendadas</p>
+    <p class="font-body-md text-body-md text-on-surface whitespace-pre-wrap">{{ evaluacion.acciones_recomendadas }}</p>
+  </div>
+  {% endif %}
+  {% if evaluacion.observaciones %}
+  <div class="pt-4 border-t border-surface-container">
+    <p class="font-label-md text-label-md text-on-surface-variant mb-1">Observaciones</p>
+    <p class="font-body-md text-body-md text-on-surface whitespace-pre-wrap">{{ evaluacion.observaciones }}</p>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{# ── Evaluaciones anteriores ── #}
+{% if evaluaciones_previas %}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+  <div class="p-5 border-b border-surface-container">
+    <h3 class="font-title-md text-title-md text-on-background">Evaluaciones anteriores del mismo paciente</h3>
+  </div>
+  <table class="w-full text-left border-collapse">
+    <thead>
+      <tr class="bg-surface-container-low text-on-surface-variant font-label-md text-label-md border-b border-surface-container">
+        <th class="p-4">Código</th>
+        <th class="p-4">Fecha</th>
+        <th class="p-4">Puntaje</th>
+        <th class="p-4">Nivel</th>
+        <th class="p-4 text-right">Ver</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-surface-container font-body-sm text-body-sm">
+      {% for ev in evaluaciones_previas %}
+      <tr class="hover:bg-surface-container-low transition-colors">
+        <td class="p-4 text-on-surface-variant">{{ ev.codigo }}</td>
+        <td class="p-4 text-on-surface-variant">{{ ev.fecha_evaluacion|date:"d/m/Y" }}</td>
+        <td class="p-4 text-on-surface">{{ ev.puntaje_total }}/24</td>
+        <td class="p-4">
+          {% if ev.nivel_riesgo == 'CRITICO' %}<span class="text-error">{{ ev.get_nivel_riesgo_display }}</span>
+          {% elif ev.nivel_riesgo == 'ALTO' %}<span class="text-secondary">{{ ev.get_nivel_riesgo_display }}</span>
+          {% elif ev.nivel_riesgo == 'MEDIO' %}<span class="text-tertiary">{{ ev.get_nivel_riesgo_display }}</span>
+          {% else %}<span class="text-primary">{{ ev.get_nivel_riesgo_display }}</span>{% endif %}
+        </td>
+        <td class="p-4 text-right">
+          <a href="{% url 'psicosocial:detalle' ev.pk %}" class="text-primary hover:underline font-label-md text-label-md">Ver</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

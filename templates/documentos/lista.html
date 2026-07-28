@@ -1,0 +1,138 @@
+{% extends "layouts/base.html" %}
+{% block title %}Documentos Médicos{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Documentos Médicos</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">{{ total }} documento{{ total|pluralize:"s" }} en el repositorio</p>
+  </div>
+  <a href="{% url 'documentos:subir' %}"
+     class="flex items-center gap-2 px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+    <span class="material-symbols-outlined" style="font-size:20px;">upload_file</span>
+    Subir Documento
+  </a>
+</div>
+
+{# Barra de búsqueda y filtros #}
+<form method="get" class="flex flex-col sm:flex-row gap-3">
+  <div class="relative flex-1">
+    <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline-variant" style="font-size:20px;">search</span>
+    <input class="w-full pl-10 pr-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+           type="search" name="q" data-live-filter placeholder="Buscar documentos..." value="{{ filtro_search }}"/>
+  </div>
+  <select name="tipo" data-autosubmit class="px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+    <option value="">Todos los tipos</option>
+    {% for value, label in tipos_documento %}
+    <option value="{{ value }}" {% if value == filtro_tipo %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="estado" data-autosubmit class="px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+    <option value="">Todos los estados</option>
+    {% for value, label in estados_documento %}
+    <option value="{{ value }}" {% if value == filtro_estado %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+    Filtrar
+  </button>
+  {% if filtro_search or filtro_tipo or filtro_estado %}
+  <a href="{% url 'documentos:lista' %}" class="px-5 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+    Limpiar
+  </a>
+  {% endif %}
+</form>
+
+{# Grid de documentos #}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for doc in documentos %}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container hover:shadow-md transition-shadow group">
+    <div class="p-5">
+      {# Icono del tipo #}
+      <div class="flex items-start justify-between mb-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center
+                    {% if doc.color == 'error' %}bg-error-container/30 text-error
+                    {% elif doc.color == 'primary' %}bg-primary-container/30 text-primary
+                    {% elif doc.color == 'secondary' %}bg-secondary-container/30 text-secondary
+                    {% elif doc.color == 'tertiary' %}bg-tertiary-container/30 text-tertiary
+                    {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+          <span class="material-symbols-outlined" style="font-size:24px;">{{ doc.icono }}</span>
+        </div>
+        <div class="text-right">
+          <span class="text-body-sm font-body-sm text-on-surface-variant">{{ doc.tamano }}</span>
+          <p class="text-label-sm font-label-sm
+                    {% if doc.estado == 'PENDIENTE' %}text-warning
+                    {% elif doc.estado == 'REVISADO' %}text-success
+                    {% elif doc.estado == 'CORRECCION' %}text-error
+                    {% else %}text-outline{% endif %}">{{ doc.get_estado_display }}</p>
+        </div>
+      </div>
+
+      {# Nombre del documento #}
+      <h4 class="font-label-md text-label-md text-on-surface mb-1 truncate" title="{{ doc.nombre }}">{{ doc.nombre }}</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mb-3">{{ doc.paciente.nombre_completo }}</p>
+
+      {# Metadatos #}
+      <div class="flex items-center justify-between">
+        <span class="inline-block px-2 py-0.5 rounded-full font-label-sm text-label-sm
+                     {% if doc.color == 'error' %}bg-error-container/30 text-error
+                     {% elif doc.color == 'primary' %}bg-primary-container/30 text-primary
+                     {% elif doc.color == 'secondary' %}bg-secondary-container/30 text-secondary
+                     {% elif doc.color == 'tertiary' %}bg-tertiary-container/30 text-tertiary
+                     {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+          {{ doc.get_tipo_documento_display }}
+        </span>
+        <span class="font-body-sm text-body-sm text-outline">{{ doc.fecha }}</span>
+      </div>
+    </div>
+
+    {# Acciones #}
+    <div class="border-t border-surface-container p-3 flex gap-2">
+      <a href="{% url 'documentos:detalle' doc.id %}" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors">
+        <span class="material-symbols-outlined" style="font-size:16px;">visibility</span>Ver
+      </a>
+      <a href="{% url 'documentos:descargar' doc.id %}" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm transition-colors">
+        <span class="material-symbols-outlined" style="font-size:16px;">download</span>Descargar
+      </a>
+      <form action="{% url 'documentos:eliminar' doc.id %}" method="post" style="flex: 1; margin: 0;" onsubmit="return confirm('¿Eliminar este documento?');">
+        {% csrf_token %}
+        <button type="submit" class="w-full flex items-center justify-center p-2 rounded-lg text-on-surface-variant hover:bg-error-container/20 hover:text-error transition-colors">
+          <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
+        </button>
+      </form>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-span-3 bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-12 text-center">
+    <span class="material-symbols-outlined text-outline-variant text-5xl block mb-3">folder_open</span>
+    <p class="font-headline-md text-headline-md text-on-surface-variant">Sin documentos</p>
+    <p class="font-body-md text-body-md text-outline mt-2">Suba el primer documento usando el boton de arriba.</p>
+  </div>
+  {% endfor %}
+</div>
+
+{# Paginacion #}
+{% if page_obj.has_other_pages %}
+<nav class="flex items-center justify-center gap-2 mt-8">
+  {% if page_obj.has_previous %}
+    <a href="?page=1{% if filtro_search %}&q={{ filtro_search }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}"
+       class="px-3 py-2 rounded-lg border border-outline-variant hover:bg-surface-container transition-colors">Primera</a>
+    <a href="?page={{ page_obj.previous_page_number }}{% if filtro_search %}&q={{ filtro_search }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}"
+       class="px-3 py-2 rounded-lg border border-outline-variant hover:bg-surface-container transition-colors">Anterior</a>
+  {% endif %}
+
+  <span class="px-3 py-2 font-body-md text-on-surface">
+    Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+  </span>
+
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if filtro_search %}&q={{ filtro_search }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}"
+       class="px-3 py-2 rounded-lg border border-outline-variant hover:bg-surface-container transition-colors">Siguiente</a>
+    <a href="?page={{ page_obj.paginator.num_pages }}{% if filtro_search %}&q={{ filtro_search }}{% endif %}{% if filtro_tipo %}&tipo={{ filtro_tipo }}{% endif %}{% if filtro_estado %}&estado={{ filtro_estado }}{% endif %}"
+       class="px-3 py-2 rounded-lg border border-outline-variant hover:bg-surface-container transition-colors">Ultima</a>
+  {% endif %}
+</nav>
+{% endif %}
+
+{% endblock %}

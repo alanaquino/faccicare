@@ -1,0 +1,337 @@
+{% load static %}
+{# ===== SIDEBAR — Portal Médico (Desktop Only) ===== #}
+<div id="mobileSidebarBackdrop" onclick="closeMobileMenu()" class="fixed inset-0 bg-black/50 z-[55] hidden"></div>
+
+<nav
+  id="mainSidebar"
+  class="hidden md:flex flex-col h-screen max-h-[100dvh] w-64 fixed left-0 top-0 bg-surface-container-low border-r border-outline-variant py-stack-md px-4 gap-unit z-[60]">
+
+  {# Botón cerrar — solo visible en mobile #}
+  <button onclick="closeMobileMenu()" class="md:hidden self-end p-2 rounded-full hover:bg-surface-container text-on-surface-variant -mt-1 -mr-1 mb-2">
+    <span class="material-symbols-outlined">close</span>
+  </button>
+
+  {# Logo + Marca → Home #}
+  <a href="{% url 'home' %}" class="flex items-center gap-3 mb-stack-lg px-2 group" title="{{ sistema_config.nombre_aplicacion }} Home">
+    <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm border border-outline-variant/40 overflow-hidden p-1 group-hover:ring-2 group-hover:ring-primary/30 transition-all">
+      <img src="{{ sistema_config.logo_aplicacion_url }}" alt="Logo App" class="w-full h-full object-contain">
+    </div>
+    <div>
+      <h1 class="font-headline-md text-headline-md font-bold text-primary group-hover:text-surface-tint transition-colors">{{ sistema_config.nombre_aplicacion }}</h1>
+    </div>
+  </a>
+
+  {# Botón Nuevo Cribado — solo médicos de detección (MEDICO, PEDIATRA) #}
+  {% if request.user.puede_hacer_cribado %}
+  <a href="{% url 'cribado:cuestionario' %}" title="Nuevo Cribado"
+    class="bg-primary-container text-on-primary-container font-label-md text-label-md rounded-lg py-3 px-4 mb-stack-md flex items-center justify-center gap-2 hover:bg-surface-tint hover:text-on-primary transition-colors shadow-sm shrink-0">
+    <span class="material-symbols-outlined">add</span>
+    <span class="sidebar-text">Nuevo Cribado</span>
+  </a>
+  {% endif %}
+
+  {# Navegación Principal — Acordeón por categorías #}
+  <div class="flex-1 flex flex-col gap-1 overflow-y-auto pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+
+    {% with app=request.resolver_match.app_name %}
+
+    {# ── CATEGORÍA: Principal ── #}
+    <details class="accordion-group" id="cat-principal">
+      <summary class="flex items-center justify-between cursor-pointer px-2 py-2 rounded-lg hover:bg-primary-container/30 transition-colors select-none list-none">
+        <span class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">
+          <span class="material-symbols-outlined text-base">home_health</span>
+          Principal
+        </span>
+        <span class="material-symbols-outlined text-lg text-on-surface-variant/50 chevron-icon transition-transform duration-200">expand_more</span>
+      </summary>
+      <div class="flex flex-col gap-1 mt-1 ml-2">
+        <a href="{% url 'home' %}" title="Dashboard Clínico"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'dashboard' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">dashboard</span>
+          <span class="sidebar-text">Dashboard Clínico</span>
+        </a>
+        <a href="{% url 'pacientes:lista' %}" title="Pacientes"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'pacientes' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">child_care</span>
+          <span class="sidebar-text">Pacientes</span>
+        </a>
+        {# Cribado: médicos de detección (MEDICO, PEDIATRA) crean; Admin solo supervisa #}
+        {% if request.user.puede_ver_cribado %}
+        <a href="{% url 'cribado:lista' %}" title="Cribado FACCI"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'cribado' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">fact_check</span>
+          <span class="sidebar-text">Cribado FACCI</span>
+        </a>
+        {% endif %}
+      </div>
+    </details>
+
+    {# ── CATEGORÍA: Gestión Médica ── #}
+    <details class="accordion-group" id="cat-gestion">
+      <summary class="flex items-center justify-between cursor-pointer px-2 py-2 rounded-lg hover:bg-primary-container/30 transition-colors select-none list-none">
+        <span class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">
+          <span class="material-symbols-outlined text-base">medical_services</span>
+          Gestión Médica
+        </span>
+        <span class="material-symbols-outlined text-lg text-on-surface-variant/50 chevron-icon transition-transform duration-200">expand_more</span>
+      </summary>
+      <div class="flex flex-col gap-1 mt-1 ml-2">
+        {# Indicaciones Médicas: clínicos + enfermería (lectura) + admin #}
+        {% if request.user.puede_ver_indicaciones %}
+        <a href="{% url 'seguimiento:indicaciones_admin' %}" title="Indicaciones Médicas"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if request.resolver_match.url_name == 'indicaciones_admin' or request.resolver_match.url_name == 'indicaciones_admin_editar' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">assignment</span>
+          <span class="sidebar-text">Indicaciones Médicas</span>
+        </a>
+        {% endif %}
+        {# Referencias MSP: equipo clínico ampliado (ENF/T.Social lectura), no FACCI #}
+        {% if request.user.puede_ver_referencias %}
+        <a href="{% url 'referencias:lista' %}" title="Referencias Médicas"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'referencias' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">send</span>
+          <span class="sidebar-text">Referencias Médicas</span>
+        </a>
+        {% endif %}
+        {# Seguimiento Clínico: equipo clínico ampliado (T.Social en lectura), no FACCI #}
+        {% if request.user.puede_ver_seguimiento %}
+        <a href="{% url 'seguimiento:lista' %}" title="Seguimiento Clínico"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'seguimiento' and request.resolver_match.url_name != 'indicaciones_admin' and request.resolver_match.url_name != 'indicaciones_admin_editar' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">monitor_heart</span>
+          <span class="sidebar-text">Seguimiento Clínico</span>
+        </a>
+        {% endif %}
+        {# Laboratorio: clínicos + enfermería + admin (sin T.Social ni FACCI) #}
+        {% if request.user.puede_ver_laboratorio %}
+        <a href="{% url 'laboratorio:lista' %}" title="Laboratorio"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'laboratorio' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">biotech</span>
+          <span class="sidebar-text">Laboratorio</span>
+        </a>
+        {% endif %}
+
+        {# Alertas Clínicas: todo el personal menos el Coordinador FACCI #}
+        {% if request.user.puede_ver_alertas %}
+        <a href="{% url 'alertas' %}" title="Alertas Clínicas"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:bg-primary-container/50">
+          <span class="material-symbols-outlined text-xl">notifications_active</span>
+          <span class="sidebar-text">Alertas Clínicas</span>
+        </a>
+        {% endif %}
+      </div>
+    </details>
+
+    {# ── CATEGORÍA: FACCI — Psicosocial (solo equipo FACCI) y Casa FACCI (equipo FACCI + clínicos lectura) ── #}
+    {% if request.user.puede_ver_psicosocial or request.user.puede_ver_alojamiento %}
+    <details class="accordion-group" id="cat-facci">
+      <summary class="flex items-center justify-between cursor-pointer px-2 py-2 rounded-lg hover:bg-primary-container/30 transition-colors select-none list-none">
+        <span class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">
+          <span class="material-symbols-outlined text-base">volunteer_activism</span>
+          FACCI
+        </span>
+        <span class="material-symbols-outlined text-lg text-on-surface-variant/50 chevron-icon transition-transform duration-200">expand_more</span>
+      </summary>
+      <div class="flex flex-col gap-1 mt-1 ml-2">
+        {# Psicosocial: solo equipo FACCI (Coordinador FACCI + Trabajo Social gestiona) + Admin #}
+        {% if request.user.puede_ver_psicosocial %}
+        <a href="{% url 'psicosocial:lista' %}" title="Evaluación Psicosocial"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'psicosocial' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">family_restroom</span>
+          <span class="sidebar-text">Psicosocial</span>
+        </a>
+        {% endif %}
+        {# Casa FACCI: equipo FACCI (gestiona) + clínicos MED/PED/ONC en lectura. Sin enfermería #}
+        {% if request.user.puede_ver_alojamiento %}
+        <a href="{% url 'alojamiento:lista' %}" title="Casa FACCI"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'alojamiento' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">home</span>
+          <span class="sidebar-text">Casa FACCI</span>
+        </a>
+        {% endif %}
+      </div>
+    </details>
+    {% endif %}
+
+    {# ── CATEGORÍA: Recursos ── #}
+    <details class="accordion-group" id="cat-recursos">
+      <summary class="flex items-center justify-between cursor-pointer px-2 py-2 rounded-lg hover:bg-primary-container/30 transition-colors select-none list-none">
+        <span class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">
+          <span class="material-symbols-outlined text-base">folder_open</span>
+          Recursos
+        </span>
+        <span class="material-symbols-outlined text-lg text-on-surface-variant/50 chevron-icon transition-transform duration-200">expand_more</span>
+      </summary>
+      <div class="flex flex-col gap-1 mt-1 ml-2">
+        <a href="{% url 'documentos:lista' %}" title="Documentos"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'documentos' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">folder_open</span>
+          <span class="sidebar-text">Documentos</span>
+        </a>
+        {# Reportes / PENCI-RD: todo el personal en solo lectura (solo ADMIN genera) #}
+        {% if request.user.puede_ver_reportes %}
+        <a href="{% url 'reportes:dashboard' %}" title="Reportes"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'reportes' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">analytics</span>
+          <span class="sidebar-text">Reportes</span>
+        </a>
+        {% endif %}
+        {# Matrices operativas: solo Admin y Coordinador FACCI (coincide con la vista) #}
+        {% if request.user.puede_ver_matrices %}
+        <a href="{% url 'matrices' %}" title="Matrices Operativas"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:bg-primary-container/50">
+          <span class="material-symbols-outlined text-xl">grid_view</span>
+          <span class="sidebar-text">Matrices Operativas</span>
+        </a>
+        {% endif %}
+      </div>
+    </details>
+
+    {# ── CATEGORÍA: Comunicación ── #}
+    <details class="accordion-group" id="cat-comunicacion">
+      <summary class="flex items-center justify-between cursor-pointer px-2 py-2 rounded-lg hover:bg-primary-container/30 transition-colors select-none list-none">
+        <span class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">
+          <span class="material-symbols-outlined text-base">chat</span>
+          Comunicación
+        </span>
+        <span class="material-symbols-outlined text-lg text-on-surface-variant/50 chevron-icon transition-transform duration-200">expand_more</span>
+      </summary>
+      <div class="flex flex-col gap-1 mt-1 ml-2">
+        <a href="{% url 'notificaciones' %}" title="Notificaciones"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:bg-primary-container/50">
+          <span class="material-symbols-outlined text-xl">notifications</span>
+          <span class="sidebar-text">Notificaciones</span>
+        </a>
+      </div>
+    </details>
+
+    {# ── CATEGORÍA: Administración — solo ADMIN ── #}
+    {% if request.user.rol == 'ADMIN' %}
+    <details class="accordion-group" id="cat-admin">
+      <summary class="flex items-center justify-between cursor-pointer px-2 py-2 rounded-lg hover:bg-primary-container/30 transition-colors select-none list-none">
+        <span class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">
+          <span class="material-symbols-outlined text-base">settings</span>
+          Administración
+        </span>
+        <span class="material-symbols-outlined text-lg text-on-surface-variant/50 chevron-icon transition-transform duration-200">expand_more</span>
+      </summary>
+      <div class="flex flex-col gap-1 mt-1 ml-2">
+        <a href="{% url 'centros_salud' %}" title="Centros de Salud"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:bg-primary-container/50">
+          <span class="material-symbols-outlined text-xl">local_hospital</span>
+          <span class="sidebar-text">Centros de Salud</span>
+        </a>
+        <a href="{% url 'usuarios:gestion' %}" title="Usuarios"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if app == 'usuarios' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">manage_accounts</span>
+          <span class="sidebar-text">Usuarios</span>
+        </a>
+        <a href="{% url 'auditoria' %}" title="Auditoría"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:bg-primary-container/50">
+          <span class="material-symbols-outlined text-xl">manage_search</span>
+          <span class="sidebar-text">Auditoría</span>
+        </a>
+        <a href="{% url 'ajustes' %}" title="Ajustes"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if request.resolver_match.url_name == 'ajustes' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">settings_applications</span>
+          <span class="sidebar-text">Ajustes</span>
+        </a>
+        <a href="{% url 'admin:index' %}" title="Admin Django"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all text-on-surface-variant hover:bg-primary-container/50">
+          <span class="material-symbols-outlined text-xl">admin_panel_settings</span>
+          <span class="sidebar-text">Admin Django</span>
+        </a>
+      </div>
+    </details>
+    {% endif %}
+
+    {% endwith %}
+
+  </div>
+
+  {# Footer del Sidebar #}
+  <div class="mt-auto pt-4 border-t border-outline-variant flex flex-col gap-2 shrink-0">
+    <a href="#" title="Soporte"
+      class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-primary-container/50 transition-all rounded-lg font-label-md text-label-md">
+      <span class="material-symbols-outlined">support_agent</span>
+      <span class="sidebar-text">Soporte</span>
+    </a>
+    <a href="{% url 'auth_app:logout' %}" title="Cerrar Sesión"
+      class="flex items-center gap-3 px-4 py-3 text-error hover:bg-error-container/30 transition-all rounded-lg font-label-md text-label-md">
+      <span class="material-symbols-outlined">logout</span>
+      <span class="sidebar-text">Cerrar Sesión</span>
+    </a>
+  </div>
+
+</nav>
+
+<script>
+  window.toggleMobileMenu = function () {
+    if (window.innerWidth >= 768) return;
+    var sidebar = document.getElementById('mainSidebar');
+    var backdrop = document.getElementById('mobileSidebarBackdrop');
+    if (sidebar.style.display === 'flex') {
+      closeMobileMenu();
+    } else {
+      sidebar.style.display = 'flex';
+      backdrop.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+  };
+
+  window.closeMobileMenu = function () {
+    var sidebar = document.getElementById('mainSidebar');
+    var backdrop = document.getElementById('mobileSidebarBackdrop');
+    sidebar.style.display = '';
+    backdrop.classList.add('hidden');
+    document.body.style.overflow = '';
+  };
+
+  (function () {
+    var currentPath = window.location.pathname;
+
+    // Rotate chevron when group opens/closes
+    document.querySelectorAll('.accordion-group').forEach(function (details) {
+      var chevron = details.querySelector('.chevron-icon');
+      var update = function () {
+        if (chevron) chevron.style.transform = details.open ? 'rotate(180deg)' : 'rotate(0deg)';
+      };
+      details.addEventListener('toggle', update);
+      update();
+    });
+
+    // Open the group and highlight the active link
+    var opened = false;
+    document.querySelectorAll('.accordion-group').forEach(function (details) {
+      details.querySelectorAll('a').forEach(function (link) {
+        var lp = link.pathname;
+        if (lp === currentPath) {
+          details.open = true;
+          opened = true;
+          link.classList.remove('text-on-surface-variant');
+          link.classList.add('bg-primary-container', 'text-on-primary-container', 'font-bold');
+        } else if (lp !== '/' && currentPath.startsWith(lp)) {
+          details.open = true;
+          opened = true;
+        }
+      });
+    });
+
+    // Default: open first group when no match
+    if (!opened) {
+      var first = document.querySelector('.accordion-group');
+      if (first) first.open = true;
+    }
+  })();
+</script>

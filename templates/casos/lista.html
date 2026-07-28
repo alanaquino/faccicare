@@ -1,0 +1,195 @@
+{% extends "layouts/base.html" %}
+{% block title %}Casos Clínicos{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Casos Clínicos</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">{{ total }} caso{{ total|pluralize:"s" }} registrado{{ total|pluralize:"s" }}</p>
+  </div>
+  <a href="{% url 'casos:crear' %}"
+     class="flex items-center gap-2 px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+    <span class="material-symbols-outlined" style="font-size:20px;">add_circle</span>
+    Nuevo Caso
+  </a>
+</div>
+
+{# Stats #}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="bg-surface-container-lowest rounded-xl p-4 border border-surface-container flex items-center gap-3">
+    <div class="w-10 h-10 rounded-lg bg-primary-container/40 flex items-center justify-center text-primary">
+      <span class="material-symbols-outlined" style="font-size:22px;">folder_special</span>
+    </div>
+    <div>
+      <p class="font-label-sm text-label-sm text-on-surface-variant">Total</p>
+      <p class="font-title-lg text-title-lg text-on-surface">{{ stats.total }}</p>
+    </div>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl p-4 border border-surface-container flex items-center gap-3">
+    <div class="w-10 h-10 rounded-lg bg-secondary-container/40 flex items-center justify-center text-secondary">
+      <span class="material-symbols-outlined" style="font-size:22px;">pending_actions</span>
+    </div>
+    <div>
+      <p class="font-label-sm text-label-sm text-on-surface-variant">Activos</p>
+      <p class="font-title-lg text-title-lg text-on-surface">{{ stats.activos }}</p>
+    </div>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl p-4 border border-surface-container flex items-center gap-3">
+    <div class="w-10 h-10 rounded-lg bg-error-container/30 flex items-center justify-center text-error">
+      <span class="material-symbols-outlined" style="font-size:22px;">priority_high</span>
+    </div>
+    <div>
+      <p class="font-label-sm text-label-sm text-on-surface-variant">Urgentes</p>
+      <p class="font-title-lg text-title-lg text-on-surface">{{ stats.urgentes }}</p>
+    </div>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl p-4 border border-surface-container flex items-center gap-3">
+    <div class="w-10 h-10 rounded-lg bg-tertiary-container/40 flex items-center justify-center text-tertiary">
+      <span class="material-symbols-outlined" style="font-size:22px;">medication</span>
+    </div>
+    <div>
+      <p class="font-label-sm text-label-sm text-on-surface-variant">En tratamiento</p>
+      <p class="font-title-lg text-title-lg text-on-surface">{{ stats.en_tratamiento }}</p>
+    </div>
+  </div>
+</div>
+
+{# Filtros #}
+<form method="get" class="flex flex-col sm:flex-row gap-3 flex-wrap">
+  <div class="relative flex-1 min-w-[200px]">
+    <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline-variant" style="font-size:20px;">search</span>
+    <input class="w-full pl-10 pr-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md"
+           type="search" name="q" data-live-filter placeholder="Buscar casos, pacientes..." value="{{ filtro_search }}"/>
+  </div>
+  <select name="estado" data-autosubmit class="px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+    <option value="">Todos los estados</option>
+    {% for value, label in estados %}
+    <option value="{{ value }}" {% if value == filtro_estado %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="tipo" data-autosubmit class="px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+    <option value="">Todos los tipos</option>
+    {% for value, label in tipos %}
+    <option value="{{ value }}" {% if value == filtro_tipo %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="prioridad" data-autosubmit class="px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md">
+    <option value="">Todas las prioridades</option>
+    {% for value, label in prioridades %}
+    <option value="{{ value }}" {% if value == filtro_prioridad %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+    Filtrar
+  </button>
+  {% if filtro_search or filtro_estado or filtro_tipo or filtro_prioridad %}
+  <a href="{% url 'casos:lista' %}" class="px-5 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+    Limpiar
+  </a>
+  {% endif %}
+</form>
+
+{# Grid de casos #}
+{% if casos %}
+<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+  {% for caso in casos %}
+  <a href="{% url 'casos:detalle' caso.pk %}"
+     class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container hover:shadow-md transition-all group block">
+    <div class="p-5">
+      {# Cabecera #}
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center
+            {% if caso.estado_color == 'primary' %}bg-primary-container/40 text-primary
+            {% elif caso.estado_color == 'secondary' %}bg-secondary-container/40 text-secondary
+            {% elif caso.estado_color == 'error' %}bg-error-container/30 text-error
+            {% elif caso.estado_color == 'tertiary' %}bg-tertiary-container/40 text-tertiary
+            {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+            <span class="material-symbols-outlined" style="font-size:22px;">{{ caso.icono_cancer }}</span>
+          </div>
+          <div>
+            <p class="font-label-sm text-label-sm text-on-surface-variant">{{ caso.codigo_caso }}</p>
+            <p class="font-label-md text-label-md text-on-surface">{{ caso.get_tipo_cancer_display }}</p>
+          </div>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <span class="inline-block px-2 py-0.5 rounded-full font-label-sm text-label-sm
+            {% if caso.prioridad == 'URGENTE' or caso.prioridad == 'ALTA' %}bg-error-container/30 text-error
+            {% elif caso.prioridad == 'MEDIA' %}bg-secondary-container/30 text-secondary
+            {% else %}bg-tertiary-container/30 text-tertiary{% endif %}">
+            {{ caso.get_prioridad_display }}
+          </span>
+          <span class="inline-block px-2 py-0.5 rounded-full font-label-sm text-label-sm
+            {% if caso.estado_color == 'primary' %}bg-primary-container/30 text-primary
+            {% elif caso.estado_color == 'secondary' %}bg-secondary-container/30 text-secondary
+            {% elif caso.estado_color == 'error' %}bg-error-container/30 text-error
+            {% elif caso.estado_color == 'tertiary' %}bg-tertiary-container/30 text-tertiary
+            {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+            {{ caso.get_estado_display }}
+          </span>
+        </div>
+      </div>
+
+      {# Título y paciente #}
+      <h4 class="font-title-sm text-title-sm text-on-surface mb-1 line-clamp-2 group-hover:text-primary transition-colors">{{ caso.titulo }}</h4>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mb-3 flex items-center gap-1">
+        <span class="material-symbols-outlined" style="font-size:14px;">child_care</span>
+        {{ caso.paciente.nombre_completo }}
+      </p>
+
+      {# Footer #}
+      <div class="flex items-center justify-between pt-3 border-t border-surface-container">
+        <span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+          <span class="material-symbols-outlined" style="font-size:14px;">calendar_today</span>
+          {{ caso.fecha_apertura }}
+        </span>
+        <span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+          <span class="material-symbols-outlined" style="font-size:14px;">sticky_note_2</span>
+          {{ caso.total_notas }} nota{{ caso.total_notas|pluralize:"s" }}
+        </span>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{# Paginación #}
+{% if page_obj.has_other_pages %}
+<div class="flex items-center justify-center gap-2">
+  {% if page_obj.has_previous %}
+  <a href="?page={{ page_obj.previous_page_number }}&q={{ filtro_search }}&estado={{ filtro_estado }}&tipo={{ filtro_tipo }}&prioridad={{ filtro_prioridad }}"
+     class="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-label-md text-label-md">
+    Anterior
+  </a>
+  {% endif %}
+  <span class="font-body-md text-body-md text-on-surface-variant">
+    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+  </span>
+  {% if page_obj.has_next %}
+  <a href="?page={{ page_obj.next_page_number }}&q={{ filtro_search }}&estado={{ filtro_estado }}&tipo={{ filtro_tipo }}&prioridad={{ filtro_prioridad }}"
+     class="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-label-md text-label-md">
+    Siguiente
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="flex flex-col items-center justify-center py-20 text-center">
+  <div class="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center mb-4">
+    <span class="material-symbols-outlined text-on-surface-variant" style="font-size:40px;">folder_open</span>
+  </div>
+  <h3 class="font-title-md text-title-md text-on-surface mb-2">No hay casos registrados</h3>
+  <p class="font-body-md text-body-md text-on-surface-variant mb-6">
+    {% if filtro_search or filtro_estado or filtro_tipo %}Prueba con otros filtros o{% else %}Comienza{% endif %} creando el primer caso clínico.
+  </p>
+  <a href="{% url 'casos:crear' %}"
+     class="flex items-center gap-2 px-5 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors">
+    <span class="material-symbols-outlined" style="font-size:20px;">add_circle</span>
+    Nuevo Caso
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}

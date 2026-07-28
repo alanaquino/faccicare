@@ -1,0 +1,266 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Panel de Control{% endblock %}
+
+{% block content %}
+{# ===== ENCABEZADO ===== #}
+<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+  <div>
+    <h2 class="font-headline-xl-mobile md:font-headline-lg text-headline-xl-mobile md:text-headline-lg text-on-background mb-1">
+      {{ saludo }}, {{ usuario_nombre }}
+    </h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Resumen de la actividad de hoy y alertas críticas.</p>
+  </div>
+  <div class="flex items-center gap-2 text-label-md font-label-md">
+    <span class="text-on-surface-variant text-body-sm">Última actualización: {{ ultima_actualizacion }}</span>
+    <button type="button"
+            onclick="this.querySelector('span').classList.add('animate-spin'); window.location.reload();"
+            title="Actualizar datos" aria-label="Actualizar datos"
+            class="p-1 rounded-full text-primary hover:bg-surface-container-low transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">refresh</span>
+    </button>
+  </div>
+</div>
+
+{# ===== STATS GRID ===== #}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+  {% for stat in stats %}
+  <div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-surface-container flex flex-col gap-4 relative overflow-hidden group transition-colors">
+    <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-10 bg-{{ stat.color }}"></div>
+    <div class="flex justify-between items-start z-10">
+      <div class="p-3 bg-{{ stat.bg_icon }} text-{{ stat.color }} rounded-lg">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">{{ stat.icono }}</span>
+      </div>
+      {% if stat.tendencia %}
+      <span class="bg-{{ stat.badge_bg }} text-{{ stat.badge_color }} px-2 py-1 rounded-full font-label-sm text-label-sm flex items-center gap-1">
+        {% if stat.tendencia_icono %}<span class="material-symbols-outlined" style="font-size:12px;">{{ stat.tendencia_icono }}</span>{% endif %}
+        {{ stat.tendencia }}
+      </span>
+      {% endif %}
+    </div>
+    <div class="z-10">
+      <p class="font-body-sm text-body-sm text-on-surface-variant mb-1">{{ stat.label }}</p>
+      <p class="font-headline-xl text-headline-xl text-on-background">{{ stat.valor }}</p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# ===== MAIN LAYOUT ===== #}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-gutter">
+
+  {# COLUMNA IZQUIERDA — más ancha #}
+  <div class="xl:col-span-2 space-y-gutter">
+
+    {# GRÁFICA POR PROVINCIAS #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="font-headline-md text-headline-md text-on-background">Casos por Provincia</h3>
+        {% if request.user.puede_ver_reportes %}
+        <a href="{% url 'reportes:dashboard' %}" class="text-primary font-label-md text-label-md hover:underline">Ver detalle completo</a>
+        {% endif %}
+      </div>
+      <div class="w-full h-[280px] bg-surface-container-low rounded-lg relative border border-outline-variant/30 flex flex-col justify-end p-6">
+        <!-- Floating info card -->
+        <div class="absolute top-4 left-4 bg-surface/90 backdrop-blur-sm p-3 rounded-lg border border-surface-variant z-20 shadow-sm">
+          <p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Mayor incidencia actual</p>
+          <p class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+            {{ top_provincia }} <span class="material-symbols-outlined text-error" style="font-size:16px;">trending_up</span>
+          </p>
+        </div>
+
+        {% if datos_grafica %}
+        <!-- Chart Grid & Bars Container -->
+        <div class="w-full h-[140px] flex items-end justify-around relative border-b border-outline-variant/30 pb-1">
+          <!-- Horizontal Grid Lines for premium look -->
+          <div class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-1">
+            <div class="border-t border-outline-variant/10 w-full"></div>
+            <div class="border-t border-outline-variant/10 w-full"></div>
+            <div class="border-t border-outline-variant/10 w-full"></div>
+          </div>
+
+          {% for dato in datos_grafica %}
+          <div class="flex flex-col items-center justify-end h-full z-10 group cursor-pointer w-16 relative">
+            <!-- Tooltip / Case Count on Hover -->
+            <div class="absolute bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-2.5 py-1 rounded-md text-[11px] font-semibold shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-30 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary-fixed"></span>
+              {{ dato.casos }} {% if dato.casos == 1 %}caso{% else %}casos{% endif %}
+            </div>
+
+            <!-- Bar -->
+            <div class="w-8 rounded-t-md hover:bg-primary transition-all duration-300 relative flex items-end justify-center"
+                 style="height: calc({{ dato.porcentaje }}% * 0.75 + 10%); background-color: rgba(0, 106, 98, {{ dato.alpha }});">
+              <!-- Always visible small count inside the bar if tall enough -->
+              <span class="text-[10px] font-bold text-white mb-1 drop-shadow-sm select-none pointer-events-none">
+                {{ dato.casos }}
+              </span>
+              <!-- Highlight overlay on hover -->
+              <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-t-md"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- X-Axis Labels (Always visible) -->
+        <div class="w-full flex justify-around pt-2">
+          {% for dato in datos_grafica %}
+          <div class="w-16 text-center">
+            <span class="text-label-sm font-semibold text-on-surface-variant truncate block" title="{{ dato.provincia }}">
+              {{ dato.provincia }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="w-full h-[180px] flex flex-col items-center justify-center text-center p-6">
+          <span class="material-symbols-outlined text-outline-variant text-4xl mb-2">bar_chart</span>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">No hay datos de pacientes registrados por provincia.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# TABLA DE PACIENTES RECIENTES #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+      <div class="p-6 border-b border-surface-container flex justify-between items-center">
+        <h3 class="font-headline-md text-headline-md text-on-background">Pacientes Recientes</h3>
+        <a href="{% url 'pacientes:lista' %}" class="bg-surface-container-low text-primary px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-surface-container transition-colors">
+          Ver todos
+        </a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-surface-container-lowest border-b border-surface-container font-label-md text-label-md text-on-surface-variant">
+              <th class="p-4 font-semibold">Nombre del Paciente</th>
+              <th class="p-4 font-semibold hidden sm:table-cell">Fecha Registro</th>
+              <th class="p-4 font-semibold">Estado</th>
+              <th class="p-4 font-semibold hidden md:table-cell">Prioridad</th>
+              <th class="p-4 font-semibold text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody class="font-body-sm text-body-sm text-on-background divide-y divide-surface-container">
+            {% for p in pacientes_recientes %}
+            <tr class="hover:bg-surface/50 transition-colors">
+              <td class="p-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs shrink-0">{{ p.iniciales }}</div>
+                  <div>
+                    <p class="font-medium">{{ p.nombre }}</p>
+                    <p class="text-xs text-on-surface-variant">{{ p.edad }}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="p-4 text-on-surface-variant hidden sm:table-cell">{{ p.fecha }}</td>
+              <td class="p-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                  {% if p.estado_color == 'error' %}bg-error-container text-on-error-container
+                  {% elif p.estado_color == 'tertiary' %}bg-tertiary-fixed text-on-tertiary-fixed
+                  {% else %}bg-secondary-fixed text-on-secondary-fixed{% endif %}">
+                  {{ p.estado }}
+                </span>
+              </td>
+              <td class="p-4 hidden md:table-cell">{{ p.prioridad }}</td>
+              <td class="p-4 text-right">
+                <a href="{% url 'pacientes:expediente' p.id %}" class="text-primary hover:text-primary-container transition-colors p-1">
+                  <span class="material-symbols-outlined text-xl">visibility</span>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# COLUMNA DERECHA #}
+  <div class="space-y-gutter">
+
+    {# ALERTAS CLINICAS #}
+    <div class="bg-error-container/20 rounded-xl shadow-sm border border-error/20 p-6">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">error</span>
+          <h3 class="font-headline-md text-headline-md text-on-background">Alertas Clinicas</h3>
+        </div>
+        <a href="{% url 'alertas' %}" class="text-primary font-label-md text-label-md hover:underline">Ver todas</a>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="rounded-lg bg-surface-container-lowest border border-error/10 p-3">
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide">Pendientes</p>
+          <p class="font-headline-md text-headline-md text-on-background">{{ alertas_resumen.pendientes }}</p>
+        </div>
+        <div class="rounded-lg bg-surface-container-lowest border border-error/10 p-3">
+          <p class="font-label-sm text-label-sm text-error uppercase tracking-wide">Criticas</p>
+          <p class="font-headline-md text-headline-md text-error">{{ alertas_resumen.criticas }}</p>
+        </div>
+        <div class="rounded-lg bg-orange-50 border border-orange-200 p-3">
+          <p class="font-label-sm text-label-sm text-orange-700 uppercase tracking-wide">Alta</p>
+          <p class="font-headline-md text-headline-md text-orange-700">{{ alertas_resumen.alta }}</p>
+        </div>
+        <div class="rounded-lg bg-amber-50 border border-amber-200 p-3">
+          <p class="font-label-sm text-label-sm text-amber-700 uppercase tracking-wide">Vencidas</p>
+          <p class="font-headline-md text-headline-md text-amber-700">{{ alertas_resumen.vencidas }}</p>
+        </div>
+      </div>
+      <div class="space-y-4">
+        {% for alerta in alertas_criticas|slice:":2" %}
+        {% include "components/cards/alert_card.html" with alerta=alerta %}
+        {% empty %}
+        <p class="font-body-sm text-body-sm text-on-surface-variant text-center py-4">
+          No hay alertas clinicas abiertas.
+        </p>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# CASOS PENDIENTES #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4">Casos Pendientes de Revisión</h3>
+      <ul class="space-y-3 divide-y divide-surface-container">
+        {% for caso in pendientes %}
+        <li class="pt-3 first:pt-0 flex justify-between items-center group cursor-pointer">
+          <a href="{% url 'referencias:detalle' caso.referencia_id %}" class="flex-1">
+            <div>
+              <p class="font-label-md text-label-md text-on-background group-hover:text-primary transition-colors">{{ caso.nombre }}</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">{{ caso.detalle }}</p>
+            </div>
+          </a>
+          <a href="{% url 'referencias:detalle' caso.referencia_id %}" class="ml-2 shrink-0">
+            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      <a href="{% url 'referencias:lista' %}" class="mt-4 w-full text-center text-primary font-label-md text-label-md hover:underline p-2 block">Ver todos los pendientes</a>
+    </div>
+
+    {# ACCESOS RÁPIDOS #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4">Accesos Rápidos</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <a href="{% url 'pacientes:registro' %}" class="flex flex-col items-center gap-2 p-4 bg-surface-container-low rounded-xl hover:bg-primary-container/30 transition-colors text-center">
+          <span class="material-symbols-outlined text-primary text-2xl">person_add</span>
+          <span class="font-label-sm text-label-sm text-on-surface-variant">Nuevo Paciente</span>
+        </a>
+        <a href="{% url 'cribado:lista' %}" class="flex flex-col items-center gap-2 p-4 bg-surface-container-low rounded-xl hover:bg-primary-container/30 transition-colors text-center">
+          <span class="material-symbols-outlined text-primary text-2xl">fact_check</span>
+          <span class="font-label-sm text-label-sm text-on-surface-variant">Cribado FACCI</span>
+        </a>
+        <a href="{% url 'referencias:crear' %}" class="flex flex-col items-center gap-2 p-4 bg-surface-container-low rounded-xl hover:bg-primary-container/30 transition-colors text-center">
+          <span class="material-symbols-outlined text-primary text-2xl">send</span>
+          <span class="font-label-sm text-label-sm text-on-surface-variant">Nueva Referencia</span>
+        </a>
+        {% if request.user.puede_ver_reportes %}
+        <a href="{% url 'reportes:dashboard' %}" class="flex flex-col items-center gap-2 p-4 bg-surface-container-low rounded-xl hover:bg-primary-container/30 transition-colors text-center">
+          <span class="material-symbols-outlined text-primary text-2xl">analytics</span>
+          <span class="font-label-sm text-label-sm text-on-surface-variant">Ver Reportes</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

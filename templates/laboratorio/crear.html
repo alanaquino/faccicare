@@ -1,0 +1,658 @@
+{% extends "layouts/base.html" %}
+{% block title %}Registrar Resultado{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-4">
+  <a href="{% url 'laboratorio:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Registrar Resultado</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Complete los datos del examen y los valores obtenidos.</p>
+  </div>
+</div>
+
+{# Script data #}
+{{ plantillas|json_script:"plantillas-data" }}
+{{ nombres_default|json_script:"nombres-data" }}
+{{ valores_iniciales|json_script:"valores-iniciales-data" }}
+{{ catalogo_estudios_json|json_script:"catalogo-estudios-data" }}
+
+<form method="post" enctype="multipart/form-data" id="lab-form" class="mt-6 space-y-6" autocomplete="off">
+  {% csrf_token %}
+
+  {# ── Sección 1: Datos del examen ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-center gap-3 p-5 border-b border-surface-container bg-surface-container-low">
+      <div class="w-10 h-10 rounded-lg bg-primary-container/30 flex items-center justify-center">
+        <span class="material-symbols-outlined text-primary" style="font-size:20px;">biotech</span>
+      </div>
+      <h3 class="font-headline-md text-headline-md text-on-background">Datos del examen</h3>
+    </div>
+    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="md:col-span-2">
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+          Paciente <span class="text-error">*</span>
+        </label>
+        <select name="paciente" id="id_paciente" required data-searchable
+                class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-body-md text-body-md">
+          <option value="">— Seleccionar paciente —</option>
+          {% if paciente_preseleccionado %}
+          <option value="{{ paciente_preseleccionado.pk }}" selected>{{ paciente_preseleccionado.nombre_completo }} · {{ paciente_preseleccionado.codigo_paciente }}</option>
+          {% endif %}
+          {% for p in pacientes %}
+          {% if not paciente_preseleccionado or paciente_preseleccionado.pk != p.pk %}
+          <option value="{{ p.pk }}" {% if form_data.paciente == p.pk|stringformat:"s" %}selected{% endif %}>
+            {{ p.nombre_completo }} · {{ p.codigo_paciente }}
+          </option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+          Tipo de examen <span class="text-error">*</span>
+        </label>
+        <select name="tipo" id="id_tipo" required
+                class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-body-md text-body-md">
+          <option value="">— Seleccionar tipo —</option>
+          {% for valor, etiqueta in tipos_examen %}
+          <option value="{{ valor }}" {% if form_data.tipo == valor %}selected{% endif %}>{{ etiqueta }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+          Nombre del examen <span class="text-error">*</span>
+        </label>
+        <input type="text" name="nombre_examen" id="id_nombre_examen" required
+               placeholder="Ej: Hemograma completo"
+               value="{{ form_data.nombre_examen }}"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-body-md text-body-md">
+      </div>
+
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+          Fecha de muestra <span class="text-error">*</span>
+        </label>
+        <input type="date" name="fecha_muestra" id="id_fecha_muestra" required
+               value="{{ form_data.fecha_muestra|default:hoy }}"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-body-md text-body-md">
+      </div>
+
+      <div>
+        <label class="block font-label-md text-label-md text-on-surface mb-1.5">
+          Fecha de resultado
+          <span class="font-body-sm text-on-surface-variant font-normal">(opcional)</span>
+        </label>
+        <input type="date" name="fecha_resultado" id="id_fecha_resultado"
+               value="{{ form_data.fecha_resultado }}"
+               class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-body-md text-body-md">
+      </div>
+    </div>
+  </div>
+
+  {# ── Sección 2: Valores ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-center justify-between p-5 border-b border-surface-container bg-surface-container-low">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-secondary-container/30 flex items-center justify-center">
+          <span class="material-symbols-outlined text-secondary" style="font-size:20px;">table_chart</span>
+        </div>
+        <div>
+          <h3 class="font-headline-md text-headline-md text-on-background">Valores del examen</h3>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Ingrese los parámetros y sus valores medidos.</p>
+        </div>
+      </div>
+      <span id="critico-count" class="hidden"></span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[1180px]">
+        <thead>
+          <tr class="bg-surface-container-low border-b border-surface-container text-on-surface-variant font-label-sm text-label-sm">
+            <th class="p-3 text-left font-semibold w-[18%]">Estudio</th>
+            <th class="p-3 text-left font-semibold w-[24%]">Parámetro</th>
+            <th class="p-3 text-left font-semibold w-[12%]">Valor</th>
+            <th class="p-3 text-left font-semibold w-[10%]">Unidad</th>
+            <th class="p-3 text-left font-semibold w-[9%]">Ref. mín.</th>
+            <th class="p-3 text-left font-semibold w-[9%]">Ref. máx.</th>
+            <th class="p-3 text-left font-semibold w-[10%]">Estado</th>
+            <th class="p-3 text-left font-semibold w-[15%]">Comentario</th>
+            <th class="p-3 w-[3%]"></th>
+          </tr>
+        </thead>
+        <tbody id="valores-tbody">
+          {# Filas generadas dinámicamente por JS #}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="p-4 border-t border-surface-container">
+      <button type="button" id="btn-agregar-fila"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+        Agregar parámetro
+      </button>
+    </div>
+  </div>
+
+  {# ── Sección 3: Interpretación y archivo ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-5">
+    <div class="flex items-center gap-3 mb-1">
+      <span class="material-symbols-outlined text-tertiary">description</span>
+      <h3 class="font-headline-md text-headline-md text-on-background">Interpretación y documentos</h3>
+    </div>
+
+    <div>
+      <label for="id_resultado_narrativo" class="block font-label-md text-label-md text-on-surface mb-1.5">
+        Resultado narrativo / Interpretación
+        <span class="font-body-sm text-on-surface-variant font-normal">(para patología, cultivos, imagenología)</span>
+      </label>
+      <textarea name="resultado_narrativo" id="id_resultado_narrativo" rows="4"
+                class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-body-md text-body-md"
+                placeholder="Descripción cualitativa del resultado, hallazgos, impresión diagnóstica..."></textarea>
+    </div>
+
+    <div>
+      <label for="id_observaciones" class="block font-label-md text-label-md text-on-surface mb-1.5">Observaciones clínicas</label>
+      <textarea name="observaciones" id="id_observaciones" rows="3"
+                class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-body-md text-body-md"
+                placeholder="Contexto clínico, condiciones de la muestra, notas adicionales..."></textarea>
+    </div>
+
+    <div>
+      <label for="id_archivo" class="block font-label-md text-label-md text-on-surface mb-1.5">
+        Archivo del resultado
+        <span class="font-body-sm text-on-surface-variant font-normal">(PDF, imagen — opcional)</span>
+      </label>
+      <input type="file" name="archivo" id="id_archivo" accept=".pdf,.jpg,.jpeg,.png"
+             class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-primary-container/30 file:text-on-primary-container file:font-label-sm file:text-label-sm">
+    </div>
+  </div>
+
+  {# ── Botones ── #}
+  <div class="flex items-center justify-end gap-3">
+    <a href="{% url 'laboratorio:lista' %}"
+       class="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined">close</span>
+      Cancelar
+    </a>
+    <button type="submit"
+            class="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined">save</span>
+      Guardar resultado
+    </button>
+  </div>
+</form>
+
+<script>
+(function () {
+  const nombresDefault = JSON.parse(document.getElementById('nombres-data').textContent);
+  const valoresIniciales = JSON.parse(document.getElementById('valores-iniciales-data').textContent);
+  const catalogoEstudios = JSON.parse(document.getElementById('catalogo-estudios-data').textContent);
+  const parametrosUrl = "{% url 'laboratorio:catalogo_parametros' %}";
+  const parametrosCache = new Map();
+  const parametrosPorId = new Map();
+
+  function bandClass(b) {
+    return {
+      NORMAL: 'bg-primary-container/30 text-primary',
+      BAJO: 'bg-orange-100 text-orange-700',
+      ALTO: 'bg-red-100 text-red-700',
+      CRITICO_BAJO: 'bg-error-container text-error',
+      CRITICO_ALTO: 'bg-error-container text-error',
+      SIN_RANGO: 'bg-surface-container text-on-surface-variant',
+      RANGO_INVALIDO: 'bg-error-container text-error',
+    }[b] || 'bg-surface-container text-on-surface-variant';
+  }
+
+  function bandLabel(b) {
+    if (b === 'SIN_RANGO') return 'Sin referencia';
+    if (b === 'RANGO_INVALIDO') return 'Rango invalido';
+    return {
+      NORMAL: 'Normal',
+      BAJO: 'Bajo ↓',
+      ALTO: 'Alto ↑',
+      CRITICO_BAJO: 'Crítico ↓',
+      CRITICO_ALTO: 'Crítico ↑',
+      SIN_RANGO: '—',
+    }[b] || '—';
+  }
+
+  function calcBandera(valor, refMin, refMax, tipoValor, alertaCritica) {
+    const texto = String(valor || '').trim().toLowerCase();
+    if (tipoValor && tipoValor !== 'numerico') {
+      if (!texto) return 'SIN_RANGO';
+      if (alertaCritica) {
+        const normales = ['negativo', 'no detectable', 'indetectable', 'normal', 'libre', 'conservado', 'estable', 'sin mutacion', 'sin mutación'];
+        const alertas = ['positivo', 'detectado', 'presente', 'maligno', 'comprometido', 'alterado', 'mutacion', 'mutación', 'amplificacion', 'amplificación', 'rearrangement', 'fusion', 'fusión'];
+        if (normales.some(function (p) { return texto.includes(p); })) return 'NORMAL';
+        if (alertas.some(function (p) { return texto.includes(p); })) return 'CRITICO_ALTO';
+      }
+      return 'SIN_RANGO';
+    }
+
+    const v = parseFloat(String(valor).replace(',', '.'));
+    const min = parseFloat(String(refMin).replace(',', '.'));
+    const max = parseFloat(String(refMax).replace(',', '.'));
+    if (!isNaN(min) && !isNaN(max) && min > max) return 'RANGO_INVALIDO';
+    if (isNaN(v)) return 'SIN_RANGO';
+    if (isNaN(min) && isNaN(max)) return 'SIN_RANGO';
+    if (!isNaN(min) && v < min) {
+      const bandera = (min > 0 && v < min * 0.7) ? 'CRITICO_BAJO' : 'BAJO';
+      return alertaCritica ? 'CRITICO_BAJO' : bandera;
+    }
+    if (!isNaN(max) && v > max) {
+      const bandera = (max > 0 && v > max * 1.3) ? 'CRITICO_ALTO' : 'ALTO';
+      return alertaCritica ? 'CRITICO_ALTO' : bandera;
+    }
+    return 'NORMAL';
+  }
+
+  function escapeAttr(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function escapeHtml(value) {
+    return escapeAttr(value).replace(/'/g, '&#039;');
+  }
+
+  function updateCriticoCount() {
+    let count = 0;
+    document.querySelectorAll('[data-bandera]').forEach(function (s) {
+      if (s.textContent.includes('Crítico')) count++;
+    });
+    const badge = document.getElementById('critico-count');
+    if (count > 0) {
+      badge.className = 'inline-flex items-center gap-1 px-3 py-1 rounded-full bg-error-container text-error font-label-sm text-label-sm';
+      badge.textContent = count + ' valor' + (count > 1 ? 'es' : '') + ' crítico' + (count > 1 ? 's' : '');
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
+  function updateBanderaRow(tr) {
+    const v = tr.querySelector('[data-valor]').value;
+    const rMin = tr.querySelector('[data-ref-min]').value;
+    const rMax = tr.querySelector('[data-ref-max]').value;
+    const b = calcBandera(
+      v,
+      rMin,
+      rMax,
+      tr.dataset.tipoValor || 'numerico',
+      tr.dataset.alertaCritica === 'true'
+    );
+    const span = tr.querySelector('[data-bandera]');
+    span.className = 'inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-label-sm ' + bandClass(b);
+    span.dataset.bandera = b;
+    span.textContent = bandLabel(b);
+
+    // Mostrar el campo Comentario cuando el valor está fuera de rango / crítico
+    // (además de cuando el catálogo lo exige o ya hay texto escrito).
+    const comentarioWrap = tr.querySelector('[data-comentario-wrap]');
+    const comentarioInput = tr.querySelector('[data-comentario]');
+    if (comentarioWrap && comentarioInput) {
+      const fueraDeRango = b !== 'NORMAL' && b !== 'SIN_RANGO';
+      const mostrar = comentarioInput.required || fueraDeRango || !!comentarioInput.value.trim();
+      comentarioWrap.classList.toggle('hidden', !mostrar);
+    }
+
+    updateCriticoCount();
+  }
+
+  function estudioOptions(selectedId) {
+    const options = ['<option value="">— Estudio —</option>'];
+    catalogoEstudios.forEach(function (estudio) {
+      const selected = estudio.id === selectedId ? ' selected' : '';
+      const categoria = estudio.categoria ? estudio.categoria + ' · ' : '';
+      options.push(
+        '<option value="' + escapeAttr(estudio.id) + '"' + selected + '>' +
+        escapeHtml(categoria + estudio.nombre) +
+        '</option>'
+      );
+    });
+    return options.join('');
+  }
+
+  function parametroOptions(parametros, selectedId, filtro) {
+    const term = String(filtro || '').trim().toLowerCase();
+    const filtrados = term
+      ? parametros.filter(function (p) { return p.nombre.toLowerCase().includes(term); })
+      : parametros.slice();
+
+    if (selectedId && !filtrados.some(function (p) { return p.id === selectedId; })) {
+      const seleccionado = parametros.find(function (p) { return p.id === selectedId; });
+      if (seleccionado) filtrados.unshift(seleccionado);
+    }
+
+    const options = ['<option value="">— Parámetro —</option>'];
+    filtrados.forEach(function (parametro) {
+      const selected = parametro.id === selectedId ? ' selected' : '';
+      options.push(
+        '<option value="' + escapeAttr(parametro.id) + '"' + selected + '>' +
+        escapeHtml(parametro.nombre) +
+        '</option>'
+      );
+    });
+    return options.join('');
+  }
+
+  async function getParametros(estudioId) {
+    if (!estudioId) return [];
+    if (parametrosCache.has(estudioId)) return parametrosCache.get(estudioId);
+    const response = await fetch(parametrosUrl + '?estudio_id=' + encodeURIComponent(estudioId), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    const parametros = data.parametros || [];
+    parametros.forEach(function (parametro) {
+      parametrosPorId.set(parametro.id, parametro);
+    });
+    parametrosCache.set(estudioId, parametros);
+    return parametros;
+  }
+
+  function setRowParametro(tr, parametro, rawData) {
+    const data = rawData || {};
+    const nombreInput = tr.querySelector('[data-parametro-nombre]');
+    const unidadInput = tr.querySelector('[data-unidad]');
+    const refMinInput = tr.querySelector('[data-ref-min]');
+    const refMaxInput = tr.querySelector('[data-ref-max]');
+    const refTextoInput = tr.querySelector('[data-ref-texto]');
+    const refTextoDisplay = tr.querySelector('[data-ref-texto-display]');
+    const alertaDisplay = tr.querySelector('[data-alerta-sistema]');
+    const comentarioWrap = tr.querySelector('[data-comentario-wrap]');
+    const comentarioInput = tr.querySelector('[data-comentario]');
+    const sugeridoDisplay = tr.querySelector('[data-comentario-sugerido]');
+    const valorInput = tr.querySelector('[data-valor]');
+
+    if (!parametro) {
+      tr.dataset.tipoValor = 'numerico';
+      tr.dataset.alertaCritica = 'false';
+      nombreInput.value = data.parametro || '';
+      unidadInput.value = data.unidad || '';
+      refMinInput.value = data.ref_min || '';
+      refMaxInput.value = data.ref_max || '';
+      refTextoInput.value = data.referencia_texto || '';
+      refTextoDisplay.textContent = data.referencia_texto || '';
+      refTextoDisplay.classList.toggle('hidden', !data.referencia_texto);
+      alertaDisplay.textContent = '';
+      alertaDisplay.classList.add('hidden');
+      comentarioInput.required = false;
+      comentarioInput.placeholder = 'Opcional';
+      comentarioWrap.classList.add('hidden');
+      sugeridoDisplay.textContent = '';
+      sugeridoDisplay.classList.add('hidden');
+      valorInput.required = false;
+      valorInput.placeholder = '0.00';
+      updateBanderaRow(tr);
+      return;
+    }
+
+    tr.dataset.tipoValor = parametro.tipo_valor || 'numerico';
+    tr.dataset.alertaCritica = parametro.alerta_critica ? 'true' : 'false';
+    nombreInput.value = parametro.nombre || '';
+    unidadInput.value = parametro.unidad || '';
+    refMinInput.value = parametro.referencia_minima || '';
+    refMaxInput.value = parametro.referencia_maxima || '';
+    refTextoInput.value = parametro.referencia_texto || '';
+    refTextoDisplay.textContent = parametro.referencia_texto ? 'Ref: ' + parametro.referencia_texto : '';
+    refTextoDisplay.classList.toggle('hidden', !parametro.referencia_texto);
+
+    alertaDisplay.textContent = parametro.alerta_sistema || '';
+    alertaDisplay.classList.toggle('hidden', !parametro.alerta_sistema);
+
+    comentarioInput.required = !!parametro.requiere_comentario;
+    comentarioInput.placeholder = parametro.requiere_comentario ? 'Comentario requerido' : 'Opcional';
+    comentarioWrap.classList.toggle(
+      'hidden',
+      !parametro.requiere_comentario && !parametro.comentario_sugerido && !comentarioInput.value
+    );
+    sugeridoDisplay.textContent = parametro.comentario_sugerido || '';
+    sugeridoDisplay.classList.toggle('hidden', !parametro.comentario_sugerido);
+
+    valorInput.required = true;
+    valorInput.placeholder = parametro.tipo_valor === 'numerico' ? '0.00' : 'Ej: Negativo';
+    updateBanderaRow(tr);
+  }
+
+  async function cargarParametrosDeFila(tr, selectedParamId) {
+    const estudioSelect = tr.querySelector('[data-estudio-select]');
+    const parametroSelect = tr.querySelector('[data-parametro-select]');
+    const comboInput = tr.querySelector('[data-param-combo-input]');
+    const estudioId = estudioSelect.value;
+
+    parametroSelect.disabled = true;
+    comboInput.disabled = true;
+    comboInput.value = '';
+    parametroSelect.innerHTML = '<option value="">Cargando...</option>';
+    setRowParametro(tr, null, {});
+
+    const parametros = await getParametros(estudioId);
+    tr._parametros = parametros;
+    parametroSelect.innerHTML = parametroOptions(parametros, selectedParamId || '', '');
+    parametroSelect.disabled = !estudioId;
+    comboInput.disabled = !estudioId;
+    if (selectedParamId) {
+      parametroSelect.value = selectedParamId;
+      const p = parametrosPorId.get(selectedParamId);
+      comboInput.value = p ? p.nombre : '';
+      setRowParametro(tr, p, {});
+    }
+  }
+
+  function positionParamList(tr) {
+    const input = tr.querySelector('[data-param-combo-input]');
+    const list = tr.querySelector('[data-param-combo-list]');
+    const r = input.getBoundingClientRect();
+    list.style.position = 'fixed';
+    list.style.top = (r.bottom + 4) + 'px';
+    list.style.left = r.left + 'px';
+    list.style.width = r.width + 'px';
+    list.style.zIndex = '1000';
+  }
+
+  function closeParamList(tr) {
+    const list = tr.querySelector('[data-param-combo-list]');
+    if (list) list.classList.add('hidden');
+    if (tr._paramReposition) {
+      window.removeEventListener('scroll', tr._paramReposition, true);
+      window.removeEventListener('resize', tr._paramReposition);
+      tr._paramReposition = null;
+    }
+  }
+
+  function renderParamList(tr, filtro) {
+    const list = tr.querySelector('[data-param-combo-list]');
+    const parametros = tr._parametros || [];
+    const term = String(filtro || '').trim().toLowerCase();
+    const filtrados = term
+      ? parametros.filter(function (p) { return p.nombre.toLowerCase().includes(term); })
+      : parametros.slice();
+
+    list.innerHTML = '';
+    if (!parametros.length) {
+      const li = document.createElement('li');
+      li.className = 'px-3 py-2 text-on-surface-variant';
+      li.textContent = 'Seleccione un estudio primero';
+      list.appendChild(li);
+    } else if (!filtrados.length) {
+      const li = document.createElement('li');
+      li.className = 'px-3 py-2 text-on-surface-variant';
+      li.textContent = 'Sin resultados';
+      list.appendChild(li);
+    } else {
+      filtrados.forEach(function (p) {
+        const li = document.createElement('li');
+        li.className = 'px-3 py-2 cursor-pointer text-on-surface hover:bg-surface-container-low';
+        li.textContent = p.nombre;
+        li.addEventListener('mousedown', function (e) {
+          e.preventDefault();
+          const select = tr.querySelector('[data-parametro-select]');
+          select.value = p.id;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          tr.querySelector('[data-param-combo-input]').value = p.nombre;
+          closeParamList(tr);
+        });
+        list.appendChild(li);
+      });
+    }
+
+    list.classList.remove('hidden');
+    positionParamList(tr);
+    if (!tr._paramReposition) {
+      tr._paramReposition = function () { positionParamList(tr); };
+      window.addEventListener('scroll', tr._paramReposition, true);
+      window.addEventListener('resize', tr._paramReposition);
+    }
+  }
+
+  function makeRow(rawData) {
+    const data = rawData || {};
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-surface-container';
+    tr.dataset.tipoValor = 'numerico';
+    tr.dataset.alertaCritica = 'false';
+    tr.innerHTML =
+      '<td class="p-2 align-top">' +
+        '<select name="estudio_catalogo[]" data-estudio-select class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-body-sm focus:outline-none focus:ring-2 focus:ring-primary/45">' +
+          estudioOptions(data.estudio_catalogo || '') +
+        '</select>' +
+      '</td>' +
+      '<td class="p-2 align-top">' +
+        '<div class="relative" data-param-combo>' +
+          '<input type="text" data-param-combo-input autocomplete="off" placeholder="Buscar parámetro" disabled ' +
+            'class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-body-sm focus:outline-none focus:ring-2 focus:ring-primary/45 disabled:bg-surface-container-low disabled:text-on-surface-variant disabled:cursor-not-allowed">' +
+          '<ul data-param-combo-list class="hidden mt-1 max-h-56 overflow-y-auto bg-surface rounded-lg border border-outline-variant shadow-lg text-body-sm"></ul>' +
+          '<select name="parametro_catalogo[]" data-parametro-select class="sr-only" tabindex="-1" aria-hidden="true" disabled>' +
+            '<option value="">— Parámetro —</option>' +
+          '</select>' +
+        '</div>' +
+        '<input type="hidden" name="parametro[]" data-parametro-nombre value="' + escapeAttr(data.parametro || '') + '">' +
+        '<input type="hidden" name="referencia_texto[]" data-ref-texto value="' + escapeAttr(data.referencia_texto || '') + '">' +
+        '<p data-ref-texto-display class="hidden mt-1 font-body-sm text-body-sm text-on-surface-variant"></p>' +
+        '<p data-alerta-sistema class="hidden mt-1 font-body-sm text-body-sm text-error"></p>' +
+      '</td>' +
+      '<td class="p-2 align-top"><input type="text" name="valor[]" value="' + escapeAttr(data.valor || '') + '" placeholder="0.00" data-valor' +
+        ' class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-body-sm focus:outline-none focus:ring-2 focus:ring-primary/45"></td>' +
+      '<td class="p-2 align-top"><input type="text" name="unidad[]" value="' + escapeAttr(data.unidad || '') + '" readonly data-unidad' +
+        ' class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-low text-body-sm text-on-surface-variant"></td>' +
+      '<td class="p-2 align-top"><input type="text" name="referencia_minima[]" value="' + escapeAttr(data.ref_min || '') + '" readonly data-ref-min' +
+        ' class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-low text-body-sm text-on-surface-variant"></td>' +
+      '<td class="p-2 align-top"><input type="text" name="referencia_maxima[]" value="' + escapeAttr(data.ref_max || '') + '" readonly data-ref-max' +
+        ' class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-low text-body-sm text-on-surface-variant"></td>' +
+      '<td class="p-2 align-top"><span data-bandera class="inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container text-on-surface-variant">—</span></td>' +
+      '<td class="p-2 align-top">' +
+        '<div data-comentario-wrap class="hidden">' +
+          '<textarea name="comentario_valor[]" data-comentario rows="2" placeholder="Opcional" class="w-full min-w-[150px] px-3 py-2 rounded-lg border border-outline-variant bg-surface text-body-sm focus:outline-none focus:ring-2 focus:ring-primary/45">' + escapeHtml(data.comentario || '') + '</textarea>' +
+          '<p data-comentario-sugerido class="hidden mt-1 font-body-sm text-body-sm text-on-surface-variant"></p>' +
+        '</div>' +
+      '</td>' +
+      '<td class="p-2 text-center"><button type="button" class="btn-remove p-1 rounded text-on-surface-variant hover:bg-error-container hover:text-error transition-colors">' +
+        '<span class="material-symbols-outlined" style="font-size:16px;">close</span></button></td>';
+
+    tr.querySelector('[data-valor]').addEventListener('input', function () { updateBanderaRow(tr); });
+    tr.querySelector('[data-comentario]').addEventListener('input', function () {
+      const parametroSelect = tr.querySelector('[data-parametro-select]');
+      const parametro = parametrosPorId.get(parametroSelect.value);
+      if (parametro) setRowParametro(tr, parametro, {});
+    });
+    tr.querySelector('[data-estudio-select]').addEventListener('change', function () {
+      cargarParametrosDeFila(tr, '');
+    });
+    const comboInput = tr.querySelector('[data-param-combo-input]');
+    comboInput.addEventListener('focus', function () { renderParamList(tr, ''); });
+    comboInput.addEventListener('input', function () { renderParamList(tr, this.value); });
+    comboInput.addEventListener('blur', function () {
+      setTimeout(function () {
+        closeParamList(tr);
+        const select = tr.querySelector('[data-parametro-select]');
+        const p = parametrosPorId.get(select.value);
+        comboInput.value = p ? p.nombre : '';
+      }, 150);
+    });
+    tr.querySelector('[data-parametro-select]').addEventListener('change', function () {
+      setRowParametro(tr, parametrosPorId.get(this.value), {});
+    });
+    tr.querySelector('.btn-remove').addEventListener('click', function () {
+      tr.remove();
+      updateCriticoCount();
+    });
+
+    if (data.estudio_catalogo) {
+      cargarParametrosDeFila(tr, data.parametro_catalogo || '');
+    } else {
+      setRowParametro(tr, null, data);
+    }
+    return tr;
+  }
+
+  function appendRow(data) {
+    const tbody = document.getElementById('valores-tbody');
+    const tr = makeRow(data || {});
+    tbody.appendChild(tr);
+    updateBanderaRow(tr);
+  }
+
+  document.getElementById('id_tipo').addEventListener('change', function () {
+    const tipo = this.value;
+    const nombreInput = document.getElementById('id_nombre_examen');
+    if (nombresDefault[tipo] && !nombreInput.value.trim()) {
+      nombreInput.value = nombresDefault[tipo];
+    }
+  });
+
+  document.getElementById('btn-agregar-fila').addEventListener('click', function () {
+    appendRow({});
+  });
+
+  // Inicializar con una fila vacía
+  document.getElementById('lab-form').addEventListener('submit', function (event) {
+    let invalidInput = null;
+    document.querySelectorAll('#valores-tbody tr').forEach(function (tr) {
+      if (invalidInput) return;
+      const bandera = calcBandera(
+        tr.querySelector('[data-valor]').value,
+        tr.querySelector('[data-ref-min]').value,
+        tr.querySelector('[data-ref-max]').value,
+        tr.dataset.tipoValor || 'numerico',
+        tr.dataset.alertaCritica === 'true'
+      );
+      if (bandera === 'RANGO_INVALIDO') {
+        invalidInput = tr.querySelector('[data-ref-min]');
+      }
+      const parametroSelect = tr.querySelector('[data-parametro-select]');
+      const valorInput = tr.querySelector('[data-valor]');
+      const comentarioInput = tr.querySelector('[data-comentario]');
+      if (parametroSelect.value && !valorInput.value.trim()) {
+        invalidInput = valorInput;
+      }
+      if (comentarioInput.required && !comentarioInput.value.trim()) {
+        invalidInput = comentarioInput;
+      }
+    });
+    if (invalidInput) {
+      event.preventDefault();
+      invalidInput.focus();
+      window.alert('Revise los valores del examen: falta un valor requerido, comentario obligatorio o rango valido.');
+    }
+  });
+
+  if (valoresIniciales.length) {
+    valoresIniciales.forEach(function (item) { appendRow(item); });
+  } else {
+    appendRow({});
+  }
+})();
+</script>
+
+{% endblock %}

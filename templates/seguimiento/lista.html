@@ -1,0 +1,159 @@
+{% extends "layouts/base.html" %}
+{% block title %}Seguimiento Clínico{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+  <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Seguimiento Clínico</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant mt-1">Vista general del progreso de pacientes oncológicos — {{ total }} seguimientos registrados.</p>
+    </div>
+    {% if request.user.rol == 'ADMIN' or request.user.rol == 'MEDICO' or request.user.rol == 'PEDIATRA' or request.user.rol == 'ONCOLOGO' %}
+    <div class="mt-2 sm:mt-0">
+      <a href="{% url 'seguimiento:registrar' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-on-primary font-label-sm text-label-sm hover:bg-surface-tint hover:scale-105 active:scale-95 transition-all shadow-sm">
+        <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+        Registrar seguimiento
+      </a>
+    </div>
+    {% endif %}
+  </div>
+  <form method="get" class="flex flex-col sm:flex-row w-full md:w-auto gap-2">
+    <div class="relative flex-1 md:w-64">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+      <input class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-full focus:ring-2 focus:ring-primary outline-none font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant/70"
+        data-live-filter=".seg-card" placeholder="Buscar paciente o ID..." type="search" name="q" value="{{ filtro_search }}">
+    </div>
+    <button type="submit" class="px-4 py-2 rounded-full bg-primary text-on-primary font-label-sm text-label-sm hover:bg-surface-tint transition-colors">
+      Buscar
+    </button>
+    {% if filtro_search %}
+    <a href="{% url 'seguimiento:lista' %}" class="px-4 py-2 rounded-full border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors text-center">
+      Limpiar
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+{# Tablero Kanban por fase #}
+<div class="flex gap-gutter overflow-x-auto pb-4 -mx-margin-mobile md:-mx-margin-desktop px-margin-mobile md:px-margin-desktop min-w-0">
+
+  {# Columna: Inducción #}
+  <div class="w-80 flex-shrink-0 flex flex-col bg-surface-container-lowest/50 rounded-xl border border-surface-variant">
+    <div class="p-4 border-b border-surface-variant bg-surface-container-lowest rounded-t-xl flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-error-container border border-error"></div>
+        <h3 class="font-label-md text-label-md text-on-surface">Inducción</h3>
+      </div>
+      <span class="font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-full">{{ induccion|length }}</span>
+    </div>
+    <div class="flex-1 p-3 flex flex-col gap-3 overflow-y-auto max-h-[60vh]">
+      {% for s in induccion %}
+      <div class="bg-surface-container-lowest p-4 rounded-lg border border-surface-variant shadow-sm hover:shadow-lg hover:border-primary/50 transition-all relative overflow-hidden seg-card {% if s.paciente_id %}cursor-pointer{% endif %} group">
+        {% if s.paciente_id %}
+        <a href="{% url 'pacientes:expediente' s.paciente.pk %}?tab=evolucion#evento-{{ s.pk }}"
+           class="absolute inset-0 z-10 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+           aria-label="Abrir expediente de {{ s.paciente.nombre_completo }}"></a>
+        {% endif %}
+        <div class="absolute top-0 left-0 w-1 h-full bg-error"></div>
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <h4 class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">{% if s.paciente_id %}{{ s.paciente.nombre_completo }}{% else %}Paciente no asignado{% endif %}</h4>
+            <p class="font-body-sm text-label-sm text-on-surface-variant">{{ s.estado_clinico }}</p>
+          </div>
+        </div>
+        <div class="mt-4 flex items-center justify-end border-t border-surface-variant pt-2">
+          <span class="font-label-sm text-xs text-on-surface-variant">{{ s.medico.get_full_name }}</span>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-center text-on-surface-variant font-body-sm text-body-sm py-8">Sin pacientes.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Columna: Consolidación #}
+  <div class="w-80 flex-shrink-0 flex flex-col bg-surface-container-lowest/50 rounded-xl border border-surface-variant">
+    <div class="p-4 border-b border-surface-variant bg-surface-container-lowest rounded-t-xl flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-secondary border border-secondary-container"></div>
+        <h3 class="font-label-md text-label-md text-on-surface">Consolidación</h3>
+      </div>
+      <span class="font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-full">{{ consolidacion|length }}</span>
+    </div>
+    <div class="flex-1 p-3 flex flex-col gap-3 overflow-y-auto max-h-[60vh]">
+      {% for s in consolidacion %}
+      <div class="bg-surface-container-lowest p-4 rounded-lg border border-surface-variant shadow-sm hover:shadow-lg hover:border-primary/50 transition-all relative overflow-hidden seg-card {% if s.paciente_id %}cursor-pointer{% endif %} group">
+        {% if s.paciente_id %}
+        <a href="{% url 'pacientes:expediente' s.paciente.pk %}?tab=evolucion#evento-{{ s.pk }}"
+           class="absolute inset-0 z-10 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+           aria-label="Abrir expediente de {{ s.paciente.nombre_completo }}"></a>
+        {% endif %}
+        <div class="absolute top-0 left-0 w-1 h-full bg-secondary"></div>
+        <h4 class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">{% if s.paciente_id %}{{ s.paciente.nombre_completo }}{% else %}Paciente no asignado{% endif %}</h4>
+        <p class="font-body-sm text-label-sm text-on-surface-variant mb-3">{{ s.estado_clinico }}</p>
+      </div>
+      {% empty %}
+      <p class="text-center text-on-surface-variant font-body-sm text-body-sm py-8">Sin pacientes.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Columna: Mantenimiento #}
+  <div class="w-80 flex-shrink-0 flex flex-col bg-surface-container-lowest/50 rounded-xl border border-surface-variant">
+    <div class="p-4 border-b border-surface-variant bg-surface-container-lowest rounded-t-xl flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-tertiary border border-tertiary-container"></div>
+        <h3 class="font-label-md text-label-md text-on-surface">Mantenimiento</h3>
+      </div>
+      <span class="font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-full">{{ mantenimiento|length }}</span>
+    </div>
+    <div class="flex-1 p-3 flex flex-col gap-3 overflow-y-auto max-h-[60vh]">
+      {% for s in mantenimiento %}
+      <div class="bg-surface-container-lowest p-4 rounded-lg border border-surface-variant shadow-sm hover:shadow-lg hover:border-primary/50 transition-all relative overflow-hidden seg-card {% if s.paciente_id %}cursor-pointer{% endif %} group">
+        {% if s.paciente_id %}
+        <a href="{% url 'pacientes:expediente' s.paciente.pk %}?tab=evolucion#evento-{{ s.pk }}"
+           class="absolute inset-0 z-10 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+           aria-label="Abrir expediente de {{ s.paciente.nombre_completo }}"></a>
+        {% endif %}
+        <div class="absolute top-0 left-0 w-1 h-full bg-tertiary"></div>
+        <h4 class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">{% if s.paciente_id %}{{ s.paciente.nombre_completo }}{% else %}Paciente no asignado{% endif %}</h4>
+        <p class="font-body-sm text-label-sm text-on-surface-variant mb-3">{{ s.estado_clinico }}</p>
+      </div>
+      {% empty %}
+      <p class="text-center text-on-surface-variant font-body-sm text-body-sm py-8">Sin pacientes.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Columna: Vigilancia #}
+  <div class="w-80 flex-shrink-0 flex flex-col bg-surface-container-lowest/50 rounded-xl border border-surface-variant">
+    <div class="p-4 border-b border-surface-variant bg-surface-container-lowest rounded-t-xl flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <div class="w-3 h-3 rounded-full bg-outline border border-outline-variant"></div>
+        <h3 class="font-label-md text-label-md text-on-surface">Vigilancia</h3>
+      </div>
+      <span class="font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-full">{{ vigilancia|length }}</span>
+    </div>
+    <div class="flex-1 p-3 flex flex-col gap-3 overflow-y-auto max-h-[60vh]">
+      {% for s in vigilancia %}
+      <div class="bg-surface-container-lowest p-4 rounded-lg border border-surface-variant shadow-sm hover:shadow-lg hover:border-primary/50 transition-all relative overflow-hidden seg-card {% if s.paciente_id %}cursor-pointer{% endif %} group opacity-80 hover:opacity-100">
+        {% if s.paciente_id %}
+        <a href="{% url 'pacientes:expediente' s.paciente.pk %}?tab=evolucion#evento-{{ s.pk }}"
+           class="absolute inset-0 z-10 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+           aria-label="Abrir expediente de {{ s.paciente.nombre_completo }}"></a>
+        {% endif %}
+        <div class="absolute top-0 left-0 w-1 h-full bg-outline-variant"></div>
+        <h4 class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">{% if s.paciente_id %}{{ s.paciente.nombre_completo }}{% else %}Paciente no asignado{% endif %}</h4>
+        <p class="font-body-sm text-label-sm text-on-surface-variant mb-1">{{ s.estado_clinico }}</p>
+      </div>
+      {% empty %}
+      <p class="text-center text-on-surface-variant font-body-sm text-body-sm py-8">Sin pacientes.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% include 'components/pagination.html' %}
+
+{% endblock %}

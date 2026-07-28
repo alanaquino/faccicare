@@ -1,0 +1,124 @@
+{% extends "layouts/base.html" %}
+{% block title %}Dashboard Oncólogo{% endblock %}
+{% block content %}
+
+<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+  <div>
+    <p class="font-label-md text-label-md text-secondary mb-1">{{ rol }}</p>
+    <h2 class="font-headline-lg text-headline-lg text-on-background mb-1">{{ saludo }}, {{ usuario_nombre }}</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Referencias recibidas y casos oncológicos en seguimiento.</p>
+  </div>
+  <a href="{% url 'referencias:lista' %}" class="flex items-center gap-2 bg-secondary text-on-secondary px-4 py-2 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm self-start sm:self-auto">
+    <span class="material-symbols-outlined" style="font-size:18px;">inbox</span>
+    Referencias Recibidas
+    <span class="bg-secondary-container text-on-secondary-container text-xs font-bold px-2 py-0.5 rounded-full">4</span>
+  </a>
+</div>
+
+{# Stats #}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-gutter">
+  {% for stat in stats %}
+  <div class="bg-surface-container-lowest rounded-xl p-5 shadow-sm border border-surface-container flex flex-col gap-3">
+    <div class="p-2.5 bg-{{ stat.bg_icon }} text-{{ stat.color }} rounded-lg w-fit">
+      <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">{{ stat.icono }}</span>
+    </div>
+    <div>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mb-0.5">{{ stat.label }}</p>
+      <p class="font-headline-lg text-headline-lg text-on-background">{{ stat.valor }}</p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# Main content #}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+  {# Referencias nuevas #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="p-5 border-b border-surface-container bg-secondary/5">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary">inbox</span>
+        <h3 class="font-headline-md text-headline-md text-on-background">Nuevas Referencias</h3>
+      </div>
+    </div>
+    <div class="divide-y divide-surface-container">
+      {% for p in pacientes_recientes|slice:":4" %}
+      <div class="p-4 hover:bg-surface-container-low/50 transition-colors">
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{{ p.iniciales }}</div>
+          <div class="min-w-0">
+            <p class="font-label-md text-label-md text-on-background truncate">{{ p.nombre }}</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">{{ p.edad }}</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">{{ p.fecha }}</p>
+          </div>
+        </div>
+        <div class="mt-3 flex gap-2">
+          <a href="{% url 'referencias:lista' %}" class="flex-1 text-center text-xs font-medium bg-secondary text-on-secondary py-1.5 rounded-md hover:opacity-90 transition-opacity">Revisar</a>
+          <button class="flex-1 text-center text-xs font-medium border border-outline-variant text-on-surface-variant py-1.5 rounded-md hover:bg-surface-container transition-colors">Agendar</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Pacientes en tratamiento #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="p-5 border-b border-surface-container">
+      <h3 class="font-headline-md text-headline-md text-on-background">En Tratamiento</h3>
+    </div>
+    <div class="divide-y divide-surface-container">
+      {% for p in pacientes_recientes %}
+      <div class="p-4 flex items-center justify-between hover:bg-surface-container-low/50 transition-colors">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center text-xs font-bold shrink-0">{{ p.iniciales }}</div>
+          <div>
+            <p class="font-label-md text-label-md text-on-background">{{ p.nombre }}</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">{{ p.edad }}</p>
+          </div>
+        </div>
+        <span class="material-symbols-outlined text-outline-variant" style="font-size:18px;">chevron_right</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Panel de alertas y acciones #}
+  <div class="space-y-gutter">
+    {% if alertas_criticas %}
+    <div class="bg-error-container/20 rounded-xl border border-error/20 p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">error</span>
+        <h3 class="font-headline-md text-headline-md text-on-background">Casos Urgentes</h3>
+      </div>
+      {% for alerta in alertas_criticas %}
+      <div class="bg-surface-container-lowest p-3 rounded-lg border-l-4 border-error mb-2">
+        <p class="font-label-md text-label-md text-on-background">{{ alerta.titulo }}</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">{{ alerta.descripcion }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4">Herramientas</h3>
+      <div class="space-y-2">
+        <a href="{% url 'seguimiento:timeline' %}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low transition-colors">
+          <span class="material-symbols-outlined text-primary">timeline</span>
+          <span class="font-label-md text-label-md text-on-background">Timeline de Casos</span>
+        </a>
+        <a href="{% url 'documentos:lista' %}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low transition-colors">
+          <span class="material-symbols-outlined text-secondary">folder_open</span>
+          <span class="font-label-md text-label-md text-on-background">Documentos Clínicos</span>
+        </a>
+        {% if request.user.puede_ver_reportes %}
+        <a href="{% url 'reportes:dashboard' %}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low transition-colors">
+          <span class="material-symbols-outlined text-tertiary">analytics</span>
+          <span class="font-label-md text-label-md text-on-background">Estadísticas</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

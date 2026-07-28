@@ -1,0 +1,222 @@
+{% extends "layouts/base.html" %}
+{% block title %}Editar Usuario{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-3 mb-2">
+  <a href="{% url 'usuarios:gestion' %}" class="text-on-surface-variant hover:text-on-surface" aria-label="Volver">
+    <span class="material-symbols-outlined" style="font-size:22px;">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Editar usuario</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">
+      Actualiza la ficha de {{ usuario_editado.nombre_completo }}.
+    </p>
+  </div>
+</div>
+
+{% if form.non_field_errors or parent_form.non_field_errors %}
+<div class="rounded-lg px-4 py-3 bg-error-container text-on-error-container">
+  {{ form.non_field_errors }}{{ parent_form.non_field_errors }}
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'usuarios:editar' usuario_editado.pk %}" enctype="multipart/form-data" class="space-y-6">
+  {% csrf_token %}
+
+  <section class="bg-surface-container-lowest border border-surface-container rounded-xl shadow-sm p-6">
+    <div class="flex items-start justify-between gap-4 mb-5">
+      <div>
+        <h3 class="font-headline-md text-headline-md text-on-background">Identidad y contacto</h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Datos personales y credenciales de acceso.</p>
+      </div>
+      <span class="inline-flex px-3 py-1 rounded-full text-xs {% if usuario_editado.is_active %}bg-tertiary-container/30 text-tertiary{% else %}bg-error-container/30 text-error{% endif %}">
+        {{ usuario_editado.estado }}
+      </span>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label for="{{ form.first_name.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Nombre <span class="text-error">*</span></label>
+        {{ form.first_name }}
+        {% for error in form.first_name.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.last_name.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Apellido</label>
+        {{ form.last_name }}
+        {% for error in form.last_name.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.username.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Nombre de usuario <span class="text-error">*</span></label>
+        {{ form.username }}
+        {% for error in form.username.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.email.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Correo electrónico</label>
+        {{ form.email }}
+        {% for error in form.email.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.tipo_documento.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Tipo de documento</label>
+        {{ form.tipo_documento }}
+        {% for error in form.tipo_documento.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.cedula.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Documento de identidad</label>
+        {{ form.cedula }}
+        {% for error in form.cedula.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.telefono.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Teléfono</label>
+        {{ form.telefono }}
+        {% for error in form.telefono.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.foto_perfil.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Foto de perfil</label>
+        {{ form.foto_perfil }}
+        {% if usuario_editado.foto_perfil %}
+        <label class="inline-flex items-center gap-2 mt-2 text-sm text-on-surface-variant">
+          {{ form.eliminar_foto }} Eliminar foto actual
+        </label>
+        {% endif %}
+        {% for error in form.foto_perfil.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+        {% for error in form.eliminar_foto.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-surface-container-lowest border border-surface-container rounded-xl shadow-sm p-6">
+    <div class="mb-5">
+      <h3 class="font-headline-md text-headline-md text-on-background">Acceso y asignación</h3>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Rol, estado y ubicación laboral.</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label for="{{ form.rol.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Rol en el sistema <span class="text-error">*</span></label>
+        {{ form.rol }}
+        {% for error in form.rol.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="flex items-end">
+        <label class="flex items-center gap-3 w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface cursor-pointer">
+          {{ form.is_active }}
+          <span>
+            <span class="block font-label-md text-label-md text-on-surface">Cuenta activa</span>
+            <span class="block text-xs text-on-surface-variant">Permite iniciar sesión.</span>
+          </span>
+        </label>
+        {% for error in form.is_active.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.especialidad.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Especialidad</label>
+        {{ form.especialidad }}
+        {% for error in form.especialidad.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.centro_medico.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Centro médico</label>
+        {{ form.centro_medico }}
+        {% for error in form.centro_medico.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section id="perfil-padre" class="{% if not requiere_perfil_padre %}hidden {% endif %}bg-surface-container-lowest border border-surface-container rounded-xl shadow-sm p-6">
+    <div class="mb-5">
+      <h3 class="font-headline-md text-headline-md text-on-background">Datos de Padre / Tutor</h3>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Información familiar, residencia y contacto de emergencia.</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label for="{{ parent_form.parentesco.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Parentesco <span class="text-error">*</span></label>
+        {{ parent_form.parentesco }}
+        {% for error in parent_form.parentesco.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ parent_form.nacionalidad.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Nacionalidad</label>
+        {{ parent_form.nacionalidad }}
+      </div>
+      <div>
+        <label for="{{ parent_form.provincia.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Provincia <span class="text-error">*</span></label>
+        {{ parent_form.provincia }}
+        {% for error in parent_form.provincia.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ parent_form.municipio.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Municipio <span class="text-error">*</span></label>
+        {{ parent_form.municipio }}
+        {% for error in parent_form.municipio.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="sm:col-span-2">
+        <label for="{{ parent_form.direccion.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Dirección <span class="text-error">*</span></label>
+        {{ parent_form.direccion }}
+        {% for error in parent_form.direccion.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ parent_form.ocupacion.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Ocupación</label>
+        {{ parent_form.ocupacion }}
+      </div>
+      <div>
+        <label for="{{ parent_form.estado_civil.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Estado civil</label>
+        {{ parent_form.estado_civil }}
+      </div>
+      <div>
+        <label for="{{ parent_form.cantidad_hijos.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Cantidad de hijos</label>
+        {{ parent_form.cantidad_hijos }}
+        {% for error in parent_form.cantidad_hijos.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ parent_form.ingresos_aproximados.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Ingresos aproximados</label>
+        {{ parent_form.ingresos_aproximados }}
+      </div>
+      <div>
+        <label for="{{ parent_form.contacto_emergencia.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Contacto de emergencia</label>
+        {{ parent_form.contacto_emergencia }}
+      </div>
+      <div>
+        <label for="{{ parent_form.telefono_emergencia.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Teléfono de emergencia</label>
+        {{ parent_form.telefono_emergencia }}
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-surface-container-lowest border border-surface-container rounded-xl shadow-sm p-6">
+    <div class="mb-5">
+      <h3 class="font-headline-md text-headline-md text-on-background">Restablecer contraseña</h3>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Déjala en blanco para conservar la contraseña actual.</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label for="{{ form.password1.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Nueva contraseña</label>
+        {{ form.password1 }}
+        {% for error in form.password1.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+      <div>
+        <label for="{{ form.password2.id_for_label }}" class="block font-label-md text-label-md text-on-surface mb-1.5">Confirmar contraseña</label>
+        {{ form.password2 }}
+        {% for error in form.password2.errors %}<p class="text-xs text-error mt-1">{{ error }}</p>{% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pb-4">
+    <a href="{% url 'usuarios:gestion' %}" class="px-6 py-3 rounded-lg border border-outline-variant text-on-surface-variant text-center hover:bg-surface-container">Cancelar</a>
+    <button type="submit" class="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary text-on-primary hover:bg-surface-tint shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+      Guardar cambios
+    </button>
+  </div>
+</form>
+
+<script>
+  (function () {
+    var rol = document.getElementById('id_rol');
+    var perfil = document.getElementById('perfil-padre');
+    var requeridos = perfil.querySelectorAll('[required]');
+    function actualizar() {
+      var visible = rol.value === 'PADRE_TUTOR';
+      perfil.classList.toggle('hidden', !visible);
+      requeridos.forEach(function (campo) { campo.required = visible; });
+    }
+    rol.addEventListener('change', actualizar);
+    actualizar();
+  })();
+</script>
+
+{% endblock %}

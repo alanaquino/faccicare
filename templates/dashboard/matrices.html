@@ -1,0 +1,413 @@
+{% extends "layouts/base.html" %}
+{% block title %}Matrices Operativas{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-surface">Matrices Operativas</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-1">
+      Visión general del rendimiento y tiempos de respuesta de la red oncológica.
+    </p>
+  </div>
+
+  {# ── Controles de cabecera ── #}
+  <div class="flex flex-wrap gap-2 items-center">
+
+    {# Filtro de período #}
+    <div class="relative" id="periodo-dropdown-wrap">
+      <button type="button" id="btn-periodo"
+              onclick="toggleDropdown('periodo-menu')"
+              class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest font-label-md text-label-md text-on-surface hover:bg-surface-container-low transition-colors">
+        <span class="material-symbols-outlined text-lg">calendar_today</span>
+        <span>{{ periodo_label }}</span>
+        <span id="periodo-label" class="hidden">
+          {% if periodo_param == '7' %}Últimos 7 días
+          {% elif periodo_param == '90' %}Últimos 90 días
+          {% elif periodo_param == '365' %}Último año
+          {% else %}Últimos 30 días{% endif %}
+        </span>
+        <span class="material-symbols-outlined text-sm">expand_more</span>
+      </button>
+      <div id="periodo-menu"
+           class="hidden absolute right-0 mt-1 w-52 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg z-20 py-1 overflow-hidden">
+        {% for val, label in periodo_opciones %}
+        <a href="?periodo={{ val }}"
+           class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors
+                  {% if val == periodo_param %}bg-primary-container/20 text-primary font-medium{% endif %}">
+          {% if val == periodo_param %}<span class="material-symbols-outlined text-sm">check</span>{% else %}<span class="w-4"></span>{% endif %}
+          {{ label }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Generar reporte CSV #}
+    <a href="?{{ report.query_string }}&exportar=csv"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary-container text-on-secondary-container font-label-md text-label-md hover:bg-secondary-fixed-dim transition-colors">
+      <span class="material-symbols-outlined text-lg">download</span>
+      Generar reporte CSV
+    </a>
+
+    <a href="{% url 'matrices_vista_previa' %}?{{ report.query_string }}"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/40 bg-surface-container-lowest font-label-md text-label-md text-primary hover:bg-primary-container/15 hover:border-primary transition-colors">
+      <span class="material-symbols-outlined text-lg">visibility</span>
+      Vista previa
+    </a>
+
+    {# Ver reporte completo (botón de la tabla) #}
+    <a href="{% url 'reportes:dashboard' %}"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest font-label-md text-label-md text-on-surface hover:bg-surface-container-low transition-colors">
+      <span class="material-symbols-outlined text-lg">bar_chart</span>
+      Reportes
+    </a>
+  </div>
+</div>
+
+{# ── KPIs principales ── #}
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+
+  {# T. Medio cribado → referencia #}
+  <div class="col-span-1 md:col-span-5 bg-surface-container-lowest rounded-xl p-stack-lg border border-surface-container-high shadow-sm relative overflow-hidden group">
+    <div class="absolute top-0 right-0 w-32 h-32 bg-primary-container/20 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
+    <div class="flex items-start justify-between mb-stack-md relative z-10">
+      <div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+        <span class="material-symbols-outlined">timer</span>
+      </div>
+      <span class="bg-tertiary-container/30 text-on-tertiary-container font-label-sm text-label-sm px-2 py-1 rounded-full flex items-center gap-1">
+        <span class="material-symbols-outlined text-sm">arrow_downward</span>
+        12% vs mes anterior
+      </span>
+    </div>
+    <h3 class="font-body-md text-body-md text-on-surface-variant mb-1 relative z-10">T. Medio: Cribado a Referencia</h3>
+    <div class="flex items-baseline gap-2 relative z-10">
+      <span class="font-headline-xl text-headline-xl text-primary font-bold">{{ tiempo_medio_valor }}</span>
+      <span class="font-label-md text-label-md text-on-surface-variant">Días</span>
+    </div>
+    <div class="mt-stack-md pt-stack-sm border-t border-outline-variant/30 flex justify-between relative z-10">
+      <span class="font-label-sm text-label-sm text-on-surface-variant">Meta institucional: &lt; 5 días</span>
+      <span class="font-label-sm text-label-sm text-primary font-medium">Óptimo</span>
+    </div>
+  </div>
+
+  {# Tasa éxito ingreso #}
+  <div class="col-span-1 md:col-span-4 bg-surface-container-lowest rounded-xl p-stack-lg border border-surface-container-high shadow-sm relative overflow-hidden group">
+    <div class="absolute top-0 right-0 w-32 h-32 bg-secondary-container/20 rounded-full blur-3xl -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
+    <div class="flex items-start justify-between mb-stack-md relative z-10">
+      <div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+        <span class="material-symbols-outlined">local_hospital</span>
+      </div>
+    </div>
+    <h3 class="font-body-md text-body-md text-on-surface-variant mb-1 relative z-10">Tasa Éxito Ingreso Hospitalario</h3>
+    <div class="flex items-baseline gap-2 relative z-10">
+      <span class="font-headline-xl text-headline-xl text-secondary font-bold">{{ tasa_exito_valor }}</span>
+      <span class="font-label-md text-label-md text-on-surface-variant">%</span>
+    </div>
+    <div class="mt-stack-md relative z-10">
+      <div class="w-full bg-surface-variant rounded-full h-2 mb-1">
+        <div class="bg-secondary h-2 rounded-full" style="width: {{ tasa_exito_barra }}%;"></div>
+      </div>
+      <span class="font-label-sm text-label-sm text-on-surface-variant">Ingresos sin fricción administrativa</span>
+    </div>
+  </div>
+
+  {# Cribados del período #}
+  <div class="col-span-1 md:col-span-3 bg-surface-container-lowest rounded-xl p-stack-lg border border-surface-container-high shadow-sm flex flex-col justify-between">
+    <div>
+      <h3 class="font-body-sm text-body-sm text-on-surface-variant mb-2 uppercase tracking-wider">
+        Cribados — {{ periodo_dias }}d
+      </h3>
+      <div class="font-headline-xl text-headline-xl text-on-surface font-bold">
+        {{ total_cribados_periodo|default:"—" }}
+      </div>
+    </div>
+    <div class="mt-4">
+      <div class="flex items-center gap-2 mb-2">
+        <div class="w-2 h-2 rounded-full bg-error"></div>
+        <span class="font-label-sm text-label-sm text-on-surface">Alta sospecha oncológica</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full bg-secondary"></div>
+        <span class="font-label-sm text-label-sm text-on-surface">En seguimiento rutinario</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Visualizaciones ── #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
+
+  {# Carga de trabajo por región #}
+  <div class="bg-surface-container-lowest border border-outline-variant/50 rounded-xl p-stack-md shadow-sm">
+    <div class="flex justify-between items-center mb-stack-lg">
+      <div>
+        <h3 class="font-headline-md text-headline-md text-on-surface">Carga de Trabajo por Región</h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Distribución de pacientes por provincia en los últimos {{ periodo_dias }} días</p>
+      </div>
+      {# ⋮ Menú contextual #}
+      <div class="relative" id="region-menu-wrap">
+        <button type="button" id="btn-region-menu"
+                onclick="toggleDropdown('region-menu')"
+                class="text-primary hover:bg-surface-container-low p-2 rounded-full transition-colors">
+          <span class="material-symbols-outlined text-xl">more_vert</span>
+        </button>
+        <div id="region-menu"
+             class="hidden absolute right-0 mt-1 w-52 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-lg z-20 py-1 overflow-hidden">
+          <a href="?{{ report.query_string }}&exportar=csv"
+             class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+            <span class="material-symbols-outlined text-sm">download</span> Generar reporte CSV
+          </a>
+          <a href="{% url 'pacientes:lista' %}"
+             class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+            <span class="material-symbols-outlined text-sm">groups</span> Ver pacientes
+          </a>
+          <a href="{% url 'centros_salud' %}"
+             class="flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+            <span class="material-symbols-outlined text-sm">location_on</span> Ver centros de salud
+          </a>
+          <button type="button"
+                  onclick="window.print(); document.getElementById('region-menu').classList.add('hidden');"
+                  class="w-full text-left flex items-center gap-2 px-4 py-2.5 font-body-sm text-body-sm text-on-surface hover:bg-surface-container transition-colors">
+            <span class="material-symbols-outlined text-sm">print</span> Imprimir
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-4 mt-2">
+      {% if provincias_data %}
+        {% for prov in provincias_data %}
+        <div class="group">
+          <div class="flex justify-between font-label-md text-label-md mb-1.5">
+            <span class="text-on-surface font-medium group-hover:text-primary transition-colors">{{ prov.nombre }}</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-on-surface font-bold">{{ prov.total }}</span>
+              <span class="text-on-surface-variant text-body-sm">({{ prov.porcentaje }}%)</span>
+            </div>
+          </div>
+          <div class="w-full bg-surface-container-high rounded-full h-2.5 overflow-hidden">
+            <div class="bg-primary h-full rounded-full transition-all duration-700 ease-out group-hover:bg-primary-hover"
+                 style="width: {{ prov.altura }}%;"></div>
+          </div>
+        </div>
+        {% endfor %}
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-4 flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>
+          Pacientes por provincia en los últimos {{ periodo_dias }} días
+        </p>
+      {% else %}
+        <p class="text-center font-body-sm text-body-sm text-outline py-10">
+          Sin registros en los últimos {{ periodo_dias }} días.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Alertas operativas #}
+  <div class="bg-surface-container-lowest border border-outline-variant/50 rounded-xl p-stack-md shadow-sm flex flex-col">
+    <div class="flex items-start justify-between mb-1">
+      <div>
+        <h3 class="font-headline-md text-headline-md text-on-surface">Alertas Operativas</h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Detectadas automáticamente por el algoritmo de monitoreo logístico.</p>
+      </div>
+      <a href="{% url 'alertas' %}"
+         class="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-colors mt-1">
+        <span class="material-symbols-outlined text-sm">open_in_new</span> Ver todas
+      </a>
+    </div>
+    <div class="flex-1 space-y-3 mt-4">
+      {% if alertas_operativas %}
+        {% for alerta in alertas_operativas|slice:":5" %}
+        <div class="flex items-start gap-4 p-4 rounded-lg bg-error-container/10 border border-error-container/25">
+          <div class="w-8 h-8 rounded-full bg-error-container text-on-error-container flex items-center justify-center shrink-0 mt-1">
+            <span class="material-symbols-outlined text-lg">warning</span>
+          </div>
+          <div class="flex-1">
+            <h4 class="font-label-md text-label-md text-on-surface mb-1">{{ alerta.titulo }}</h4>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">{{ alerta.descripcion|truncatechars:130 }}</p>
+            <p class="font-label-sm text-label-sm text-on-surface-variant mt-2">{{ alerta.nivel }} · {{ alerta.estado }}</p>
+          </div>
+          <a href="{{ alerta.url }}"
+             class="shrink-0 px-2 py-1 rounded-lg bg-error-container/30 text-error font-label-sm text-label-sm hover:bg-error-container/50 transition-colors">
+            Ver
+          </a>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="p-5 rounded-lg border border-outline-variant/50 bg-surface-container-low text-center">
+          <span class="material-symbols-outlined text-primary mb-2">task_alt</span>
+          <p class="font-label-md text-label-md text-on-surface">Sin alertas operativas abiertas</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">No hay alertas abiertas para el periodo seleccionado.</p>
+        </div>
+      {% endif %}
+      <div class="hidden">
+      <div class="flex items-start gap-4 p-4 rounded-lg bg-error-container/20 border border-error-container/30">
+        <div class="w-8 h-8 rounded-full bg-error-container text-on-error-container flex items-center justify-center shrink-0 mt-1">
+          <span class="material-symbols-outlined text-lg">warning</span>
+        </div>
+        <div class="flex-1">
+          <h4 class="font-label-md text-label-md text-on-surface mb-1">Cuello de botella en Referencias</h4>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">La Zona Sur experimenta un retraso del +24% en admisiones vs mes pasado.</p>
+        </div>
+        <a href="{% url 'alertas' %}?grupo=seguimiento"
+           class="shrink-0 px-2 py-1 rounded-lg bg-error-container/30 text-error font-label-sm text-label-sm hover:bg-error-container/50 transition-colors">
+          Ver
+        </a>
+      </div>
+      <div class="flex items-start gap-4 p-4 rounded-lg bg-tertiary-container/20 border border-tertiary-container/30">
+        <div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center shrink-0 mt-1">
+          <span class="material-symbols-outlined text-lg">check_circle</span>
+        </div>
+        <div class="flex-1">
+          <h4 class="font-label-md text-label-md text-on-surface mb-1">Mejora de Tiempos</h4>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">El centro Zona Norte ha reducido su tiempo de diagnóstico a 48 hrs en promedio.</p>
+        </div>
+        <a href="{% url 'centros_salud' %}"
+           class="shrink-0 px-2 py-1 rounded-lg bg-tertiary-container/30 text-on-tertiary-container font-label-sm text-label-sm hover:bg-tertiary-container/50 transition-colors">
+          Ver
+        </a>
+      </div>
+      </div>
+    </div>
+
+    {# Mini-acciones rápidas #}
+    <div class="mt-4 pt-4 border-t border-outline-variant/30 grid grid-cols-3 gap-2">
+      <a href="{% url 'alertas' %}?grupo=cribado"
+         class="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-surface-container transition-colors text-center">
+        <span class="material-symbols-outlined text-primary" style="font-size:22px;">biotech</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant">Cribados</span>
+      </a>
+      <a href="{% url 'seguimientos' %}"
+         class="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-surface-container transition-colors text-center">
+        <span class="material-symbols-outlined text-secondary" style="font-size:22px;">monitoring</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant">Seguimiento</span>
+      </a>
+      <a href="{% url 'reportes:dashboard' %}"
+         class="flex flex-col items-center gap-1 p-3 rounded-lg hover:bg-surface-container transition-colors text-center">
+        <span class="material-symbols-outlined text-tertiary" style="font-size:22px;">bar_chart</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant">Reportes</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+{# ── Tabla comparativa ── #}
+<div class="bg-surface-container-lowest border border-outline-variant/50 rounded-xl shadow-sm overflow-hidden">
+  <div class="p-stack-md border-b border-outline-variant/50 flex justify-between items-center bg-surface-container-low/50">
+    <div>
+      <h3 class="font-headline-md text-headline-md text-on-surface">Comparativa por Centro de Salud</h3>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+        Actividad de los últimos {{ periodo_dias }} días · {{ centros|length }} centros registrados
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a href="?{{ report.query_string }}&exportar=csv"
+         class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant bg-surface font-label-sm text-label-sm text-on-surface hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined text-sm">download</span> CSV
+      </a>
+      <a href="{% url 'reportes:dashboard' %}"
+         class="font-label-sm text-label-sm text-primary hover:underline px-3 py-2">
+        Ver reporte completo →
+      </a>
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="border-b border-outline-variant/50 text-on-surface-variant font-label-md text-label-md bg-surface">
+          <th class="p-4 font-semibold">Centro Clínico</th>
+          <th class="p-4 font-semibold">Provincia</th>
+          <th class="p-4 font-semibold">Cribados ({{ periodo_dias }}d)</th>
+          <th class="p-4 font-semibold">Referencias ({{ periodo_dias }}d)</th>
+          <th class="p-4 font-semibold">Estado de Flujo</th>
+          <th class="p-4 font-semibold">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="font-body-md text-body-md">
+        {% for row in centros_data %}
+        <tr class="border-b border-outline-variant/20 hover:bg-surface-container-low/50 transition-colors">
+          <td class="p-4">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">
+                {{ row.centro.nombre|slice:":2"|upper }}
+              </div>
+              <span class="font-medium text-on-surface">{{ row.centro.nombre }}</span>
+            </div>
+          </td>
+          <td class="p-4 text-on-surface-variant">{{ row.centro.provincia|default:"—" }}</td>
+          <td class="p-4 text-on-surface-variant">
+            {% if row.cribados %}
+              <span class="font-medium text-on-surface">{{ row.cribados }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="p-4 text-on-surface-variant">
+            {% if row.referencias %}
+              <span class="font-medium text-on-surface">{{ row.referencias }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="p-4">
+            {% if row.centro.activo %}
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-tertiary-container/30 text-on-tertiary-container border border-tertiary/20">Activo</span>
+            {% else %}
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-surface-variant text-on-surface-variant border border-outline-variant">Inactivo</span>
+            {% endif %}
+          </td>
+          <td class="p-4">
+            <div class="flex items-center gap-1">
+              <a href="{% url 'ver_centro' row.centro.pk %}"
+                 title="Ver detalle"
+                 class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors">
+                <span class="material-symbols-outlined" style="font-size:18px;">visibility</span>
+              </a>
+              {% if request.user.rol == 'ADMIN' %}
+              <a href="{% url 'editar_centro' row.centro.pk %}"
+                 title="Editar"
+                 class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-secondary transition-colors">
+                <span class="material-symbols-outlined" style="font-size:18px;">edit</span>
+              </a>
+              {% endif %}
+              <a href="{% url 'pacientes:lista' %}?centro={{ row.centro.pk }}"
+                 title="Ver pacientes"
+                 class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-tertiary transition-colors">
+                <span class="material-symbols-outlined" style="font-size:18px;">groups</span>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="py-12 text-center text-on-surface-variant font-body-sm text-body-sm">
+            <span class="material-symbols-outlined block mb-2 text-4xl">local_hospital</span>
+            No hay centros de salud registrados.
+            {% if request.user.rol == 'ADMIN' %}
+            <a href="{% url 'centros_salud' %}" class="text-primary hover:underline ml-1">Agregar uno →</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // ── Dropdown toggle ────────────────────────────────────────────
+  function toggleDropdown(id) {
+    const menu = document.getElementById(id);
+    menu.classList.toggle('hidden');
+  }
+
+  // Cerrar dropdowns al hacer clic fuera
+  document.addEventListener('click', function(e) {
+    ['periodo-menu', 'region-menu'].forEach(id => {
+      const menu = document.getElementById(id);
+      if (!menu) return;
+      const wrap = menu.parentElement;
+      if (!wrap.contains(e.target)) {
+        menu.classList.add('hidden');
+      }
+    });
+  });
+</script>
+
+{% endblock %}

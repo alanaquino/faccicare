@@ -1,0 +1,2547 @@
+{% extends "layouts/base.html" %}
+{% block title %}Expediente — {{ paciente.nombres }} {{ paciente.apellidos }}{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+  <div class="flex items-center gap-3 min-w-0">
+    <a href="{% url 'pacientes:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant shrink-0">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+        <span class="font-headline-md text-headline-md text-on-primary-container">{{ paciente.iniciales }}</span>
+      </div>
+      <div class="min-w-0">
+        <h2 class="font-headline-lg text-headline-lg text-on-background truncate">{{ paciente.nombres }} {{ paciente.apellidos }}</h2>
+        <p class="font-body-sm text-body-sm text-on-surface-variant truncate">
+          {{ paciente.edad }} &middot; {{ paciente.provincia }} &middot; ID: {{ paciente.codigo_paciente }}
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2 shrink-0">
+    <a href="{% url 'pacientes:ficha_paciente' paciente.id %}"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">description</span>
+      Ver ficha
+    </a>
+    <a href="{% url 'pacientes:ficha_paciente_pdf' paciente.id %}"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+      Descargar PDF
+    </a>
+    <a href="{% url 'pacientes:ficha_paciente' paciente.id %}?print=1"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">print</span>
+      Imprimir ficha
+    </a>
+    <a href="{% url 'pacientes:editar' paciente.id %}"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">edit</span>
+      Editar
+    </a>
+
+    {% if request.user.puede_hacer_cribado %}
+    <a href="{% url 'cribado:cuestionario' %}?paciente={{ paciente.id }}"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">fact_check</span>
+      Nuevo Cribado
+    </a>
+    {% endif %}
+  </div>
+</div>
+<!-- Modals moved to block modals -->
+
+{# Estado badge #}
+<div class="flex items-center gap-3 flex-wrap">
+  {% with e=paciente.estado_actual %}
+  {% if e == 'EN_TRATAMIENTO' %}
+    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container/40 text-error font-label-md text-label-md">
+      <span class="w-2 h-2 rounded-full bg-error"></span>{{ paciente.estado }}
+    </span>
+  {% elif e == 'REFERIDO' %}
+    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-md text-label-md">
+      <span class="w-2 h-2 rounded-full bg-secondary"></span>{{ paciente.estado }}
+    </span>
+  {% elif e == 'FINALIZADO' or e == 'DESCARTADO' %}
+    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md">
+      <span class="w-2 h-2 rounded-full bg-outline"></span>{{ paciente.estado }}
+    </span>
+  {% else %}
+    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-container/30 text-primary font-label-md text-label-md">
+      <span class="w-2 h-2 rounded-full bg-primary"></span>{{ paciente.estado }}
+    </span>
+  {% endif %}
+  {% endwith %}
+  <span class="font-body-sm text-body-sm text-on-surface-variant">Médico asignado: <strong class="text-on-surface">{{ paciente.medico }}</strong></span>
+  {% if ultima_visita %}
+  <span class="font-body-sm text-body-sm text-on-surface-variant">Última visita: <strong class="text-on-surface">{{ ultima_visita }}</strong></span>
+  {% endif %}
+</div>
+
+{# Tabs de navegación #}
+<div class="border-b border-surface-container-highest relative">
+  <div class="absolute right-0 top-0 bottom-[1px] w-12 bg-gradient-to-l from-background to-transparent pointer-events-none z-10"></div>
+  <nav class="flex gap-1 -mb-px overflow-x-auto" id="expediente-tabs"
+       onscroll="this.previousElementSibling.style.opacity=this.scrollLeft>10?'0':'1'">
+    <button type="button" data-tab="resumen"
+            class="tab-btn px-4 py-3 font-label-md text-label-md border-b-2 whitespace-nowrap transition-colors">
+      Resumen Clínico
+    </button>
+    <button type="button" data-tab="cribados"
+            class="tab-btn px-4 py-3 font-label-md text-label-md border-b-2 whitespace-nowrap transition-colors">
+      Historial de Cribados
+      {% if historial_cribados %}
+        <span class="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm">{{ historial_cribados|length }}</span>
+      {% endif %}
+    </button>
+    <button type="button" data-tab="referencias"
+            class="tab-btn px-4 py-3 font-label-md text-label-md border-b-2 whitespace-nowrap transition-colors">
+      Referencias
+      {% with total_refs=referencias|length %}
+      {% if total_refs %}
+        <span class="ml-1.5 px-1.5 py-0.5 rounded-full bg-secondary/10 text-secondary font-label-sm text-label-sm">{{ total_refs }}</span>
+      {% endif %}
+      {% endwith %}
+    </button>
+    <button type="button" data-tab="evolucion"
+            class="tab-btn px-4 py-3 font-label-md text-label-md border-b-2 whitespace-nowrap transition-colors">
+      Evolucion Clinica
+      {% if timeline_clinico %}
+        <span class="ml-1.5 px-1.5 py-0.5 rounded-full bg-tertiary-container/30 text-tertiary font-label-sm text-label-sm">{{ timeline_clinico|length }}</span>
+      {% endif %}
+    </button>
+    <button type="button" data-tab="documentos"
+            class="tab-btn px-4 py-3 font-label-md text-label-md border-b-2 whitespace-nowrap transition-colors">
+      Documentos
+      {% if documentos_count %}
+        <span class="ml-1.5 px-1.5 py-0.5 rounded-full bg-outline/10 text-on-surface-variant font-label-sm text-label-sm">{{ documentos_count }}</span>
+      {% endif %}
+    </button>
+    <button type="button" data-tab="indicaciones"
+            class="tab-btn px-4 py-3 font-label-md text-label-md border-b-2 whitespace-nowrap transition-colors">
+      Indicaciones Médicas
+    </button>
+    <button type="button" data-tab="laboratorio"
+            class="tab-btn px-4 py-3 font-label-md text-label-md border-b-2 whitespace-nowrap transition-colors">
+      Laboratorio
+      {% if resultados_lab_criticos %}
+        <span class="ml-1.5 px-1.5 py-0.5 rounded-full bg-error-container text-error font-label-sm text-label-sm" title="Resultados con valores críticos">{{ resultados_lab_criticos }}</span>
+      {% elif solicitudes_pendientes_count %}
+        <span class="ml-1.5 px-1.5 py-0.5 rounded-full bg-warning-container text-warning font-label-sm text-label-sm" title="Solicitudes pendientes">{{ solicitudes_pendientes_count }}</span>
+      {% elif resultados_lab_count %}
+        <span class="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm">{{ resultados_lab_count }}</span>
+      {% endif %}
+    </button>
+    <button type="button" data-tab="alojamiento"
+            class="tab-btn px-4 py-3 font-label-md text-label-md border-b-2 whitespace-nowrap transition-colors">
+      Casa FACCI
+      {% if estancias_activas %}
+        <span class="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm">{{ estancias_activas }}</span>
+      {% endif %}
+    </button>
+    <button type="button" data-tab="psicosocial"
+            class="tab-btn px-4 py-3 font-label-md text-label-md border-b-2 whitespace-nowrap transition-colors">
+      Psicosocial
+      {% if psico_criticos %}
+        <span class="ml-1.5 px-1.5 py-0.5 rounded-full bg-error-container text-error font-label-sm text-label-sm">{{ psico_criticos }}</span>
+      {% elif psico_count %}
+        <span class="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm">{{ psico_count }}</span>
+      {% endif %}
+    </button>
+  </nav>
+</div>
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# TAB 1: Resumen Clínico                                            #}
+{# ══════════════════════════════════════════════════════════════════ #}
+<div id="panel-resumen" class="tab-panel grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+  <div class="lg:col-span-2 space-y-gutter">
+
+    {# Datos personales #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">person</span>
+        Datos Personales
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Fecha de nacimiento</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ paciente.fecha_nacimiento|date:"d \d\e F \d\e Y" }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Sexo</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ paciente.get_sexo_display }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Tipo de sangre</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ paciente.tipo_sangre|default:"—" }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Provincia</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ paciente.provincia }}</p>
+        </div>
+        {% if paciente.municipio %}
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Municipio</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ paciente.municipio }}</p>
+        </div>
+        {% endif %}
+        {% if paciente.peso or paciente.altura %}
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Peso / Talla</p>
+          <p class="font-body-md text-body-md text-on-surface">
+            {% if paciente.peso %}{{ paciente.peso }} kg{% endif %}
+            {% if paciente.peso and paciente.altura %} / {% endif %}
+            {% if paciente.altura %}{{ paciente.altura }} cm{% endif %}
+          </p>
+        </div>
+        {% endif %}
+        <div class="col-span-2 sm:col-span-3">
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Alergias</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ paciente.alergias|default:"Ninguna conocida" }}</p>
+        </div>
+        {% if paciente.antecedentes_medicos %}
+        <div class="col-span-2 sm:col-span-3">
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Antecedentes médicos</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ paciente.antecedentes_medicos }}</p>
+        </div>
+        {% endif %}
+        {% if paciente.seguro_medico %}
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Seguro médico</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ paciente.seguro_medico }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Indicaciones médicas activas (preview últimos 3) #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">clinical_notes</span>
+          Indicaciones Médicas Activas
+        </h3>
+        <button type="button" data-tab="indicaciones" class="tab-link font-label-md text-label-md text-primary hover:underline">Ver todas →</button>
+      </div>
+      <div class="space-y-3">
+        {% for ind in indicaciones_list|slice:":3" %}
+        <div onclick="verDetalleIndicacion('{{ ind.titulo|escapejs }}', '{{ ind.get_tipo_indicacion_display|escapejs }}', '{{ ind.get_prioridad_display|escapejs }}', '{{ ind.descripcion|escapejs }}', '{{ ind.icono|escapejs }}')"
+             class="flex items-start justify-between p-4 rounded-lg border border-surface-container bg-surface hover:bg-surface-container-low transition-colors cursor-pointer group">
+          <div class="flex items-start gap-4 min-w-0">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0
+                        {% if ind.prioridad == 'ALTA' %}bg-error-container/20 text-error
+                        {% elif ind.prioridad == 'MEDIA' %}bg-primary-container/20 text-primary
+                        {% else %}bg-secondary-container/20 text-secondary{% endif %}">
+              <span class="material-symbols-outlined" style="font-size:20px;">{{ ind.icono }}</span>
+            </div>
+            <div class="min-w-0">
+              <p class="font-label-md text-label-md text-on-surface font-semibold truncate group-hover:text-primary transition-colors">{{ ind.titulo }}</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant truncate mt-0.5">{{ ind.get_tipo_indicacion_display }}</p>
+              <p class="font-body-sm text-body-sm text-on-surface mt-1 line-clamp-2 leading-relaxed text-on-surface-variant/80">{{ ind.descripcion }}</p>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="inline-block px-2.5 py-0.5 rounded-full font-label-sm text-[10px] font-bold uppercase tracking-wider border
+                         {% if ind.prioridad == 'ALTA' %}bg-error/10 text-error border-error/20
+                         {% elif ind.prioridad == 'MEDIA' %}bg-primary/10 text-primary border-primary/20
+                         {% else %}bg-secondary/10 text-secondary border-secondary/20{% endif %}">
+              {{ ind.get_prioridad_display }}
+            </span>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-8">
+          <span class="material-symbols-outlined text-outline-variant text-4xl block mb-2">assignment_late</span>
+          <p class="font-body-md text-body-md text-on-surface-variant">No hay indicaciones médicas activas.</p>
+          {% if request.user.rol != 'PERSONAL_FACCI' and request.user.rol != 'PADRE_TUTOR' %}
+          <button type="button" data-tab="indicaciones" onclick="mostrarFormularioCreacion()" class="tab-link mt-2 inline-block font-label-md text-label-md text-primary hover:underline">Crear primera indicación</button>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Historial de cribados (preview últimos 3) #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary">fact_check</span>
+          Historial de Cribados
+        </h3>
+        <button type="button" data-tab="cribados" class="tab-link font-label-md text-label-md text-primary hover:underline">Ver todos →</button>
+      </div>
+      <div class="space-y-3">
+        {% for cribado in historial_cribados|slice:":3" %}
+        <a href="{% url 'cribado:detalle' cribado.id %}"
+           class="flex items-center justify-between p-4 rounded-lg border border-surface-container bg-surface hover:bg-surface-container-low transition-colors">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center
+                        {% if cribado.nivel_key == 'ALTO' %}bg-error-container text-error
+                        {% elif cribado.nivel_key == 'MEDIO' %}bg-secondary-container/40 text-secondary
+                        {% else %}bg-primary-container/30 text-primary{% endif %}">
+              <span class="material-symbols-outlined" style="font-size:20px;">
+                {% if cribado.nivel_key == 'ALTO' %}warning{% elif cribado.nivel_key == 'MEDIO' %}help{% else %}check_circle{% endif %}
+              </span>
+            </div>
+            <div>
+              <p class="font-label-md text-label-md text-on-surface">Cribado #{{ cribado.numero }}</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">{{ cribado.fecha }} &middot; {{ cribado.medico }}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="inline-block px-2 py-0.5 rounded-full font-label-sm text-label-sm
+                         {% if cribado.nivel_key == 'ALTO' %}bg-error-container text-error
+                         {% elif cribado.nivel_key == 'MEDIO' %}bg-secondary-container/40 text-secondary
+                         {% else %}bg-primary-container/30 text-primary{% endif %}">
+              {{ cribado.nivel }}
+            </span>
+            <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Score: {{ cribado.score }}/{{ score_maximo }}</p>
+          </div>
+        </a>
+        {% empty %}
+        <div class="text-center py-8">
+          <span class="material-symbols-outlined text-outline-variant text-4xl block mb-2">fact_check</span>
+          <p class="font-body-md text-body-md text-on-surface-variant">No hay cribados registrados.</p>
+          {% if request.user.puede_hacer_cribado %}
+          <a href="{% url 'cribado:cuestionario' %}?paciente={{ paciente.id }}" class="mt-2 inline-block font-label-md text-label-md text-primary hover:underline">Iniciar primer cribado</a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Estudios médicos solicitados (preview últimos 3) #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">biotech</span>
+          Estudios Médicos Solicitados
+        </h3>
+        <button type="button" data-tab="laboratorio" class="tab-link font-label-md text-label-md text-primary hover:underline">Ver todos →</button>
+      </div>
+      <div class="space-y-3">
+        {% for sol in solicitudes_documento|slice:":3" %}
+        <div class="p-4 rounded-lg border border-surface-container bg-surface hover:bg-surface-container-low transition-colors flex flex-col sm:flex-row justify-between gap-4">
+          <div class="flex items-start gap-4 min-w-0 flex-1">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0
+                        {% if sol.estado == 'PENDIENTE' %}bg-warning-container/20 text-warning
+                        {% elif sol.estado == 'SUBIDO' %}bg-secondary-container/40 text-secondary
+                        {% else %}bg-primary-container/30 text-primary{% endif %}">
+              <span class="material-symbols-outlined" style="font-size:20px;">
+                {% if sol.estado == 'PENDIENTE' %}hourglass_empty
+                {% elif sol.estado == 'SUBIDO' %}pending_actions
+                {% else %}check_circle{% endif %}
+              </span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-label-md text-label-md text-on-surface font-semibold truncate">{{ sol.titulo }}</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant truncate mt-0.5">
+                Solicitado por: <span class="font-medium text-on-surface">{{ sol.medico_solicitante.get_full_name|default:sol.medico_solicitante.username }}</span> &middot; {{ sol.created_at|date:"d M Y" }}
+              </p>
+              <p class="font-body-sm text-body-sm text-on-surface mt-1 line-clamp-2 leading-relaxed text-on-surface-variant/80">{{ sol.descripcion|default:"Sin indicaciones adicionales." }}</p>
+              
+              {% if sol.documento_asociado %}
+              <div onclick="abrirVisor('{{ sol.documento_asociado.archivo.url }}', '{{ sol.documento_asociado.nombre_archivo|escapejs }}', '{{ sol.documento_asociado.extension|escapejs }}')"
+                   class="mt-3 p-2.5 rounded-lg bg-surface-container-low border border-surface-container/50 hover:border-primary/30 flex items-center gap-2 text-xs text-on-surface-variant cursor-pointer transition-colors group/doc">
+                <span class="material-symbols-outlined text-sm text-primary shrink-0 group-hover/doc:scale-110 transition-transform">description</span>
+                <span class="font-medium text-on-surface truncate group-hover/doc:text-primary transition-colors">{{ sol.documento_asociado.nombre_archivo }}</span>
+                <span class="text-[10px] text-on-surface-variant/75 shrink-0">({{ sol.documento_asociado.tamano }})</span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="flex sm:flex-col items-end justify-between sm:justify-start gap-3 shrink-0">
+            <span class="inline-block px-2.5 py-0.5 rounded-full font-label-sm text-[10px] font-bold uppercase tracking-wider border
+                         {% if sol.estado == 'PENDIENTE' %}bg-warning-container/20 text-warning border-warning/30
+                         {% elif sol.estado == 'SUBIDO' %}bg-secondary-container/30 text-secondary border-secondary/20
+                         {% else %}bg-primary-container/20 text-primary border-primary/20{% endif %}">
+              {% if sol.estado == 'PENDIENTE' %}Pendiente
+              {% elif sol.estado == 'SUBIDO' %}Por revisar
+              {% else %}Completado{% endif %}
+            </span>
+            
+            <div class="flex items-center gap-1.5 pt-1">
+              {% if sol.estado == 'PENDIENTE' or sol.estado == 'SUBIDO' %}
+              <button type="button"
+                      onclick="abrirModalSubida('{{ sol.id }}', '{{ sol.titulo|escapejs }}')"
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary hover:opacity-90 font-label-sm text-xs transition-opacity shadow-sm"
+                      title="Subir resultado de este estudio">
+                <span class="material-symbols-outlined text-sm" style="font-size:16px;">upload</span>
+                Subir
+              </button>
+              {% endif %}
+              
+              {% if sol.estado == 'SUBIDO' and request.user.rol != 'PERSONAL_FACCI' and request.user.rol != 'PADRE_TUTOR' %}
+              <form method="post" action="" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="revisar_estudio">
+                <input type="hidden" name="solicitud_id" value="{{ sol.id }}">
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-on-secondary hover:opacity-90 font-label-sm text-xs transition-opacity shadow-sm"
+                        title="Marcar como revisado y completado">
+                  <span class="material-symbols-outlined text-sm" style="font-size:16px;">done_all</span>
+                  Revisar
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-8">
+          <span class="material-symbols-outlined text-outline-variant text-4xl block mb-2">biotech</span>
+          <p class="font-body-md text-body-md text-on-surface-variant">No hay estudios médicos solicitados.</p>
+          {% if request.user.rol != 'PERSONAL_FACCI' and request.user.rol != 'PADRE_TUTOR' %}
+          <button type="button" onclick="abrirModalSolicitarEstudio()" class="mt-2 inline-block font-label-md text-label-md text-primary hover:underline">Solicitar primer estudio</button>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Referencias recientes (preview últimos 3) #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary">send</span>
+          Referencias Recientes
+        </h3>
+        <button type="button" data-tab="referencias" class="tab-link font-label-md text-label-md text-primary hover:underline">Ver todas →</button>
+      </div>
+      <div class="space-y-3">
+        {% for ref in referencias|slice:":3" %}
+        <div class="p-4 rounded-lg border border-surface-container bg-surface hover:bg-surface-container-low transition-colors flex flex-col sm:flex-row justify-between gap-4">
+          <div class="flex items-start gap-4 min-w-0 flex-1">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-secondary-container/40 text-secondary">
+              <span class="material-symbols-outlined" style="font-size:20px;">send</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-label-md text-label-md text-on-surface font-semibold truncate">{{ ref.hospital_destino|default:"—" }}</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant truncate mt-0.5">
+                Creada el: <span class="font-medium text-on-surface">{{ ref.fecha }}</span> &middot; Por: <span class="font-medium text-on-surface">{{ ref.medico_referente.get_full_name }}</span>
+              </p>
+              <p class="font-body-sm text-body-sm text-on-surface mt-1 line-clamp-2 leading-relaxed text-on-surface-variant/80">{{ ref.motivo_referencia }}</p>
+            </div>
+          </div>
+          <div class="flex sm:flex-col items-end justify-between sm:justify-start gap-3 shrink-0">
+            <div class="flex items-center gap-1.5">
+              {# Prioridad badge #}
+              {% if ref.prioridad == 'URGENTE' %}
+                <span class="px-2.5 py-0.5 rounded-full bg-error/10 text-error border border-error/20 font-label-sm text-[10px] font-bold uppercase tracking-wider">Urgente</span>
+              {% elif ref.prioridad == 'ALTA' %}
+                <span class="px-2.5 py-0.5 rounded-full bg-error-container text-error border border-error/20 font-label-sm text-[10px] font-bold uppercase tracking-wider">Alta</span>
+              {% elif ref.prioridad == 'MEDIA' %}
+                <span class="px-2.5 py-0.5 rounded-full bg-secondary-container/40 text-secondary border border-secondary/20 font-label-sm text-[10px] font-bold uppercase tracking-wider">Media</span>
+              {% else %}
+                <span class="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant border border-surface-container/50 font-label-sm text-[10px] font-bold uppercase tracking-wider">Baja</span>
+              {% endif %}
+              {# Estado badge #}
+              {% if ref.estado == 'PENDIENTE' %}
+                <span class="px-2.5 py-0.5 rounded-full bg-primary-container/30 text-primary border border-primary/20 font-label-sm text-[10px] font-bold uppercase tracking-wider">Pendiente</span>
+              {% elif ref.estado == 'ACEPTADA' %}
+                <span class="px-2.5 py-0.5 rounded-full bg-primary-container/30 text-primary border border-primary/20 font-label-sm text-[10px] font-bold uppercase tracking-wider">Aceptada</span>
+              {% elif ref.estado == 'EN_PROCESO' %}
+                <span class="px-2.5 py-0.5 rounded-full bg-secondary-container/40 text-secondary border border-secondary/20 font-label-sm text-[10px] font-bold uppercase tracking-wider">En proceso</span>
+              {% elif ref.estado == 'COMPLETADA' %}
+                <span class="px-2.5 py-0.5 rounded-full bg-primary-container/30 text-primary border border-primary/20 font-label-sm text-[10px] font-bold uppercase tracking-wider">Completada</span>
+              {% else %}
+                <span class="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant border border-surface-container/50 font-label-sm text-[10px] font-bold uppercase tracking-wider">{{ ref.get_estado_display }}</span>
+              {% endif %}
+            </div>
+            <a href="{% url 'referencias:detalle' ref.id %}"
+               class="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-xs hover:bg-surface-container transition-colors mt-1"
+               title="Ver detalle de la referencia">
+              <span class="material-symbols-outlined text-sm" style="font-size:16px;">open_in_new</span>
+              Detalle
+            </a>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-8">
+          <span class="material-symbols-outlined text-outline-variant text-4xl block mb-2">send</span>
+          <p class="font-body-md text-body-md text-on-surface-variant">No hay referencias médicas registradas.</p>
+          {% if request.user.rol != 'PERSONAL_FACCI' and request.user.rol != 'PADRE_TUTOR' %}
+          <a href="{% url 'referencias:crear' %}?paciente={{ paciente.id }}" class="mt-2 inline-block font-label-md text-label-md text-primary hover:underline">Crear primera referencia</a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Notas clínicas #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-tertiary">note_alt</span>
+          Notas Clínicas
+        </h3>
+        {% if request.user.rol != 'PADRE_TUTOR' and request.user.rol != 'PERSONAL_FACCI' %}
+        <button type="button" onclick="abrirModalNota()"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-tertiary text-tertiary font-label-sm text-label-sm hover:bg-tertiary-container/20 transition-colors">
+          <span class="material-symbols-outlined" style="font-size:16px;">add</span>
+          Nueva Nota
+        </button>
+        {% endif %}
+      </div>
+      <div class="space-y-3">
+        {% for nota in notas_clinicas %}
+        <div class="flex items-start gap-4 p-4 rounded-lg border {% if nota.es_importante %}border-error/30 bg-error-container/5{% else %}border-surface-container bg-surface{% endif %}">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0
+                      {% if nota.color == 'error' %}bg-error-container text-error
+                      {% elif nota.color == 'secondary' %}bg-secondary-container/40 text-secondary
+                      {% elif nota.color == 'primary' %}bg-primary-container/30 text-primary
+                      {% else %}bg-tertiary-container/30 text-tertiary{% endif %}">
+            <span class="material-symbols-outlined" style="font-size:20px;">
+              {% if nota.color == 'error' %}warning
+              {% elif nota.tipo == 'TRATAMIENTO' %}healing
+              {% elif nota.tipo == 'DIAGNOSTICO' %}medical_information
+              {% elif nota.tipo == 'EVOLUCION' %}trending_up
+              {% else %}notes{% endif %}
+            </span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="font-label-md text-label-md text-on-surface font-semibold">{{ nota.get_tipo_display }}</p>
+                {% if nota.es_importante %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-error-container text-error">
+                  Importante
+                </span>
+                {% endif %}
+              </div>
+              <span class="font-body-sm text-body-sm text-on-surface-variant">{{ nota.fecha }}</span>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Por {{ nota.autor_nombre }}</p>
+            <p class="font-body-md text-body-md text-on-surface mt-2 whitespace-pre-line leading-relaxed">{{ nota.texto }}</p>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-8">
+          <span class="material-symbols-outlined text-outline-variant text-4xl block mb-2">note_alt</span>
+          <p class="font-body-md text-body-md text-on-surface-variant">No hay notas clínicas registradas.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  {# Columna lateral resumen #}
+  <div class="space-y-gutter">
+
+
+
+    {# Tutor / Padre #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px;">family_restroom</span>
+        Tutor / Padre
+      </h3>
+      <div class="space-y-2">
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Nombre</p>
+          <p class="font-label-md text-label-md text-on-surface">{{ tutor_nombre }}</p>
+        </div>
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Teléfono</p>
+          <p class="font-label-md text-label-md text-on-surface">{{ tutor_telefono }}</p>
+        </div>
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Correo</p>
+          <p class="font-label-md text-label-md text-on-surface break-all">{{ tutor_email }}</p>
+        </div>
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Dirección</p>
+          <p class="font-label-md text-label-md text-on-surface">{{ tutor_direccion }}</p>
+        </div>
+      </div>
+    </div>
+
+    {# Próximo Seguimiento Programado #}
+    {% if proxima_cita_seg %}
+    <div class="bg-primary-container/20 rounded-xl shadow-sm border border-primary/20 p-5">
+      <h3 class="font-label-md text-label-md text-primary uppercase tracking-wide mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary" style="font-size:18px;">calendar_month</span>
+        Próximo Seguimiento
+      </h3>
+      <div class="space-y-2.5">
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Fecha y hora</p>
+          <p class="font-label-md text-label-md text-on-surface font-semibold">
+            {{ proxima_cita_seg.proxima_fecha_seguimiento|date:"d \d\e F \d\e Y" }} &middot; {{ proxima_cita_seg.proxima_fecha_seguimiento|date:"h:i A" }}
+          </p>
+        </div>
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Médico a cargo</p>
+          <p class="font-label-md text-label-md text-on-surface">
+            {% if proxima_cita_seg.medico_seguimiento %}{{ proxima_cita_seg.medico_seguimiento.get_full_name|default:proxima_cita_seg.medico_seguimiento.username }}{% else %}<span class="text-on-surface-variant italic">Por asignar</span>{% endif %}
+          </p>
+        </div>
+        {% if proxima_cita_seg.lugar_seguimiento %}
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Lugar / Centro</p>
+          <p class="font-label-md text-label-md text-on-surface">{{ proxima_cita_seg.lugar_seguimiento }}</p>
+        </div>
+        {% endif %}
+        {% if proxima_cita_seg.observaciones %}
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Notas / Observaciones</p>
+          <p class="font-body-sm text-body-sm text-on-surface italic mt-0.5">{{ proxima_cita_seg.observaciones }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="flex gap-2 pt-2">
+          <button type="button"
+                  class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-xs hover:bg-surface-container-high transition-colors"
+                  data-titulo="Seguimiento agendado"
+                  data-tipo="Seguimiento agendado"
+                  data-autor="{{ proxima_cita_seg.medico.get_full_name|default:proxima_cita_seg.medico.username }}"
+                  data-fecha="{{ proxima_cita_seg.proxima_fecha_seguimiento|date:'d M Y' }}"
+                  data-descripcion="{{ proxima_cita_seg.observaciones }}"
+                  data-icon="calendar_month"
+                  data-color="primary"
+                  data-campo-0-label="Fecha del seguimiento"
+                  data-campo-0-valor="{{ proxima_cita_seg.proxima_fecha_seguimiento|date:'d/m/Y H:i' }}"
+                  data-campo-1-label="Médico"
+                  data-campo-1-valor="{% if proxima_cita_seg.medico_seguimiento %}{{ proxima_cita_seg.medico_seguimiento.get_full_name|default:proxima_cita_seg.medico_seguimiento.username }}{% else %}Por asignar{% endif %}"
+                  data-campo-2-label="Centro / Lugar"
+                  data-campo-2-valor="{{ proxima_cita_seg.lugar_seguimiento }}"
+                  data-campo-3-label="Observaciones"
+                  data-campo-3-valor="{{ proxima_cita_seg.observaciones }}"
+                  data-campos-count="4"
+                  onclick="abrirModalDetalleSeguimiento(this)">
+            <span class="material-symbols-outlined" style="font-size:16px;">visibility</span>
+            Ver
+          </button>
+          
+          {% if request.user.rol == 'ADMIN' or request.user.rol == 'MEDICO' or request.user.rol == 'PEDIATRA' or request.user.rol == 'ONCOLOGO' %}
+          <button type="button"
+                  onclick="abrirModalGestionarSeguimiento()"
+                  class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary/10 text-primary font-label-md text-xs hover:bg-primary/20 transition-colors">
+            <span class="material-symbols-outlined" style="font-size:16px;">edit</span>
+            Modificar
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Acciones rápidas #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-3">Acciones Rápidas</h3>
+      <div class="space-y-2">
+        {% if request.user.puede_hacer_cribado %}
+        <a href="{% url 'cribado:cuestionario' %}?paciente={{ paciente.id }}"
+           class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant group">
+          <span class="material-symbols-outlined text-primary" style="font-size:20px;">fact_check</span>
+          <span class="font-label-md text-label-md">Iniciar cribado</span>
+        </a>
+        {% endif %}
+        <a href="{% url 'referencias:crear' %}?paciente={{ paciente.id }}"
+           class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant group">
+          <span class="material-symbols-outlined text-secondary" style="font-size:20px;">send</span>
+          <span class="font-label-md text-label-md">Crear referencia</span>
+        </a>
+        {% if request.user.rol == 'ADMIN' or request.user.rol == 'MEDICO' or request.user.rol == 'PEDIATRA' or request.user.rol == 'ONCOLOGO' %}
+        <button type="button" onclick="abrirModalCita()"
+           class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant group w-full text-left">
+          <span class="material-symbols-outlined text-secondary" style="font-size:20px;">calendar_add_on</span>
+          <span class="font-label-md text-label-md">Registrar seguimiento</span>
+        </button>
+        {% endif %}
+        <button type="button" data-tab="evolucion"
+           class="tab-link flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant group w-full text-left">
+          <span class="material-symbols-outlined text-tertiary" style="font-size:20px;">timeline</span>
+          <span class="font-label-md text-label-md">Ver evolucion</span>
+        </button>
+        <button type="button" data-tab="documentos" class="tab-link flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant w-full text-left">
+          <span class="material-symbols-outlined text-on-surface-variant" style="font-size:20px;">folder_open</span>
+          <span class="font-label-md text-label-md">Ver documentos</span>
+        </button>
+
+        <a href="{% url 'notificaciones' %}"
+           class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant group">
+          <span class="material-symbols-outlined text-on-surface-variant" style="font-size:20px;">notifications</span>
+          <span class="font-label-md text-label-md">Ver notificaciones</span>
+        </a>
+      </div>
+    </div>
+
+    {# Estadísticas #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-3">Resumen Estadístico</h3>
+      <div class="space-y-3">
+        <div class="flex justify-between items-center py-2 border-b border-surface-container">
+          <span class="font-body-sm text-body-sm text-on-surface-variant">Total cribados</span>
+          <span class="font-headline-md text-headline-md text-primary">{{ historial_cribados|length }}</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b border-surface-container">
+          <span class="font-body-sm text-body-sm text-on-surface-variant">En seguimiento</span>
+          <span class="font-label-md text-label-md text-on-surface">{{ meses_seguimiento }}</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b border-surface-container">
+          <span class="font-body-sm text-body-sm text-on-surface-variant">Referencias</span>
+          <span class="font-label-md text-label-md text-on-surface">{{ referencias|length }}</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b border-surface-container">
+          <span class="font-body-sm text-body-sm text-on-surface-variant">Seguimientos</span>
+          <span class="font-label-md text-label-md text-on-surface">{{ seguimientos_count }}</span>
+        </div>
+        <div class="flex justify-between items-center py-2">
+          <span class="font-body-sm text-body-sm text-on-surface-variant">Documentos</span>
+          <span class="font-label-md text-label-md text-on-surface">{{ documentos_count }} archivos</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# TAB 2: Historial de Cribados                                      #}
+{# ══════════════════════════════════════════════════════════════════ #}
+<div id="panel-cribados" class="tab-panel hidden">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary">fact_check</span>
+        Historial Completo de Cribados
+      </h3>
+      {% if request.user.puede_hacer_cribado %}
+      <a href="{% url 'cribado:cuestionario' %}?paciente={{ paciente.id }}"
+         class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+        <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+        Nuevo Cribado
+      </a>
+      {% endif %}
+    </div>
+
+    {% if historial_cribados %}
+    <div class="space-y-3">
+      {% for cribado in historial_cribados %}
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl border border-surface-container bg-surface hover:bg-surface-container-low transition-colors">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center shrink-0
+                      {% if cribado.nivel_key == 'ALTO' %}bg-error-container text-error
+                      {% elif cribado.nivel_key == 'MEDIO' %}bg-secondary-container/40 text-secondary
+                      {% else %}bg-primary-container/30 text-primary{% endif %}">
+            <span class="material-symbols-outlined" style="font-size:22px;">
+              {% if cribado.nivel_key == 'ALTO' %}warning{% elif cribado.nivel_key == 'MEDIO' %}help{% else %}check_circle{% endif %}
+            </span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="font-label-md text-label-md text-on-surface">Cribado #{{ cribado.numero }}</p>
+              <span class="inline-block px-2 py-0.5 rounded-full font-label-sm text-label-sm
+                           {% if cribado.nivel_key == 'ALTO' %}bg-error-container text-error
+                           {% elif cribado.nivel_key == 'MEDIO' %}bg-secondary-container/40 text-secondary
+                           {% else %}bg-primary-container/30 text-primary{% endif %}">
+                {{ cribado.nivel }}
+              </span>
+              {% if cribado.requiere_referencia %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container/20 text-error font-label-sm text-label-sm">
+                <span class="material-symbols-outlined" style="font-size:12px;">send</span> Requiere referencia
+              </span>
+              {% endif %}
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+              {{ cribado.fecha }} &middot; {{ cribado.medico }}
+            </p>
+            {% if cribado.observaciones %}
+            <p class="font-body-sm text-body-sm text-on-surface-variant mt-1 truncate max-w-sm">{{ cribado.observaciones }}</p>
+            {% endif %}
+          </div>
+        </div>
+        <div class="flex items-center gap-4 sm:text-right">
+          <div>
+            <p class="font-label-sm text-label-sm text-on-surface-variant">Puntaje</p>
+            <p class="font-headline-sm text-headline-sm text-on-background">{{ cribado.score }}<span class="font-body-sm text-body-sm text-on-surface-variant">/{{ score_maximo }}</span></p>
+          </div>
+          <a href="{% url 'cribado:detalle' cribado.id %}"
+             class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors whitespace-nowrap">
+            <span class="material-symbols-outlined" style="font-size:16px;">open_in_new</span>
+            Ver detalle
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-16">
+      <span class="material-symbols-outlined text-outline-variant block mb-3" style="font-size:48px;">fact_check</span>
+      <p class="font-title-md text-title-md text-on-surface mb-1">Sin cribados registrados</p>
+      <p class="font-body-md text-body-md text-on-surface-variant mb-4">Inicia el primer cribado FACCI para este paciente.</p>
+      {% if request.user.puede_hacer_cribado %}
+      <a href="{% url 'cribado:cuestionario' %}?paciente={{ paciente.id }}"
+         class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+        <span class="material-symbols-outlined" style="font-size:18px;">fact_check</span>
+        Iniciar Cribado
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# TAB 3: Referencias                                                #}
+{# ══════════════════════════════════════════════════════════════════ #}
+<div id="panel-referencias" class="tab-panel hidden">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary">send</span>
+        Referencias Médicas
+      </h3>
+      <a href="{% url 'referencias:crear' %}?paciente={{ paciente.id }}"
+         class="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+        <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+        Nueva Referencia
+      </a>
+    </div>
+
+    {% if referencias %}
+    <div class="space-y-3">
+      {% for ref in referencias %}
+      <div class="p-5 rounded-xl border border-surface-container bg-surface">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap mb-1">
+              <span class="font-label-md text-label-md text-on-surface">{{ ref.hospital_destino|default:"—" }}</span>
+              {# Prioridad badge #}
+              {% if ref.prioridad == 'URGENTE' %}
+                <span class="px-2 py-0.5 rounded-full bg-error text-on-error font-label-sm text-label-sm">Urgente</span>
+              {% elif ref.prioridad == 'ALTA' %}
+                <span class="px-2 py-0.5 rounded-full bg-error-container text-error font-label-sm text-label-sm">Alta</span>
+              {% elif ref.prioridad == 'MEDIA' %}
+                <span class="px-2 py-0.5 rounded-full bg-secondary-container/40 text-secondary font-label-sm text-label-sm">Media</span>
+              {% else %}
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Baja</span>
+              {% endif %}
+              {# Estado badge #}
+              {% if ref.estado == 'PENDIENTE' %}
+                <span class="px-2 py-0.5 rounded-full bg-primary-container/30 text-primary font-label-sm text-label-sm">Pendiente</span>
+              {% elif ref.estado == 'ACEPTADA' %}
+                <span class="px-2 py-0.5 rounded-full bg-primary-container/30 text-primary font-label-sm text-label-sm">Aceptada</span>
+              {% elif ref.estado == 'EN_PROCESO' %}
+                <span class="px-2 py-0.5 rounded-full bg-secondary-container/40 text-secondary font-label-sm text-label-sm">En proceso</span>
+              {% elif ref.estado == 'COMPLETADA' %}
+                <span class="px-2 py-0.5 rounded-full bg-primary-container/30 text-primary font-label-sm text-label-sm">Completada</span>
+              {% else %}
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">{{ ref.get_estado_display }}</span>
+              {% endif %}
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant mb-2">
+              {{ ref.motivo_referencia|truncatechars:120 }}
+            </p>
+            <div class="flex items-center gap-4 flex-wrap">
+              <span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+                <span class="material-symbols-outlined" style="font-size:14px;">calendar_today</span>
+                {{ ref.fecha }}
+              </span>
+              <span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+                <span class="material-symbols-outlined" style="font-size:14px;">person</span>
+                {{ ref.medico_referente.get_full_name }}
+              </span>
+              {% if ref.especialista_destino %}
+              <span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+                <span class="material-symbols-outlined" style="font-size:14px;">local_hospital</span>
+                {{ ref.especialista_destino.get_full_name }}
+              </span>
+              {% endif %}
+              {% if ref.fecha_cita %}
+              <span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+                <span class="material-symbols-outlined" style="font-size:14px;">event</span>
+                Cita: {{ ref.fecha_cita|date:"d M, Y" }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+          <a href="{% url 'referencias:detalle' ref.id %}"
+             class="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors">
+            <span class="material-symbols-outlined" style="font-size:16px;">open_in_new</span>
+            Detalle
+          </a>
+        </div>
+        {% if ref.observaciones %}
+        <div class="mt-3 pt-3 border-t border-surface-container">
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ ref.observaciones }}</p>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-16">
+      <span class="material-symbols-outlined text-outline-variant block mb-3" style="font-size:48px;">send</span>
+      <p class="font-title-md text-title-md text-on-surface mb-1">Sin referencias</p>
+      <p class="font-body-md text-body-md text-on-surface-variant mb-4">No se han generado referencias médicas para este paciente.</p>
+      <a href="{% url 'referencias:crear' %}?paciente={{ paciente.id }}"
+         class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+        <span class="material-symbols-outlined" style="font-size:18px;">send</span>
+        Crear Referencia
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# TAB 4: Evolucion clinica #}
+<div id="panel-evolucion" class="tab-panel hidden">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-variant/40 p-6">
+    <div class="flex items-center justify-between mb-8 pb-4 border-b border-surface-variant/40">
+      <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2.5">
+        <span class="material-symbols-outlined text-tertiary">timeline</span>
+        Evolución Clínica
+      </h3>
+      <span class="px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-md text-xs font-semibold">
+        {{ timeline_clinico|length }} eventos
+      </span>
+    </div>
+
+    {% if timeline_clinico %}
+    <div class="relative">
+      <div class="absolute left-5 top-0 bottom-0 w-[2px] bg-gradient-to-b from-surface-container-highest via-outline-variant/30 to-surface-container-highest"></div>
+      <div class="space-y-6">
+        {% for evento in timeline_clinico %}
+        <div class="relative pl-14 group" {% if evento.id %}id="evento-{{ evento.id }}"{% endif %}>
+          {# Icono del evento #}
+          <div class="absolute left-0 top-1 w-10 h-10 rounded-full flex items-center justify-center border-4 border-surface-container-lowest shadow-sm ring-1 ring-surface-variant/40 transition-all duration-300 group-hover:scale-110 group-hover:shadow-md
+                      {% if evento.color == 'error' %}bg-error/10 text-error ring-error/20
+                      {% elif evento.color == 'primary' %}bg-primary/10 text-primary ring-primary/20
+                      {% elif evento.color == 'secondary' %}bg-secondary/10 text-secondary ring-secondary/20
+                      {% else %}bg-tertiary/10 text-tertiary ring-tertiary/20{% endif %}">
+            <span class="material-symbols-outlined" style="font-size:20px;">{{ evento.icono }}</span>
+          </div>
+
+          <div class="p-5 rounded-2xl border border-surface-variant/50 bg-white/70 backdrop-blur-sm shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 space-y-4">
+
+            {# Encabezado: tipo, título, fecha, autor, link detalle #}
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div class="min-w-0 space-y-1.5">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="px-2.5 py-0.5 rounded-full font-label-sm text-[10px] font-bold uppercase tracking-wider border
+                               {% if evento.color == 'error' %}bg-error/10 text-error border-error/20
+                               {% elif evento.color == 'primary' %}bg-primary/10 text-primary border-primary/20
+                               {% elif evento.color == 'secondary' %}bg-secondary/10 text-secondary border-secondary/20
+                               {% else %}bg-tertiary/10 text-tertiary border-tertiary/20{% endif %}">
+                    {{ evento.tipo }}
+                  </span>
+                </div>
+                <h4 class="font-headline-sm text-headline-sm text-on-background font-bold tracking-tight text-base sm:text-[17px] leading-snug">{{ evento.titulo }}</h4>
+                <div class="flex items-center gap-3 text-xs text-on-surface-variant/80 flex-wrap">
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-xs text-outline" style="font-size:14px;">schedule</span>
+                    {{ evento.fecha }}
+                  </span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-outline-variant/60"></span>
+                  <span class="flex items-center gap-1 font-medium">
+                    <span class="material-symbols-outlined text-xs text-outline" style="font-size:14px;">person</span>
+                    Por {{ evento.autor }}
+                  </span>
+                </div>
+              </div>
+              <div class="flex gap-2 shrink-0">
+                {% if evento.detalle_url == 'cribado' %}
+                <a href="{% url 'cribado:detalle' evento.id %}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-on-primary font-label-md text-xs hover:opacity-95 transition-all shadow-sm">
+                  <span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span>
+                  Ver cribado
+                </a>
+                {% elif evento.detalle_url == 'referencia' %}
+                <a href="{% url 'referencias:detalle' evento.id %}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-secondary text-on-secondary font-label-md text-xs hover:opacity-95 transition-all shadow-sm">
+                  <span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span>
+                  Ver referencia
+                </a>
+                {% elif evento.tipo == 'Seguimiento clínico' or evento.tipo == 'Seguimiento agendado' %}
+                <button type="button"
+                        class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-on-primary font-label-md text-xs hover:opacity-95 transition-all shadow-sm"
+                        data-titulo="{{ evento.titulo }}"
+                        data-tipo="{{ evento.tipo }}"
+                        data-autor="{{ evento.autor }}"
+                        data-fecha="{{ evento.fecha }}"
+                        data-descripcion="{{ evento.descripcion }}"
+                        data-icon="{{ evento.icono }}"
+                        data-color="{{ evento.color }}"
+                        {% for campo in evento.campos %}
+                          data-campo-{{ forloop.counter0 }}-label="{{ campo.label }}"
+                          data-campo-{{ forloop.counter0 }}-valor="{{ campo.valor }}"
+                        {% endfor %}
+                        data-campos-count="{{ evento.campos|length }}"
+                        onclick="abrirModalDetalleSeguimiento(this)">
+                  <span class="material-symbols-outlined" style="font-size:14px;">visibility</span>
+                  Ver detalle
+                </button>
+                {% endif %}
+              </div>
+            </div>
+
+            {# Badges de estado/prioridad #}
+            {% if evento.badges %}
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              {% for badge in evento.badges %}
+              <span class="px-2.5 py-0.5 rounded-full font-label-sm text-[10px] font-bold border flex items-center gap-1.5
+                           {% if badge.color == 'error' %}bg-error/5 text-error border-error/15
+                           {% elif badge.color == 'primary' %}bg-primary/5 text-primary border-primary/15
+                           {% elif badge.color == 'secondary' %}bg-secondary/5 text-secondary border-secondary/15
+                           {% else %}bg-tertiary/5 text-tertiary border-tertiary/15{% endif %}">
+                <span class="w-1.5 h-1.5 rounded-full
+                             {% if badge.color == 'error' %}bg-error
+                             {% elif badge.color == 'primary' %}bg-primary
+                             {% elif badge.color == 'secondary' %}bg-secondary
+                             {% else %}bg-tertiary{% endif %}"></span>
+                {{ badge.label }}
+              </span>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {# Descripción principal #}
+            {% if evento.descripcion %}
+            <div class="border-l-4 p-3.5 rounded-r-2xl font-body-sm text-body-sm text-on-surface leading-relaxed
+                         {% if evento.color == 'error' %}border-error/60 bg-error/5
+                         {% elif evento.color == 'primary' %}border-primary/60 bg-primary/5
+                         {% elif evento.color == 'secondary' %}border-secondary/60 bg-secondary/5
+                         {% else %}border-tertiary/60 bg-tertiary/5{% endif %}">
+              {{ evento.descripcion }}
+            </div>
+            {% endif %}
+
+            {# Campos de detalle adicional #}
+            {% if evento.campos %}
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-surface-container-low/40 rounded-2xl p-4 border border-surface-variant/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
+              {% for campo in evento.campos %}
+              {% if campo.valor and campo.valor != '—' %}
+              <div class="min-w-0 space-y-0.5">
+                <p class="font-label-sm text-[10px] text-on-surface-variant/80 uppercase tracking-wider font-semibold">{{ campo.label }}</p>
+                <p class="font-body-sm text-body-sm text-on-surface font-semibold truncate" title="{{ campo.valor }}">{{ campo.valor }}</p>
+              </div>
+              {% endif %}
+              {% endfor %}
+            </div>
+            {% endif %}
+
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="text-center py-20 bg-surface-container-low/30 rounded-2xl border border-dashed border-surface-variant/60">
+      <span class="material-symbols-outlined text-outline-variant block mb-4" style="font-size:56px;">timeline</span>
+      <p class="font-headline-sm text-headline-sm text-on-surface font-bold">Sin evolución clínica</p>
+      <p class="font-body-md text-body-md text-on-surface-variant mt-2 max-w-sm mx-auto">Agregue una nota clínica o registre un cribado para iniciar la línea de tiempo.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# TAB 5: Documentos                                                 #}
+{# ══════════════════════════════════════════════════════════════════ #}
+<div id="panel-documentos" class="tab-panel hidden">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+        <span class="material-symbols-outlined text-on-surface-variant">folder_open</span>
+        Documentos Médicos
+      </h3>
+      <a href="{% url 'documentos:subir' %}?paciente={{ paciente.id }}"
+         class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+        <span class="material-symbols-outlined" style="font-size:18px;">upload_file</span>
+        Subir documento
+      </a>
+    </div>
+
+    {% if documentos %}
+    <div class="space-y-3">
+      {% for doc in documentos %}
+      <div class="flex items-center justify-between gap-4 p-4 rounded-xl border border-surface-container bg-surface hover:bg-surface-container-low transition-colors">
+        <div class="flex items-center gap-4 min-w-0">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0
+                      {% if doc.color == 'error' %}bg-error-container text-error
+                      {% elif doc.color == 'primary' %}bg-primary-container/40 text-primary
+                      {% elif doc.color == 'secondary' %}bg-secondary-container/40 text-secondary
+                      {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+            <span class="material-symbols-outlined" style="font-size:20px;">{{ doc.icono }}</span>
+          </div>
+          <div class="min-w-0">
+            <p class="font-label-md text-label-md text-on-surface truncate">{{ doc.nombre }}</p>
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="font-body-sm text-body-sm text-on-surface-variant">{{ doc.tipo }}</span>
+              <span class="font-body-sm text-body-sm text-on-surface-variant">{{ doc.fecha }}</span>
+              <span class="font-body-sm text-body-sm text-on-surface-variant">{{ doc.tamano }}</span>
+              {% if doc.subido_por %}
+              <span class="font-body-sm text-body-sm text-on-surface-variant">{{ doc.subido_por.get_full_name }}</span>
+              {% endif %}
+            </div>
+            {% if doc.descripcion %}
+            <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5 truncate">{{ doc.descripcion }}</p>
+            {% endif %}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm
+                       {% if doc.color == 'error' %}bg-error-container/30 text-error
+                       {% elif doc.color == 'primary' %}bg-primary-container/30 text-primary
+                       {% elif doc.color == 'secondary' %}bg-secondary-container/30 text-secondary
+                       {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+            {{ doc.extension|upper }}
+          </span>
+          {% if doc.archivo %}
+          <button type="button"
+                  onclick="abrirVisor('{{ doc.archivo.url }}', '{{ doc.nombre|escapejs }}', '{{ doc.extension }}')"
+                  class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-label-sm text-label-sm hover:bg-primary/20 transition-colors"
+                  title="Ver documento">
+            <span class="material-symbols-outlined" style="font-size:16px;">visibility</span>
+            Ver
+          </button>
+          <a href="{{ doc.archivo.url }}" download
+             class="p-2 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant"
+             title="Descargar">
+            <span class="material-symbols-outlined" style="font-size:20px;">download</span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-16">
+      <span class="material-symbols-outlined text-outline-variant block mb-3" style="font-size:48px;">folder_open</span>
+      <p class="font-title-md text-title-md text-on-surface mb-1">Sin documentos</p>
+      <p class="font-body-md text-body-md text-on-surface-variant">No se han subido documentos para este paciente.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div id="panel-indicaciones" class="tab-panel hidden">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <div class="flex items-center justify-between mb-6 border-b border-surface-container-highest pb-4">
+      <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">clinical_notes</span>
+        Indicaciones Médicas
+      </h3>
+      <span class="font-body-sm text-body-sm text-on-surface-variant">Última actualización: <strong class="text-on-surface" id="indicacion-last-updated-text">{{ fecha_actualizacion_ind }}</strong></span>
+    </div>
+
+    <div class="grid grid-cols-1 gap-8 items-start">
+      <div class="lg:col-span-12">
+        
+        <!-- SUB-PANEL 1: Listado de Indicaciones (Por defecto visible) -->
+        <div id="indicaciones-listado-subpanel" class="space-y-6">
+          <div class="flex justify-between items-center">
+            <h4 class="font-title-md text-title-md text-on-surface font-semibold">Indicaciones Activas</h4>
+            <button type="button" onclick="mostrarFormularioCreacion()"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 active:scale-[0.98] transition-all shadow-sm">
+              <span class="material-symbols-outlined text-lg">add</span>
+              Crear Indicación Nueva
+            </button>
+          </div>
+
+          {% if indicaciones_list %}
+          <div class="space-y-3">
+            {% for ind in indicaciones_list %}
+            <div class="flex flex-col p-4 rounded-xl border border-surface-container bg-surface hover:bg-surface-container-low transition-colors group relative">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0
+                              {% if ind.prioridad == 'ALTA' %}bg-error-container/20 text-error
+                              {% elif ind.prioridad == 'MEDIA' %}bg-primary-container/20 text-primary
+                              {% else %}bg-secondary-container/20 text-secondary{% endif %}">
+                    <span class="material-symbols-outlined text-lg">{{ ind.icono }}</span>
+                  </div>
+                  <div>
+                    <h5 class="font-label-md text-sm font-bold text-on-surface">{{ ind.titulo }}</h5>
+                    <p class="font-body-sm text-xs text-on-surface-variant mt-0.5">
+                      {{ ind.get_tipo_indicacion_display }} &middot; Prioridad: 
+                      <span class="font-semibold {% if ind.prioridad == 'ALTA' %}text-error{% elif ind.prioridad == 'MEDIA' %}text-primary{% else %}text-secondary{% endif %}">
+                        {{ ind.get_prioridad_display }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                
+                <div class="flex items-center gap-2 shrink-0">
+                  <button type="button" onclick="verDetalleIndicacion('{{ ind.titulo|escapejs }}', '{{ ind.get_tipo_indicacion_display|escapejs }}', '{{ ind.get_prioridad_display|escapejs }}', '{{ ind.descripcion|escapejs }}', '{{ ind.icono|escapejs }}')"
+                    class="px-2.5 py-1 rounded bg-surface-container text-on-surface font-label-sm text-xs hover:bg-surface-container-high transition-colors">
+                    Ver
+                  </button>
+                  <form method="post" action="" onsubmit="return confirm('¿Está seguro de eliminar esta indicación?');" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="eliminar_indicacion">
+                    <input type="hidden" name="indicacion_id" value="{{ ind.id }}">
+                    <button type="submit" class="p-1.5 rounded-lg text-outline-variant hover:bg-error-container/20 hover:text-error transition-colors" title="Eliminar indicación">
+                      <span class="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+              <p class="font-body-sm text-xs text-on-surface-variant mt-2 leading-relaxed pl-12 line-clamp-2">
+                {{ ind.descripcion }}
+              </p>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-12 border border-dashed border-outline-variant/50 rounded-2xl bg-surface/30">
+            <span class="material-symbols-outlined text-outline-variant block mb-2" style="font-size:40px;">assignment_late</span>
+            <p class="font-title-sm text-title-sm text-on-surface font-medium">Sin indicaciones personalizadas</p>
+            <p class="font-body-sm text-xs text-on-surface-variant mb-4">No hay indicaciones específicas creadas para este paciente.</p>
+            <button type="button" onclick="mostrarFormularioCreacion()"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+              <span class="material-symbols-outlined text-lg">add</span>
+              Crear la Primera Indicación
+            </button>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- SUB-PANEL 2: Formulario de Creación (Oculto por defecto) -->
+        <div id="indicaciones-creacion-subpanel" class="hidden space-y-6">
+          <div class="flex justify-between items-center">
+            <h4 class="font-title-md text-title-md text-on-surface font-semibold flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">add_box</span>
+              Crear Nueva Indicación
+            </h4>
+            <button type="button" onclick="mostrarListadoIndicaciones()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors">
+              <span class="material-symbols-outlined text-sm">arrow_back</span>
+              Volver al listado
+            </button>
+          </div>
+
+          <form method="post" class="space-y-5 bg-surface rounded-xl border border-surface-container p-5 shadow-inner">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="guardar_indicaciones">
+            
+            <!-- Tipo de Indicación y Prioridad -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="space-y-1.5">
+                <label for="id_tipo_indicacion" class="block font-label-md text-xs font-semibold text-on-surface">
+                  Tipo de Indicación <span class="text-error">*</span>
+                </label>
+                <select id="id_tipo_indicacion" name="tipo_indicacion" onchange="actualizarMockupDynamic()"
+                  class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 text-body-md">
+                  {% for choice in tipos_indicacion_choices %}
+                    <option value="{{ choice.0 }}" {% if choice.0 == 'MEDICACION' %}selected{% endif %}>{{ choice.1 }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <!-- Prioridad -->
+              <div class="space-y-1.5">
+                <label for="id_prioridad" class="block font-label-md text-xs font-semibold text-on-surface">
+                  Nivel de Prioridad <span class="text-error">*</span>
+                </label>
+                <select id="id_prioridad" name="prioridad" onchange="actualizarMockupDynamic()"
+                  class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 text-body-md">
+                  {% for choice in prioridad_choices %}
+                    <option value="{{ choice.0 }}" {% if choice.0 == 'MEDIA' %}selected{% endif %}>{{ choice.1 }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <!-- Título -->
+            <div class="space-y-1.5">
+              <label for="id_titulo" class="block font-label-md text-xs font-semibold text-on-surface">
+                Título de la Indicación <span class="text-error">*</span>
+              </label>
+              <input type="text" id="id_titulo" name="titulo" required oninput="actualizarMockupDynamic()"
+                class="w-full px-4 py-2.5 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 text-body-md"
+                placeholder="Ej. Vitaminas Pediátricas, Reposo Absoluto, Hidratar 1.5L, etc.">
+            </div>
+
+            <!-- Descripción -->
+            <div class="space-y-1.5">
+              <label for="id_descripcion" class="block font-label-md text-xs font-semibold text-on-surface">
+                Descripción / Instrucciones Detalladas <span class="text-error">*</span>
+              </label>
+              <textarea id="id_descripcion" name="descripcion" required oninput="actualizarMockupDynamic()"
+                class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 text-body-md h-28 resize-none shadow-inner"
+                placeholder="Describa la dosis, la frecuencia, consejos prácticos o cualquier advertencia..."></textarea>
+            </div>
+
+            <label class="flex items-start gap-3 p-4 rounded-xl border border-outline-variant bg-surface-container-low cursor-pointer">
+              <input type="checkbox" name="visible_padre" checked
+                     class="mt-1 rounded border-outline-variant text-primary focus:ring-primary">
+              <span>
+                <span class="block font-label-md text-label-md text-on-surface">Mostrar en el Portal Padres</span>
+                <span class="block font-body-sm text-body-sm text-on-surface-variant">El padre o tutor podrá consultar esta indicación.</span>
+              </span>
+            </label>
+
+            <div class="pt-2">
+              <button type="submit"
+                class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint active:scale-[0.98] transition-all shadow-sm">
+                <span class="material-symbols-outlined text-lg">save</span>
+                Guardar e Integrar Indicación
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="panel-laboratorio" class="tab-panel hidden space-y-gutter">
+
+  {# ── Encabezado con acciones ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">biotech</span>
+          Laboratorio y Estudios
+        </h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+          Solicitudes de estudios y resultados de laboratorio del paciente.
+        </p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        {% if request.user.rol != 'PERSONAL_FACCI' %}
+        <button type="button" onclick="abrirModalSolicitarEstudio()"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-outline-variant text-on-surface hover:bg-surface-container font-label-md text-label-md transition-colors whitespace-nowrap">
+          <span class="material-symbols-outlined text-lg">add</span>
+          Solicitar estudio
+        </button>
+        {% endif %}
+        <a href="{% url 'laboratorio:crear_para_paciente' paciente.pk %}"
+           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap">
+          <span class="material-symbols-outlined text-lg">add</span>
+          Registrar resultado
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Sección 1: Solicitudes / Órdenes de estudios ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <h4 class="font-title-md text-title-md text-on-background mb-4 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary" style="font-size:20px;">assignment</span>
+      Solicitudes / Órdenes
+      {% if solicitudes_pendientes_count %}
+      <span class="ml-1 px-2 py-0.5 rounded-full bg-warning-container text-warning font-label-sm text-label-sm">{{ solicitudes_pendientes_count }} pendiente{{ solicitudes_pendientes_count|pluralize }}</span>
+      {% endif %}
+    </h4>
+
+    {% if solicitudes_documento %}
+    <div class="space-y-4">
+      {% for sol in solicitudes_documento %}
+      <div class="p-5 rounded-xl border border-surface-container bg-surface hover:bg-surface-container-low transition-all duration-200">
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div class="flex items-start gap-4 flex-1 min-w-0">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0
+                        {% if sol.estado == 'PENDIENTE' %}bg-warning-container/20 text-warning
+                        {% elif sol.estado == 'SUBIDO' %}bg-secondary-container/40 text-secondary
+                        {% else %}bg-primary-container/30 text-primary{% endif %}">
+              <span class="material-symbols-outlined" style="font-size:20px;">
+                {% if sol.estado == 'PENDIENTE' %}hourglass_empty
+                {% elif sol.estado == 'SUBIDO' %}pending_actions
+                {% else %}check_circle{% endif %}
+              </span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap mb-1">
+                <h5 class="font-label-md text-sm font-bold text-on-surface truncate">{{ sol.titulo }}</h5>
+                <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase
+                             {% if sol.estado == 'PENDIENTE' %}bg-warning-container text-warning
+                             {% elif sol.estado == 'SUBIDO' %}bg-secondary-container/40 text-secondary
+                             {% else %}bg-primary-container text-primary{% endif %}">
+                  {% if sol.estado == 'PENDIENTE' %}Pendiente
+                  {% elif sol.estado == 'SUBIDO' %}Por revisar
+                  {% else %}Revisado / Completado{% endif %}
+                </span>
+              </div>
+              <p class="font-body-sm text-xs text-on-surface-variant leading-relaxed">
+                {{ sol.descripcion|default:"Sin indicaciones adicionales." }}
+              </p>
+              <p class="font-body-sm text-[11px] text-on-surface-variant/80 mt-2">
+                Solicitado por: <span class="font-semibold text-on-surface-variant">{{ sol.medico_solicitante.get_full_name|default:sol.medico_solicitante.username }}</span> &middot; {{ sol.created_at|date:"d M Y" }}
+              </p>
+
+              {% if sol.documento_asociado %}
+              <div class="mt-4 p-3 rounded-lg bg-surface-container-low border border-surface-container/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-on-surface-variant">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="material-symbols-outlined text-sm text-primary shrink-0">description</span>
+                  <span class="font-medium text-on-surface truncate">{{ sol.documento_asociado.nombre_archivo }}</span>
+                  <span class="text-[10px] text-on-surface-variant/80 shrink-0">({{ sol.documento_asociado.tamano }})</span>
+                </div>
+                <span class="text-[10px] italic shrink-0">
+                  Subido por: {{ sol.documento_asociado.subido_por.get_full_name|default:sol.documento_asociado.subido_por.username }} el {{ sol.documento_asociado.fecha_documento|date:"d M Y" }}
+                </span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 md:self-start shrink-0 flex-wrap pt-2 md:pt-0">
+            {% if sol.documento_asociado %}
+            <button type="button" 
+                    onclick="abrirVisor('{{ sol.documento_asociado.archivo.url }}', '{{ sol.documento_asociado.nombre_archivo|escapejs }}', '{{ sol.documento_asociado.extension|escapejs }}')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant hover:bg-surface-container text-on-surface font-label-sm text-xs transition-colors"
+                    title="Visualizar documento del estudio">
+              <span class="material-symbols-outlined text-sm">visibility</span>
+              Ver Estudio
+            </button>
+            {% endif %}
+
+            {% if sol.estado == 'PENDIENTE' or sol.estado == 'SUBIDO' %}
+            <button type="button"
+                    onclick="abrirModalSubida('{{ sol.id }}', '{{ sol.titulo|escapejs }}')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary hover:opacity-90 font-label-sm text-xs transition-opacity shadow-sm"
+                    title="Subir resultado de este estudio">
+              <span class="material-symbols-outlined text-sm">upload</span>
+              Subir Resultado
+            </button>
+            {% endif %}
+
+            {% if sol.estado == 'SUBIDO' %}
+            <form method="post" action="" class="inline">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="revisar_estudio">
+              <input type="hidden" name="solicitud_id" value="{{ sol.id }}">
+              <button type="submit"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-on-secondary hover:opacity-90 font-label-sm text-xs transition-opacity shadow-sm"
+                      title="Marcar como revisado y completado">
+                <span class="material-symbols-outlined text-sm">done_all</span>
+                Revisar
+              </button>
+            </form>
+            {% endif %}
+
+            <form method="post" action="" onsubmit="return confirm('¿Está seguro de eliminar esta solicitud de estudio médico?');" class="inline">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="eliminar_estudio_solicitud">
+              <input type="hidden" name="solicitud_id" value="{{ sol.id }}">
+              <button type="submit" 
+                      class="p-1.5 rounded-lg text-outline-variant hover:bg-error-container/20 hover:text-error transition-colors" 
+                      title="Eliminar solicitud">
+                <span class="material-symbols-outlined text-lg">delete</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-16 border border-dashed border-outline-variant/50 rounded-2xl bg-surface/30">
+      <span class="material-symbols-outlined text-outline-variant block mb-3" style="font-size:48px;">biotech</span>
+      <p class="font-title-md text-title-md text-on-surface font-semibold mb-1">Sin estudios solicitados</p>
+      <p class="font-body-md text-sm text-on-surface-variant mb-4">No se han requerido estudios médicos ni analíticas adicionales para este paciente.</p>
+      {% if request.user.rol != 'PERSONAL_FACCI' %}
+      <button type="button" onclick="abrirModalSolicitarEstudio()"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 active:scale-[0.98] transition-all shadow-sm">
+        <span class="material-symbols-outlined text-lg">add</span>
+        Solicitar Primer Estudio
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Sección 2: Resultados de laboratorio ── #}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <h4 class="font-title-md text-title-md text-on-background mb-4 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary" style="font-size:20px;">science</span>
+      Resultados de laboratorio
+    </h4>
+
+    {% if resultados_lab %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="border-b border-surface-container text-on-surface-variant font-label-sm text-label-sm">
+            <th class="p-3 font-semibold">Examen</th>
+            <th class="p-3 font-semibold">Tipo</th>
+            <th class="p-3 font-semibold">Fecha</th>
+            <th class="p-3 font-semibold">Estado</th>
+            <th class="p-3 font-semibold text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-container font-body-sm text-body-sm">
+          {% for r in resultados_lab %}
+          <tr class="hover:bg-surface-container-low transition-colors">
+            <td class="p-3">
+              <p class="font-label-md text-label-md text-on-surface">{{ r.nombre_examen }}</p>
+              {% if r.hay_valores_criticos %}
+              <span class="inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0.5 bg-error-container text-error rounded-full font-label-sm text-label-sm">
+                <span class="material-symbols-outlined" style="font-size:11px;">emergency</span> Crítico
+              </span>
+              {% endif %}
+            </td>
+            <td class="p-3">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-tertiary-container/30 text-tertiary font-label-sm text-label-sm">
+                {{ r.get_tipo_display }}
+              </span>
+            </td>
+            <td class="p-3 text-on-surface-variant">{{ r.fecha_muestra|date:"d/m/Y" }}</td>
+            <td class="p-3">
+              {% if r.estado == 'CRITICO' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-error font-label-sm text-label-sm">
+                <span class="material-symbols-outlined" style="font-size:12px;">emergency</span>{{ r.get_estado_display }}
+              </span>
+              {% elif r.estado == 'REVISADO' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/30 text-primary font-label-sm text-label-sm">
+                <span class="material-symbols-outlined" style="font-size:12px;">check_circle</span>{{ r.get_estado_display }}
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container/40 text-secondary font-label-sm text-label-sm">
+                {{ r.get_estado_display }}
+              </span>
+              {% endif %}
+            </td>
+            <td class="p-3 text-right">
+              <a href="{% url 'laboratorio:detalle' r.pk %}"
+                 class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-primary hover:bg-surface-container font-label-sm text-label-sm transition-colors">
+                <span class="material-symbols-outlined" style="font-size:16px;">visibility</span>Ver
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if resultados_lab_count > resultados_lab|length %}
+    <div class="mt-4 text-center">
+      <a href="{% url 'laboratorio:lista' %}?paciente={{ paciente.pk }}"
+         class="inline-flex items-center gap-1 text-primary font-label-md text-label-md hover:underline">
+        Ver los {{ resultados_lab_count }} resultados completos
+        <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span>
+      </a>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="py-12 text-center text-on-surface-variant">
+      <span class="material-symbols-outlined text-5xl block mb-3 text-outline">biotech</span>
+      <p class="font-body-md text-body-md">No hay resultados de laboratorio registrados.</p>
+      <a href="{% url 'laboratorio:crear_para_paciente' paciente.pk %}"
+         class="mt-2 inline-flex text-primary font-label-md text-label-md hover:underline">
+        Registrar primer resultado
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# TAB 9: Casa FACCI — Alojamiento                                    #}
+{# ══════════════════════════════════════════════════════════════════ #}
+<div id="panel-alojamiento" class="tab-panel hidden">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 border-b border-surface-container-highest pb-4 gap-3">
+      <div>
+        <h3 class="font-headline-sm text-headline-sm text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary" style="font-size:20px;">home</span>
+          Estancias en Casa FACCI
+        </h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+          Historial de alojamiento de la familia durante el tratamiento.
+        </p>
+      </div>
+      {% if request.user.puede_gestionar_alojamiento %}
+      <a href="{% url 'alojamiento:crear_para_paciente' paciente.pk %}"
+         class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity">
+        <span class="material-symbols-outlined" style="font-size:18px;">add</span>Registrar estancia
+      </a>
+      {% endif %}
+    </div>
+    {% if estancias_list %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="bg-surface-container-low text-on-surface-variant font-label-md text-label-md border-b border-surface-container">
+            <th class="p-3">Habitación</th><th class="p-3">Acompañante</th><th class="p-3">Motivo</th>
+            <th class="p-3">Ingreso</th><th class="p-3">Noches</th><th class="p-3">Estado</th><th class="p-3 text-right">Ver</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-container font-body-sm text-body-sm">
+          {% for e in estancias_list %}
+          <tr class="hover:bg-surface-container-low transition-colors">
+            <td class="p-3 font-label-md text-label-md text-on-surface">{{ e.habitacion.nombre }}</td>
+            <td class="p-3 text-on-surface-variant">{{ e.acompanante_nombre }}</td>
+            <td class="p-3 text-on-surface-variant">{{ e.get_motivo_display }}</td>
+            <td class="p-3 text-on-surface-variant">{{ e.fecha_ingreso|date:"d/m/Y" }}</td>
+            <td class="p-3 text-on-surface">{% with n=e.noches %}{% if n is not None %}{{ n }}{% else %}—{% endif %}{% endwith %}</td>
+            <td class="p-3">
+              {% if e.estado == 'ACTIVA' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/30 text-primary font-label-sm text-label-sm">Activa</span>
+              {% else %}
+              <span class="text-on-surface-variant font-body-sm">{{ e.get_estado_display }}</span>
+              {% endif %}
+            </td>
+            <td class="p-3 text-right">
+              <a href="{% url 'alojamiento:detalle' e.pk %}" class="inline-flex items-center justify-center p-1.5 rounded-lg text-primary hover:bg-surface-container">
+                <span class="material-symbols-outlined" style="font-size:18px;">visibility</span>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="py-12 text-center text-on-surface-variant">
+      <span class="material-symbols-outlined text-5xl block mb-3 text-outline">home</span>
+      <p class="font-body-md text-body-md">No hay estancias registradas para este paciente.</p>
+      {% if request.user.puede_gestionar_alojamiento %}
+      <a href="{% url 'alojamiento:crear_para_paciente' paciente.pk %}"
+         class="mt-2 inline-flex text-primary font-label-md text-label-md hover:underline">
+        Registrar primera estancia
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# TAB 10: Psicosocial                                                 #}
+{# ══════════════════════════════════════════════════════════════════ #}
+<div id="panel-psicosocial" class="tab-panel hidden">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 border-b border-surface-container-highest pb-4 gap-3">
+      <div>
+        <h3 class="font-headline-sm text-headline-sm text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-secondary" style="font-size:20px;">family_restroom</span>
+          Evaluaciones Psicosociales
+        </h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+          Últimas {{ psico_list|length }} evaluaciones registradas para este paciente.
+        </p>
+      </div>
+      <a href="{% url 'psicosocial:crear_para_paciente' paciente.pk %}"
+         class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity">
+        <span class="material-symbols-outlined" style="font-size:18px;">add</span>Nueva evaluación
+      </a>
+    </div>
+
+    {% if psico_list %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="bg-surface-container-low text-on-surface-variant font-label-md text-label-md border-b border-surface-container">
+            <th class="p-3">Código</th>
+            <th class="p-3">Fecha</th>
+            <th class="p-3">Puntaje</th>
+            <th class="p-3">Nivel de riesgo</th>
+            <th class="p-3">Evaluador</th>
+            <th class="p-3 text-right">Ver</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-container font-body-sm text-body-sm">
+          {% for ev in psico_list %}
+          <tr class="hover:bg-surface-container-low transition-colors">
+            <td class="p-3 text-on-surface-variant">{{ ev.codigo }}</td>
+            <td class="p-3 text-on-surface-variant">{{ ev.fecha_evaluacion|date:"d/m/Y" }}</td>
+            <td class="p-3 font-label-md text-label-md text-on-surface">{{ ev.puntaje_total }}/24</td>
+            <td class="p-3">
+              {% if ev.nivel_riesgo == 'CRITICO' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-error font-label-sm text-label-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-error"></span>{{ ev.get_nivel_riesgo_display }}
+              </span>
+              {% elif ev.nivel_riesgo == 'ALTO' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-container/40 text-secondary font-label-sm text-label-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>{{ ev.get_nivel_riesgo_display }}
+              </span>
+              {% elif ev.nivel_riesgo == 'MEDIO' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-tertiary-container/30 text-tertiary font-label-sm text-label-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>{{ ev.get_nivel_riesgo_display }}
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-container/30 text-primary font-label-sm text-label-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>{{ ev.get_nivel_riesgo_display }}
+              </span>
+              {% endif %}
+            </td>
+            <td class="p-3 text-on-surface-variant">{{ ev.evaluador.nombre_completo|default:"—" }}</td>
+            <td class="p-3 text-right">
+              <a href="{% url 'psicosocial:detalle' ev.pk %}"
+                 class="inline-flex items-center justify-center p-1.5 rounded-lg text-primary hover:bg-surface-container">
+                <span class="material-symbols-outlined" style="font-size:18px;">visibility</span>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if psico_count > psico_list|length %}
+    <div class="mt-4 text-center">
+      <a href="{% url 'psicosocial:lista' %}?paciente={{ paciente.pk }}"
+         class="inline-flex items-center gap-1 text-primary font-label-md text-label-md hover:underline">
+        Ver las {{ psico_count }} evaluaciones completas
+        <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span>
+      </a>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="py-12 text-center text-on-surface-variant">
+      <span class="material-symbols-outlined text-5xl block mb-3 text-outline">family_restroom</span>
+      <p class="font-body-md text-body-md">No hay evaluaciones psicosociales registradas.</p>
+      <a href="{% url 'psicosocial:crear_para_paciente' paciente.pk %}"
+         class="mt-2 inline-flex text-primary font-label-md text-label-md hover:underline">
+        Registrar primera evaluación
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Upload modal moved to block modals -->
+
+<script>
+  function abrirModalSubida(solicitudId, estudioTitulo) {
+    document.getElementById('upload_solicitud_id').value = solicitudId;
+    document.getElementById('upload_estudio_subtitulo').textContent = 'Vinculado al estudio: ' + estudioTitulo;
+    
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('upload_fecha').value = hoy;
+    
+    document.getElementById('upload_archivo').value = '';
+    const fileChosen = document.getElementById('file-chosen-text');
+    fileChosen.textContent = '';
+    fileChosen.classList.add('hidden');
+    
+    document.getElementById('estudio-upload-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function cerrarModalSubida() {
+    document.getElementById('estudio-upload-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('upload_archivo').addEventListener('change', function() {
+    const fileChosen = document.getElementById('file-chosen-text');
+    if (this.files && this.files.length > 0) {
+      fileChosen.textContent = 'Archivo seleccionado: ' + this.files[0].name;
+      fileChosen.classList.remove('hidden');
+    } else {
+      fileChosen.textContent = '';
+      fileChosen.classList.add('hidden');
+    }
+  });
+</script>
+
+<!-- Details modal moved to block modals -->
+
+<!-- JavaScript para control interactivo y simulación en tiempo real -->
+<script>
+  // Swapping sub-panels
+  function mostrarFormularioCreacion() {
+    document.getElementById('indicaciones-listado-subpanel').classList.add('hidden');
+    document.getElementById('indicaciones-creacion-subpanel').classList.remove('hidden');
+    actualizarMockupDynamic();
+  }
+
+  function mostrarListadoIndicaciones() {
+    document.getElementById('indicaciones-creacion-subpanel').classList.add('hidden');
+    document.getElementById('indicaciones-listado-subpanel').classList.remove('hidden');
+    document.getElementById('simBlockNuevo').classList.add('hidden');
+  }
+
+  function actualizarMockupDynamic() {}
+
+  function abrirModalCita() {
+    const modal = document.getElementById('modalAgendarCita');
+    modal.classList.remove('hidden');
+    // Pre-rellenar con la fecha actual + 1 semana como sugerencia
+    const input = modal.querySelector('input[name="proxima_fecha_seguimiento"]');
+    if (input && !input.value) {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      d.setHours(9, 0, 0, 0);
+      const pad = n => String(n).padStart(2, '0');
+      input.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    input && input.focus();
+  }
+
+  function cerrarModalCita() {
+    document.getElementById('modalAgendarCita').classList.add('hidden');
+  }
+
+  function abrirModalNota() {
+    const modal = document.getElementById('modalAgregarNota');
+    modal.classList.remove('hidden');
+    const text = modal.querySelector('textarea');
+    if (text) {
+      text.value = '';
+      text.focus();
+    }
+  }
+
+  function cerrarModalNota() {
+    document.getElementById('modalAgregarNota').classList.add('hidden');
+  }
+
+  function abrirModalSolicitarEstudio() {
+    const modal = document.getElementById('modalSolicitarEstudio');
+    modal.classList.remove('hidden');
+    const input = modal.querySelector('input[name="titulo"]');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    const text = modal.querySelector('textarea');
+    if (text) text.value = '';
+  }
+
+  function cerrarModalSolicitarEstudio() {
+    document.getElementById('modalSolicitarEstudio').classList.add('hidden');
+  }
+
+  function abrirModalDetalleSeguimiento(btn) {
+    const titulo = btn.getAttribute('data-titulo');
+    const tipo = btn.getAttribute('data-tipo');
+    const autor = btn.getAttribute('data-autor');
+    const fecha = btn.getAttribute('data-fecha');
+    const descripcion = btn.getAttribute('data-descripcion');
+    const icon = btn.getAttribute('data-icon');
+    const color = btn.getAttribute('data-color');
+    const count = parseInt(btn.getAttribute('data-campos-count') || '0', 10);
+
+    document.getElementById('modal-seg-titulo').textContent = titulo || 'Detalle de Seguimiento';
+    document.getElementById('modal-seg-subtitulo').textContent = `${tipo} • ${fecha} • Por ${autor}`;
+    
+    // Icon
+    const modalIcon = document.getElementById('modal-seg-icon');
+    modalIcon.textContent = icon || 'monitor_heart';
+    
+    // Descripcion principal
+    const descContainer = document.getElementById('modal-seg-descripcion-container');
+    const descEl = document.getElementById('modal-seg-descripcion');
+    if (descripcion && descripcion.trim() && descripcion !== 'None') {
+      descEl.textContent = descripcion;
+      descContainer.classList.remove('hidden');
+    } else {
+      descContainer.classList.add('hidden');
+    }
+
+    // Campos
+    const camposContainer = document.getElementById('modal-seg-campos');
+    camposContainer.innerHTML = ''; // Limpiar campos viejos
+
+    for (let i = 0; i < count; i++) {
+      const label = btn.getAttribute(`data-campo-${i}-label`);
+      const valor = btn.getAttribute(`data-campo-${i}-valor`);
+
+      if (label && valor && valor !== '—') {
+        const campoDiv = document.createElement('div');
+        campoDiv.className = 'space-y-1';
+        
+        const labelEl = document.createElement('p');
+        labelEl.className = 'font-label-sm text-xs text-on-surface-variant uppercase tracking-wider font-semibold';
+        labelEl.textContent = label;
+        
+        const valorEl = document.createElement('p');
+        valorEl.className = 'font-body-sm text-sm text-on-surface bg-surface-container-low/40 p-3 rounded-lg border border-surface-container whitespace-pre-wrap';
+        valorEl.textContent = valor;
+        
+        campoDiv.appendChild(labelEl);
+        campoDiv.appendChild(valorEl);
+        camposContainer.appendChild(campoDiv);
+      }
+    }
+
+    document.getElementById('modalDetalleSeguimiento').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function cerrarModalDetalleSeguimiento() {
+    document.getElementById('modalDetalleSeguimiento').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  function abrirModalGestionarSeguimiento() {
+    document.getElementById('modalGestionarSeguimiento').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function cerrarModalGestionarSeguimiento() {
+    document.getElementById('modalGestionarSeguimiento').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      cerrarModalCita();
+      cerrarModalNota();
+      cerrarModalSolicitarEstudio();
+      cerrarModalDetalleSeguimiento();
+      cerrarModalGestionarSeguimiento();
+    }
+  });
+
+  // Modals for detail
+  function verDetalleIndicacion(titulo, tipo, prioridad, descripcion, icono) {
+    document.getElementById('modal-ind-titulo').textContent = titulo;
+    document.getElementById('modal-ind-subtitulo').textContent = tipo + ' • Prioridad: ' + prioridad;
+    document.getElementById('modal-ind-descripcion').textContent = descripcion;
+    document.getElementById('modal-ind-icon').textContent = icono;
+    
+    // Estilos del icono en modal
+    const box = document.getElementById('modal-ind-icon-box');
+    if (prioridad === 'Alta') {
+      box.className = 'w-9 h-9 rounded-lg flex items-center justify-center text-error bg-error-container/20';
+    } else if (prioridad === 'Media') {
+      box.className = 'w-9 h-9 rounded-lg flex items-center justify-center text-primary bg-primary-container/20';
+    } else {
+      box.className = 'w-9 h-9 rounded-lg flex items-center justify-center text-secondary bg-secondary-container/20';
+    }
+    
+    document.getElementById('indicacion-detalle-modal').classList.remove('hidden');
+  }
+
+  function cerrarDetalleIndicacion() {
+    document.getElementById('indicacion-detalle-modal').classList.add('hidden');
+  }
+  
+  // También ejecutar al cambiar de tab para asegurar la inicialización
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.tab === 'indicaciones') {
+        mostrarListadoIndicaciones();
+      }
+    });
+  });
+</script>
+
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# Modal visor de documentos                                         #}
+<!-- Doc modal moved to block modals -->
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# Script de tabs                                                    #}
+{# ══════════════════════════════════════════════════════════════════ #}
+<script>
+(function () {
+  const ACTIVE_CLASSES   = ['text-primary', 'border-primary'];
+  const INACTIVE_CLASSES = ['text-on-surface-variant', 'hover:text-on-surface', 'border-transparent'];
+
+  function activateTab(tabName) {
+    // 'estudios' se fusionó dentro de 'laboratorio' (compatibilidad con enlaces antiguos)
+    if (tabName === 'estudios') {
+      tabName = 'laboratorio';
+    }
+    if (!document.getElementById('panel-' + tabName)) {
+      tabName = 'resumen';
+    }
+    // Update all tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      const isActive = btn.dataset.tab === tabName;
+      btn.classList.toggle('text-primary', isActive);
+      btn.classList.toggle('border-primary', isActive);
+      btn.classList.toggle('text-on-surface-variant', !isActive);
+      btn.classList.toggle('hover:text-on-surface', !isActive);
+      btn.classList.toggle('border-transparent', !isActive);
+    });
+    // Show/hide panels
+    document.querySelectorAll('.tab-panel').forEach(panel => {
+      panel.classList.toggle('hidden', panel.id !== 'panel-' + tabName);
+    });
+    // Update URL without reload
+    const url = new URL(window.location);
+    url.searchParams.set('tab', tabName);
+    history.replaceState(null, '', url);
+  }
+
+  // Tab button clicks
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+  });
+
+  // Tab links (e.g. "Ver todos →" buttons)
+  document.querySelectorAll('.tab-link').forEach(link => {
+    link.addEventListener('click', () => activateTab(link.dataset.tab));
+  });
+
+  // Init from URL param
+  const params = new URLSearchParams(window.location.search);
+  const initial = params.get('tab') || '{{ tab_activo }}' || 'resumen';
+  activateTab(initial);
+
+  // Scroll to hash and highlight
+  if (window.location.hash) {
+    const targetId = window.location.hash.substring(1);
+    const element = document.getElementById(targetId);
+    if (element) {
+      setTimeout(() => {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const card = element.querySelector('.p-5.rounded-2xl.border');
+        if (card) {
+          card.classList.add('ring-4', 'ring-primary/35', 'border-primary', 'scale-[1.01]', 'transition-all', 'duration-300');
+          setTimeout(() => {
+            card.classList.remove('ring-4', 'ring-primary/35', 'border-primary', 'scale-[1.01]');
+          }, 3000);
+        }
+      }, 400);
+    }
+  }
+})();
+
+// ── Visor de documentos ───────────────────────────────────────────
+const IMG_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
+
+function abrirVisor(url, nombre, ext) {
+  const modal    = document.getElementById('doc-modal');
+  const visorPdf = document.getElementById('doc-visor-pdf');
+  const visorImg = document.getElementById('doc-visor-img');
+  const imgTag   = document.getElementById('doc-visor-img-tag');
+  const fallback = document.getElementById('doc-visor-fallback');
+
+  // Resetear visores
+  visorPdf.classList.add('hidden');
+  visorImg.classList.add('hidden');
+  fallback.classList.add('hidden');
+  visorPdf.src = '';
+
+  // Título y enlace de descarga
+  document.getElementById('doc-modal-titulo').textContent = nombre;
+  document.getElementById('doc-modal-descarga').href = url;
+  document.getElementById('doc-visor-fallback-link').href = url;
+
+  const extLower = (ext || '').toLowerCase().replace('.', '');
+
+  if (extLower === 'pdf') {
+    visorPdf.src = url;
+    visorPdf.classList.remove('hidden');
+  } else if (IMG_EXTS.includes(extLower)) {
+    imgTag.src = url;
+    visorImg.classList.remove('hidden');
+  } else {
+    fallback.classList.remove('hidden');
+  }
+
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarVisor() {
+  const modal = document.getElementById('doc-modal');
+  modal.classList.add('hidden');
+  document.getElementById('doc-visor-pdf').src = '';
+  document.body.style.overflow = '';
+}
+
+// Cerrar con Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') cerrarVisor();
+});
+</script>
+
+{% endblock %}
+
+{% block modals %}
+{# Modal Registrar Seguimiento #}
+<div id="modalAgendarCita" class="fixed inset-0 z-[1050] flex items-center justify-center bg-black/40 backdrop-blur-sm hidden" onclick="if(event.target===this)cerrarModalCita()">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-surface-container w-full max-w-md mx-4 overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container">
+      <h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary">calendar_add_on</span>
+        Registrar Seguimiento
+      </h3>
+      <button type="button" onclick="cerrarModalCita()" class="p-1.5 rounded-full hover:bg-surface-container transition-colors text-on-surface-variant">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <form method="post" class="px-6 py-5 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="registrar_seguimiento">
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Fecha y hora <span class="text-error">*</span></label>
+        <input type="datetime-local" name="proxima_fecha_seguimiento" required
+               title="Fecha y hora del seguimiento" placeholder="Selecciona fecha y hora"
+               class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm">
+      </div>
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Médico a cargo <span class="text-error">*</span></label>
+        <select name="medico_seguimiento" required
+                class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm">
+          <option value="">— Selecciona un médico —</option>
+          {% for medico in medicos_disponibles %}
+          <option value="{{ medico.pk }}"
+            {% if paciente.medico_asignado and medico.pk == paciente.medico_asignado.pk %}selected{% endif %}>
+            {{ medico.get_full_name }} ({{ medico.get_rol_display }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Centro / Lugar del seguimiento</label>
+        <select name="lugar_seguimiento"
+                class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm">
+          <option value="">— Selecciona un centro —</option>
+          {% for centro in centros_disponibles %}
+          <option value="{{ centro.id }}"
+            {% if paciente.medico_asignado and paciente.medico_asignado.centro_medico_id == centro.id %}selected{% endif %}>
+            {{ centro.nombre }}{% if centro.municipio %} · {{ centro.municipio }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Observaciones</label>
+        <textarea name="observaciones" rows="2" placeholder="Ej. Control de seguimiento, revisión de resultados..."
+                  class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm resize-none"></textarea>
+      </div>
+
+      <div class="flex gap-3 justify-end pt-1">
+        <button type="button" onclick="cerrarModalCita()"
+                class="px-4 py-2.5 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-secondary text-on-secondary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+          <span class="material-symbols-outlined" style="font-size:18px;">event_available</span>
+          Guardar Seguimiento
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Modal Agregar Nota Clínica #}
+<div id="modalAgregarNota" class="fixed inset-0 z-[1050] flex items-center justify-center bg-black/40 backdrop-blur-sm hidden" onclick="if(event.target===this)cerrarModalNota()">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-surface-container w-full max-w-md mx-4 overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container">
+      <h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+        <span class="material-symbols-outlined text-tertiary">note_alt</span>
+        Nueva Nota Clínica
+      </h3>
+      <button type="button" onclick="cerrarModalNota()" class="p-1.5 rounded-full hover:bg-surface-container transition-colors text-on-surface-variant">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <form method="post" action="{% url 'pacientes:expediente' paciente.id %}" class="px-6 py-5 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="agregar_nota">
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="{{ nota_form.tipo.id_for_label }}">Tipo de Nota <span class="text-error">*</span></label>
+        {{ nota_form.tipo }}
+      </div>
+
+      <div class="flex items-center gap-2">
+        {{ nota_form.es_importante }}
+        <label class="font-label-md text-label-md text-on-surface cursor-pointer select-none" for="{{ nota_form.es_importante.id_for_label }}">Marcar como importante</label>
+      </div>
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="{{ nota_form.texto.id_for_label }}">Nota clinica <span class="text-error">*</span></label>
+        {{ nota_form.texto }}
+        {% if nota_form.texto.errors %}
+        <p class="mt-1 text-error text-body-sm">{{ nota_form.texto.errors|striptags }}</p>
+        {% endif %}
+      </div>
+
+      <div class="flex gap-3 justify-end pt-1">
+        <button type="button" onclick="cerrarModalNota()"
+                class="px-4 py-2.5 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+          <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+          Guardar Nota
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Modal Solicitar Nuevo Estudio #}
+<div id="modalSolicitarEstudio" class="fixed inset-0 z-[1050] flex items-center justify-center bg-black/40 backdrop-blur-sm hidden" onclick="if(event.target===this)cerrarModalSolicitarEstudio()">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-surface-container w-full max-w-md mx-4 overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container">
+      <h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">biotech</span>
+        Solicitar Nuevo Estudio
+      </h3>
+      <button type="button" onclick="cerrarModalSolicitarEstudio()" class="p-1.5 rounded-full hover:bg-surface-container transition-colors text-on-surface-variant">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <form method="post" action="{% url 'pacientes:expediente' paciente.id %}" class="px-6 py-5 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="solicitar_estudio">
+
+      <div>
+        <label for="estudio_titulo" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Estudio Solicitado <span class="text-error">*</span></label>
+        <input type="text" id="estudio_titulo" name="titulo" required
+               placeholder="Ej: Hemograma Completo, Biopsia de Médula"
+               class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm">
+      </div>
+
+      <div>
+        <label for="estudio_descripcion" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Instrucciones / Detalles</label>
+        <textarea id="estudio_descripcion" name="descripcion" rows="4"
+                  placeholder="Escriba indicaciones específicas sobre la toma de muestras, ayuno, etc."
+                  class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm resize-none"></textarea>
+      </div>
+
+      <div class="flex gap-3 justify-end pt-1">
+        <button type="button" onclick="cerrarModalSolicitarEstudio()"
+                class="px-4 py-2.5 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+          <span class="material-symbols-outlined" style="font-size:18px;">send</span>
+          Solicitar Estudio
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal interactivo para subir resultados de estudio médico (Doctor/Centro) -->
+<div id="estudio-upload-modal" class="fixed inset-0 z-[1050] hidden" role="dialog" aria-modal="true">
+  <div class="absolute inset-0 bg-black/55 backdrop-blur-sm" onclick="cerrarModalSubida()"></div>
+  <div class="relative flex flex-col w-11/12 max-w-lg mx-auto my-32 bg-surface rounded-2xl shadow-2xl border border-surface-container overflow-hidden">
+    <form method="post" action="" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="subir_estudio_admin">
+      <input type="hidden" id="upload_solicitud_id" name="solicitud_id" value="">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-surface-container shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-primary bg-primary-container/20">
+            <span class="material-symbols-outlined text-lg">cloud_upload</span>
+          </div>
+          <div>
+            <h4 class="font-label-md text-sm font-bold text-on-surface">Subir Resultados de Estudio</h4>
+            <p id="upload_estudio_subtitulo" class="font-body-sm text-[11px] text-on-surface-variant">Asociado al estudio solicitado</p>
+          </div>
+        </div>
+        <button type="button" onclick="cerrarModalSubida()" class="p-1.5 rounded-lg hover:bg-surface-container transition-colors text-outline">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 max-h-[400px] overflow-y-auto">
+        <div>
+          <label for="upload_tipo_documento" class="block font-label-md text-xs font-semibold text-on-surface mb-1">Categoría del Estudio</label>
+          <select id="upload_tipo_documento" name="tipo_documento" required
+                  class="w-full px-3 py-2.5 rounded-lg border border-outline bg-surface text-on-surface font-body-md text-sm focus:border-primary focus:outline-none transition-colors">
+            {% for choice_val, choice_lbl in tipos_documento_choices %}
+              <option value="{{ choice_val }}" {% if choice_val == 'HEMOGRAMA' %}selected{% endif %}>{{ choice_lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="upload_fecha" class="block font-label-md text-xs font-semibold text-on-surface mb-1">Fecha de Realización</label>
+          <input type="date" id="upload_fecha" name="fecha_documento" required
+                 class="w-full px-3 py-2.5 rounded-lg border border-outline bg-surface text-on-surface font-body-md text-sm focus:border-primary focus:outline-none transition-colors">
+        </div>
+
+        <div>
+          <label for="upload_desc" class="block font-label-md text-xs font-semibold text-on-surface mb-1">Breve Descripción / Conclusión</label>
+          <textarea id="upload_desc" name="descripcion" rows="3"
+                    placeholder="Escriba comentarios, interpretaciones o notas importantes sobre el resultado."
+                    class="w-full px-3 py-2.5 rounded-lg border border-outline bg-surface text-on-surface font-body-md text-sm focus:border-primary focus:outline-none transition-colors resize-none"></textarea>
+        </div>
+
+        <div>
+          <label for="upload_archivo" class="block font-label-md text-xs font-semibold text-on-surface mb-1">Archivo de Resultados</label>
+          <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-outline-variant/60 rounded-xl hover:border-primary/80 transition-all bg-surface-container-lowest">
+            <div class="space-y-1 text-center">
+              <span class="material-symbols-outlined text-outline-variant text-3xl block mb-1">file_open</span>
+              <div class="flex text-xs text-on-surface-variant">
+                <label for="upload_archivo" class="relative cursor-pointer rounded-md font-semibold text-primary hover:underline focus-within:outline-none">
+                  <span>Seleccionar un archivo</span>
+                  <input id="upload_archivo" name="archivo" type="file" required class="sr-only">
+                </label>
+                <p class="pl-1">o arrastrar aquí</p>
+              </div>
+              <p class="text-[10px] text-on-surface-variant/75">PDF, PNG, JPG, JPEG de hasta 10MB</p>
+              <div id="file-chosen-text" class="text-xs font-semibold text-primary mt-2 hidden">Ningún archivo seleccionado</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t border-surface-container flex justify-end gap-2 shrink-0">
+        <button type="button" onclick="cerrarModalSubida()"
+                class="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-xs hover:bg-surface-container transition-colors">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="px-5 py-2 rounded-lg bg-primary text-on-primary font-label-md text-xs hover:opacity-90 active:scale-[0.98] transition-all shadow-sm">
+          Guardar y Vincular
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal para Ver Detalle de Indicación -->
+<div id="indicacion-detalle-modal" class="fixed inset-0 z-[1050] hidden" role="dialog" aria-modal="true">
+  <div class="absolute inset-0 bg-black/55 backdrop-blur-sm" onclick="cerrarDetalleIndicacion()"></div>
+  <div class="relative flex flex-col w-11/12 max-w-lg mx-auto my-32 bg-surface rounded-2xl shadow-2xl border border-surface-container overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-surface-container shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div id="modal-ind-icon-box" class="w-9 h-9 rounded-lg flex items-center justify-center text-primary bg-primary-container/20">
+          <span id="modal-ind-icon" class="material-symbols-outlined text-lg">info</span>
+        </div>
+        <div>
+          <h4 id="modal-ind-titulo" class="font-label-md text-sm font-bold text-on-surface">Título</h4>
+          <p id="modal-ind-subtitulo" class="font-body-sm text-xs text-on-surface-variant">Tipo &middot; Prioridad</p>
+        </div>
+      </div>
+      <button type="button" onclick="cerrarDetalleIndicacion()" class="p-1.5 rounded-lg hover:bg-surface-container transition-colors text-outline">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="p-6 space-y-4 max-h-[300px] overflow-y-auto">
+      <p class="font-label-sm text-xs text-on-surface-variant uppercase tracking-wider font-semibold">Detalles y Pautas de Cuidado</p>
+      <p id="modal-ind-descripcion" class="font-body-md text-sm text-on-surface leading-relaxed whitespace-pre-wrap">Descripción...</p>
+    </div>
+    <div class="px-5 py-3 border-t border-surface-container flex justify-end shrink-0">
+      <button type="button" onclick="cerrarDetalleIndicacion()" class="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-xs hover:opacity-90 transition-opacity">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="doc-modal" class="fixed inset-0 z-[1050] hidden" role="dialog" aria-modal="true">
+  {# Backdrop #}
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="cerrarVisor()"></div>
+  {# Panel #}
+  <div class="relative flex flex-col w-full h-full max-w-5xl mx-auto my-4 sm:my-8 bg-surface rounded-2xl shadow-2xl overflow-hidden">
+    {# Header del modal #}
+    <div class="flex items-center justify-between px-5 py-3 border-b border-surface-container shrink-0">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="material-symbols-outlined text-primary" style="font-size:22px;">description</span>
+        <span id="doc-modal-titulo" class="font-label-md text-label-md text-on-surface truncate"></span>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <a id="doc-modal-descarga" href="#" download
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined" style="font-size:16px;">download</span>
+          Descargar
+        </a>
+        <button type="button" onclick="cerrarVisor()"
+                class="p-2 rounded-lg hover:bg-surface-container-low transition-colors text-on-surface-variant"
+                title="Cerrar">
+          <span class="material-symbols-outlined" style="font-size:22px;">close</span>
+        </button>
+      </div>
+    </div>
+    {# Contenido del visor #}
+    <div class="flex-1 overflow-hidden bg-surface-container-low">
+      {# Visor PDF #}
+      <iframe id="doc-visor-pdf"
+              class="w-full h-full border-0 hidden"
+              title="Visor de documento"></iframe>
+      {# Visor imagen #}
+      <div id="doc-visor-img" class="hidden w-full h-full flex items-center justify-center p-4 overflow-auto">
+        <img id="doc-visor-img-tag" src="" alt="Documento" class="max-w-full max-h-full object-contain rounded-lg shadow-lg">
+      </div>
+      {# Sin vista previa #}
+      <div id="doc-visor-fallback" class="hidden w-full h-full flex flex-col items-center justify-center gap-4">
+        <span class="material-symbols-outlined text-outline-variant" style="font-size:64px;">draft</span>
+        <p class="font-body-md text-body-md text-on-surface-variant">Este tipo de archivo no tiene vista previa.</p>
+        <a id="doc-visor-fallback-link" href="#" download
+           class="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity">
+          <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+          Descargar archivo
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Modal Ver Detalle de Seguimiento #}
+<div id="modalDetalleSeguimiento" class="fixed inset-0 z-[1050] hidden" role="dialog" aria-modal="true">
+  <div class="absolute inset-0 bg-black/55 backdrop-blur-sm" onclick="cerrarModalDetalleSeguimiento()"></div>
+  <div class="relative flex flex-col w-11/12 max-w-lg mx-auto my-32 bg-surface rounded-2xl shadow-2xl border border-surface-container overflow-hidden">
+    {# Header #}
+    <div class="flex items-center justify-between px-5 py-4 border-b border-surface-container shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center text-primary bg-primary-container/20">
+          <span id="modal-seg-icon" class="material-symbols-outlined text-lg font-bold">monitor_heart</span>
+        </div>
+        <div>
+          <h4 id="modal-seg-titulo" class="font-label-md text-sm font-bold text-on-surface">Detalle de Seguimiento</h4>
+          <p id="modal-seg-subtitulo" class="font-body-sm text-xs text-on-surface-variant">Tipo &middot; Autor</p>
+        </div>
+      </div>
+      <button type="button" onclick="cerrarModalDetalleSeguimiento()" class="p-1.5 rounded-lg hover:bg-surface-container transition-colors text-outline">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    {# Body #}
+    <div class="p-6 space-y-4 max-h-[400px] overflow-y-auto">
+      <div id="modal-seg-descripcion-container" class="hidden">
+        <p class="font-label-sm text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Descripción / Observación Principal</p>
+        <p id="modal-seg-descripcion" class="font-body-md text-sm text-on-surface leading-relaxed whitespace-pre-wrap bg-surface-container-low/40 p-3 rounded-lg border border-surface-container"></p>
+      </div>
+
+      {# Contenedor dinámico de campos #}
+      <div id="modal-seg-campos" class="space-y-4">
+        {# Se poblará vía JS #}
+      </div>
+    </div>
+
+    {# Footer #}
+    <div class="px-5 py-3 border-t border-surface-container flex justify-end shrink-0">
+      <button type="button" onclick="cerrarModalDetalleSeguimiento()" class="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-xs hover:opacity-90 transition-opacity">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+{# Modal Gestionar Próximo Seguimiento #}
+<div id="modalGestionarSeguimiento" class="fixed inset-0 z-[1050] flex items-center justify-center bg-black/40 backdrop-blur-sm hidden" onclick="if(event.target===this)cerrarModalGestionarSeguimiento()">
+  <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-surface-container w-full max-w-md mx-4 overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container">
+      <h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">calendar_month</span>
+        Gestionar Seguimiento
+      </h3>
+      <button type="button" onclick="cerrarModalGestionarSeguimiento()" class="p-1.5 rounded-full hover:bg-surface-container transition-colors text-on-surface-variant">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    
+    <div class="px-6 py-4 border-b border-surface-container/50 bg-primary-container/10 flex justify-between items-center gap-4">
+      <p class="font-body-sm text-xs text-on-surface-variant">¿Desea cancelar este seguimiento?</p>
+      <form method="post" action="{% url 'pacientes:expediente' paciente.id %}" onsubmit="return confirm('¿Está seguro de que desea cancelar esta cita de seguimiento?');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="cancelar_seguimiento">
+        <input type="hidden" name="seguimiento_id" value="{{ proxima_cita_seg.id }}">
+        <button type="submit" class="px-3 py-1.5 rounded-lg bg-error/10 text-error border border-error/20 font-label-md text-xs hover:bg-error-container/20 transition-colors flex items-center gap-1">
+          <span class="material-symbols-outlined text-sm">cancel</span>
+          Cancelar cita
+        </button>
+      </form>
+    </div>
+
+    <form method="post" class="px-6 py-5 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="editar_seguimiento">
+      <input type="hidden" name="seguimiento_id" value="{{ proxima_cita_seg.id }}">
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Fecha y hora <span class="text-error">*</span></label>
+        <input type="datetime-local" name="proxima_fecha_seguimiento" required
+               value="{{ proxima_cita_seg.proxima_fecha_seguimiento|date:'Y-m-d\TH:i' }}"
+               title="Fecha y hora del seguimiento" placeholder="Selecciona fecha y hora"
+               class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm">
+      </div>
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Médico a cargo <span class="text-error">*</span></label>
+        <select name="medico_seguimiento" required
+                class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm">
+          <option value="">— Selecciona un médico —</option>
+          {% for medico in medicos_disponibles %}
+          <option value="{{ medico.pk }}"
+            {% if proxima_cita_seg.medico_seguimiento and medico.pk == proxima_cita_seg.medico_seguimiento.pk %}selected{% endif %}>
+            {{ medico.get_full_name }} ({{ medico.get_rol_display }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Centro / Lugar del seguimiento</label>
+        <select name="lugar_seguimiento"
+                class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm">
+          <option value="">— Selecciona un centro —</option>
+          {% for centro in centros_disponibles %}
+          <option value="{{ centro.id }}"
+            {% if proxima_cita_seg.lugar_seguimiento_id == centro.id %}selected{% endif %}>
+            {{ centro.nombre }}{% if centro.municipio %} · {{ centro.municipio }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Observaciones</label>
+        <textarea name="observaciones" rows="2" placeholder="Ej. Control de seguimiento, revisión de resultados..."
+                  class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm resize-none">{{ proxima_cita_seg.observaciones }}</textarea>
+      </div>
+
+      <div class="flex gap-3 justify-end pt-1">
+        <button type="button" onclick="cerrarModalGestionarSeguimiento()"
+                class="px-4 py-2.5 rounded-xl border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+          Cancelar
+        </button>
+        <button type="submit"
+                class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+          <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+          Guardar Cambios
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Modal: PIN generado al registrar paciente ── #}
+{% if pin_creado %}
+<div id="modalPinGenerado" class="fixed inset-0 z-[1050] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onclick="if(event.target===this)cerrarModalPinGenerado()">
+  <div class="bg-surface rounded-2xl p-6 shadow-2xl max-w-sm w-full border border-surface-container text-center space-y-4">
+    <div class="w-12 h-12 rounded-full bg-primary-container/20 text-primary flex items-center justify-center mx-auto">
+      <span class="material-symbols-outlined" style="font-size:24px;">lock_open</span>
+    </div>
+    <h3 class="font-headline-md text-headline-md text-on-background mb-1">PIN de Acceso Generado</h3>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mb-5">PIN para el tutor {{ pin_creado.tutor }}</p>
+    <div class="p-3 bg-surface-container rounded-xl flex items-center justify-between border border-outline-variant/30">
+      <span id="pinValor" class="font-headline-lg text-headline-lg font-bold tracking-[0.3em] text-primary">{{ pin_creado.pin }}</span>
+      <button type="button" onclick="copiarPin()" title="Copiar"
+              class="p-2 rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant">
+        <span class="material-symbols-outlined" style="font-size:20px;">content_copy</span>
+      </button>
+    </div>
+    <p id="pinCopiado" class="font-body-sm text-body-sm text-tertiary mb-4 hidden">Copiado al portapapeles</p>
+    <div class="flex items-start gap-2 p-3 bg-tertiary-container/20 border border-tertiary-container/40 rounded-lg mb-5 text-left">
+      <span class="material-symbols-outlined text-tertiary" style="font-size:18px;">info</span>
+      <p class="font-body-sm text-body-sm text-on-surface">Anótelo y entréguelo al padre para que pueda acceder al portal de padres.</p>
+    </div>
+    <button type="button" onclick="cerrarModalPinGenerado()"
+            class="w-full bg-primary text-on-primary py-2.5 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors">
+      Entendido
+    </button>
+  </div>
+</div>
+
+<script>
+  function cerrarModalPinGenerado() {
+    const m = document.getElementById('modalPinGenerado');
+    if (m) m.remove();
+  }
+  function copiarPin() {
+    const pin = document.getElementById('pinValor').textContent.trim();
+    navigator.clipboard.writeText(pin).then(function () {
+      const aviso = document.getElementById('pinCopiado');
+      if (aviso) {
+        aviso.classList.remove('hidden');
+        setTimeout(function () { aviso.classList.add('hidden'); }, 2000);
+      }
+    }).catch(function () { /* clipboard no disponible */ });
+  }
+</script>
+{% endif %}
+{% endblock %}

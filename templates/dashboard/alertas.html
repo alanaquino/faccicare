@@ -1,0 +1,206 @@
+{% extends "layouts/base.html" %}
+{% block title %}Alertas Clinicas{% endblock %}
+{% block content %}
+
+<div class="max-w-5xl mx-auto space-y-gutter">
+
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-surface">Alertas y Seguimiento Activo</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl mt-2">
+      Atencion requerida para casos sospechosos, reportes de sintomas y seguimientos vencidos.
+      Priorice segun la severidad indicada.
+    </p>
+  </div>
+
+  <div class="flex gap-3 overflow-x-auto pb-2">
+    <a href="{% url 'alertas' %}"
+       class="px-4 py-2 rounded-full font-label-md text-label-md flex-shrink-0 shadow-sm transition-colors
+              {% if not filtros.prioridad and not filtros.estado and not filtros.tipo and not filtros.grupo and not filtros.paciente and not filtros.fecha_desde and not filtros.fecha_hasta %}bg-primary text-on-primary{% else %}bg-surface-container-low border border-outline-variant text-on-surface-variant hover:bg-surface-container-high{% endif %}">
+      Todas ({{ total }})
+    </a>
+    <a href="{% url 'alertas' %}?prioridad=CRITICA"
+       class="px-4 py-2 rounded-full font-label-md text-label-md flex-shrink-0 transition-colors flex items-center gap-2
+              {% if filtros.prioridad == 'CRITICA' %}bg-primary text-on-primary shadow-sm{% else %}bg-surface-container-low border border-outline-variant text-on-surface-variant hover:bg-surface-container-high{% endif %}">
+      <span class="w-2 h-2 rounded-full bg-error"></span>
+      Urgentes ({{ urgentes_count }})
+    </a>
+    <a href="{% url 'alertas' %}?grupo=cribado"
+       class="px-4 py-2 rounded-full font-label-md text-label-md flex-shrink-0 transition-colors
+              {% if filtros.grupo == 'cribado' %}bg-primary text-on-primary shadow-sm{% else %}bg-surface-container-low border border-outline-variant text-on-surface-variant hover:bg-surface-container-high{% endif %}">
+      Cribados Positivos ({{ cribados_count }})
+    </a>
+    <a href="{% url 'alertas' %}?grupo=seguimiento"
+       class="px-4 py-2 rounded-full font-label-md text-label-md flex-shrink-0 transition-colors
+              {% if filtros.grupo == 'seguimiento' %}bg-primary text-on-primary shadow-sm{% else %}bg-surface-container-low border border-outline-variant text-on-surface-variant hover:bg-surface-container-high{% endif %}">
+      Seguimiento ({{ seguimientos_count }})
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+    {% if alerta_principal %}
+    <div class="md:col-span-8 bg-error-container rounded-xl p-6 border border-error/20 shadow-sm flex flex-col justify-between relative overflow-hidden min-h-[230px]">
+      <div class="absolute top-0 right-0 w-36 h-36 bg-error/5 rounded-bl-full pointer-events-none"></div>
+      <div class="flex justify-between items-start gap-4 mb-4 relative z-10">
+        <div class="flex items-start gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-full bg-error text-on-error flex items-center justify-center shadow-sm shrink-0">
+            <span class="material-symbols-outlined">warning</span>
+          </div>
+          <div class="min-w-0">
+            <span class="font-label-sm text-label-sm text-on-error-container px-2 py-1 bg-error/10 rounded-full uppercase tracking-wide mb-1 inline-block">
+              {{ alerta_principal.get_prioridad_display }} - {{ alerta_principal.get_tipo_alerta_display }}
+            </span>
+            <h3 class="font-headline-md text-headline-md text-on-error-container truncate">{{ alerta_principal.paciente.nombre_completo }}</h3>
+          </div>
+        </div>
+        <span class="font-body-sm text-body-sm text-on-error-container/70 shrink-0">{{ alerta_principal.fecha_creacion|date:"d/m/Y H:i" }}</span>
+      </div>
+      <p class="font-body-md text-body-md text-on-error-container mb-6 relative z-10">
+        {{ alerta_principal.titulo }} - Nivel: {{ alerta_principal.get_prioridad_display|lower }}
+      </p>
+      <div class="flex flex-wrap gap-3 relative z-10">
+        {% if alerta_principal.paciente.padre_tutor.usuario.telefono %}
+        <a href="tel:{{ alerta_principal.paciente.padre_tutor.usuario.telefono }}"
+           class="bg-error text-on-error px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-on-error-container transition-colors flex items-center gap-2 shadow-sm">
+          <span class="material-symbols-outlined">phone_in_talk</span>
+          Contactar Familia
+        </a>
+        {% endif %}
+        <a href="{% url 'referencias:crear' %}?paciente={{ alerta_principal.paciente.id }}{% if alerta_principal.cribado_id %}&cribado={{ alerta_principal.cribado_id }}{% endif %}"
+           class="bg-surface-container-lowest text-error border border-error/30 px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-error/5 transition-colors flex items-center gap-2">
+          <span class="material-symbols-outlined">assignment_ind</span>
+          Referir Urgente
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if alerta_secundaria %}
+    <div class="md:col-span-4 bg-surface-container-lowest rounded-xl p-6 border border-outline-variant shadow-sm flex flex-col min-h-[230px]">
+      <div class="flex justify-between items-start gap-3 mb-4">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined">{{ alerta_secundaria.icono }}</span>
+          </div>
+          <span class="font-label-sm text-label-sm text-secondary px-2 py-1 bg-secondary-container/30 rounded-full uppercase tracking-wide truncate">
+            {{ alerta_secundaria.get_tipo_alerta_display }}
+          </span>
+        </div>
+        <span class="font-body-sm text-body-sm text-on-surface-variant shrink-0">{{ alerta_secundaria.fecha_creacion|date:"d/m/Y" }}</span>
+      </div>
+      <h3 class="font-body-lg text-body-lg font-semibold text-on-surface mb-2">{{ alerta_secundaria.paciente.nombre_completo }}</h3>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mb-6 flex-1">
+        Alerta nivel {{ alerta_secundaria.get_prioridad_display|lower }} - {{ alerta_secundaria.titulo }}
+      </p>
+      <a href="{{ alerta_secundaria.url_detalle }}"
+         class="w-full bg-surface-container-low text-primary border border-primary/20 px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-primary-container/20 transition-colors flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined">calendar_month</span>
+        Ver Detalle
+      </a>
+    </div>
+    {% endif %}
+
+    <div class="md:col-span-12 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+      <div class="p-4 border-b border-outline-variant flex justify-between items-center">
+        <h3 class="font-body-md text-body-md font-semibold text-on-surface">Todas las Alertas</h3>
+        <span class="font-body-sm text-body-sm text-on-surface-variant">{{ total }}</span>
+      </div>
+      <div class="divide-y divide-outline-variant/50">
+        {% for alerta in alertas %}
+        <div class="p-4 hover:bg-surface-container-low transition-colors flex gap-4 items-start">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-surface-container-low text-on-surface-variant">
+            <span class="material-symbols-outlined">notifications_active</span>
+          </div>
+          <a href="{{ alerta.url_detalle }}" class="flex-1 min-w-0">
+            <p class="font-body-sm text-body-sm font-semibold text-on-surface">
+              {{ alerta.paciente.nombre_completo }} - {{ alerta.get_tipo_alerta_display }}
+            </p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant">
+              Nivel: {{ alerta.get_prioridad_display|lower }} - {{ alerta.get_estado_display }}
+            </p>
+            <span class="font-label-sm text-label-sm text-on-surface-variant/70 mt-1 block">{{ alerta.fecha_creacion|date:"d/m/Y H:i" }}</span>
+          </a>
+          {% if alerta.estado == 'PENDIENTE' %}
+          <form method="post" action="{% url 'alerta_revisar' alerta.id %}" class="hidden sm:block">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="px-3 py-1.5 rounded-lg bg-surface-container-low text-primary border border-primary/20 font-label-sm text-label-sm hover:bg-primary-container/20 transition-colors">
+              Revisar
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        {% empty %}
+        <div class="py-16 text-center text-on-surface-variant font-body-md text-body-md">
+          <span class="material-symbols-outlined text-5xl block mb-3 text-outline">notifications_off</span>
+          No hay alertas clinicas para los filtros seleccionados.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <details class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm">
+    <summary class="cursor-pointer px-4 py-3 list-none flex items-center justify-between font-label-md text-label-md text-on-surface-variant">
+      <span class="inline-flex items-center gap-2">
+        <span class="material-symbols-outlined" style="font-size:18px;">tune</span>
+        Filtros avanzados
+      </span>
+      <span class="material-symbols-outlined" style="font-size:18px;">expand_more</span>
+    </summary>
+    <form method="get" class="p-4 pt-0">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Prioridad</label>
+          <select name="prioridad" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+            <option value="">Todas</option>
+            {% for valor, etiqueta in prioridades %}
+            <option value="{{ valor }}" {% if filtros.prioridad == valor %}selected{% endif %}>{{ etiqueta }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Estado</label>
+          <select name="estado" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+            <option value="">Todos</option>
+            {% for valor, etiqueta in estados %}
+            <option value="{{ valor }}" {% if filtros.estado == valor %}selected{% endif %}>{{ etiqueta }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Tipo</label>
+          <select name="tipo" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+            <option value="">Todos</option>
+            {% for valor, etiqueta in tipos_alerta %}
+            <option value="{{ valor }}" {% if filtros.tipo == valor %}selected{% endif %}>{{ etiqueta }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Paciente</label>
+          <input type="search" name="paciente" value="{{ filtros.paciente }}" placeholder="Nombre o codigo" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Desde</label>
+          <input type="date" name="fecha_desde" value="{{ filtros.fecha_desde }}" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Hasta</label>
+          <input type="date" name="fecha_hasta" value="{{ filtros.fecha_hasta }}" class="w-full rounded-lg border-outline-variant bg-surface-container-low font-body-sm text-body-sm">
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-3 mt-4">
+        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors">
+          <span class="material-symbols-outlined" style="font-size:18px;">filter_alt</span>
+          Filtrar
+        </button>
+        <a href="{% url 'alertas' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+          <span class="material-symbols-outlined" style="font-size:18px;">restart_alt</span>
+          Limpiar
+        </a>
+      </div>
+    </form>
+  </details>
+</div>
+
+{% endblock %}

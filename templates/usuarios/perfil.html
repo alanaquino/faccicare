@@ -1,0 +1,328 @@
+{% extends "layouts/base.html" %}
+{% block title %}Mi Perfil{% endblock %}
+{% block content %}
+
+{% if messages %}
+<div class="space-y-2">
+  {% for msg in messages %}
+  <div class="rounded-lg px-4 py-3 text-sm flex items-center gap-2
+    {% if msg.tags == 'error' %}bg-error-container text-on-error-container{% else %}bg-tertiary-container/30 text-on-tertiary-container{% endif %}">
+    <span class="material-symbols-outlined text-base">{% if msg.tags == 'error' %}error{% else %}check_circle{% endif %}</span>
+    {{ msg }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<header>
+  <h2 class="font-headline-lg text-headline-lg text-on-surface">Perfil y Configuración</h2>
+  <p class="font-body-md text-body-md text-on-surface-variant mt-2">Gestiona tu información personal, seguridad y preferencias.</p>
+</header>
+
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+
+  {# Tarjeta de perfil — solo lectura por defecto #}
+  <div class="md:col-span-12 bg-surface-container-lowest border border-surface-container-high rounded-xl p-stack-lg shadow-sm">
+    <div class="flex flex-col md:flex-row items-center md:items-start gap-stack-lg">
+      {# Avatar #}
+      <div class="relative group flex-shrink-0">
+        <div class="w-28 h-28 rounded-full overflow-hidden border-4 border-surface-container-low shadow-sm bg-primary-container flex items-center justify-center">
+          {% if user.foto_perfil %}
+          <img src="{{ user.foto_perfil.url }}" alt="Foto de perfil" class="w-full h-full object-cover">
+          {% else %}
+          <span class="text-4xl font-bold text-on-primary-container">{{ user.iniciales }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Datos en modo lectura #}
+      <div id="vista-lectura" class="flex-1 text-center md:text-left">
+        <div class="inline-block bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-3 py-1 rounded-full w-max mx-auto md:mx-0 mb-2">
+          {{ user.get_rol_display|default:"Usuario" }}
+        </div>
+        <h3 class="font-headline-md text-headline-md text-on-surface mb-1">{{ user.get_full_name|default:user.username }}</h3>
+        <p class="font-body-md text-body-md text-on-surface-variant mb-3">{{ user.especialidad|default:"Sin especialidad registrada" }}</p>
+        <div class="flex flex-wrap gap-4 justify-center md:justify-start text-on-surface-variant font-body-sm text-body-sm">
+          <span class="flex items-center gap-1"><span class="material-symbols-outlined text-lg">mail</span>{{ user.email }}</span>
+          {% if user.centro_medico %}<span class="flex items-center gap-1"><span class="material-symbols-outlined text-lg">local_hospital</span>{{ user.centro_medico }}</span>{% endif %}
+          {% if user.telefono %}<span class="flex items-center gap-1"><span class="material-symbols-outlined text-lg">phone</span>{{ user.telefono }}</span>{% endif %}
+        </div>
+        <button type="button" onclick="activarEdicion()"
+          class="mt-4 px-6 py-2 border-2 border-primary text-primary rounded-lg font-label-md text-label-md hover:bg-primary hover:text-on-primary transition-colors">
+          Editar Perfil
+        </button>
+      </div>
+
+      {# Formulario de edición — oculto por defecto #}
+      <form id="form-edicion" method="post" action="{% url 'usuarios:perfil' %}" enctype="multipart/form-data" class="hidden flex-1 w-full">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="editar_perfil">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="e-nombre" class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Nombre</label>
+            <input id="e-nombre" name="first_name" value="{{ user.first_name }}" type="text" title="Nombre"
+              class="w-full rounded-lg border border-outline-variant px-4 py-2 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+          </div>
+          <div>
+            <label for="e-apellido" class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Apellido</label>
+            <input id="e-apellido" name="last_name" value="{{ user.last_name }}" type="text" title="Apellido"
+              class="w-full rounded-lg border border-outline-variant px-4 py-2 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+          </div>
+          <div>
+            <label for="e-email" class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Correo electrónico</label>
+            <input id="e-email" name="email" value="{{ user.email }}" type="email" title="Correo electrónico"
+              class="w-full rounded-lg border border-outline-variant px-4 py-2 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+          </div>
+          <div>
+            <label for="e-especialidad" class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Especialidad</label>
+            <input id="e-especialidad" name="especialidad" value="{{ user.especialidad }}" type="text" title="Especialidad"
+              class="w-full rounded-lg border border-outline-variant px-4 py-2 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+          </div>
+          <div class="sm:col-span-2">
+            <label for="e-centro" class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Centro médico</label>
+            <select id="e-centro" name="centro_medico" title="Centro médico"
+              class="w-full rounded-lg border border-outline-variant px-4 py-2 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary">
+              <option value="">— Seleccionar centro —</option>
+              {% for c in centros %}
+              <option value="{{ c.id }}" {% if user.centro_medico_id == c.id %}selected{% endif %}>{{ c.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label for="e-foto" class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Foto de perfil</label>
+            <input id="e-foto" name="foto_perfil" type="file" accept="image/*"
+              class="w-full rounded-lg border border-outline-variant px-4 py-1.5 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
+          </div>
+        </div>
+        <div class="flex gap-3 mt-4">
+          <button type="button" onclick="cancelarEdicion()"
+            class="flex-1 py-2 rounded-lg border border-outline-variant text-on-surface font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+            Cancelar
+          </button>
+          <button type="submit"
+            class="flex-1 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors">
+            Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# Bitácora de Actividad Reciente — Solo se muestra cuando no estamos editando #}
+  <div id="seccion-actividad" class="md:col-span-12 bg-surface-container-lowest border border-surface-container-high rounded-xl p-stack-lg shadow-sm">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 rounded-full bg-primary-container/30 flex items-center justify-center text-on-primary-container animate-pulse">
+        <span class="material-symbols-outlined">history</span>
+      </div>
+      <div>
+        <h3 class="font-body-lg text-body-lg font-semibold text-on-surface">Bitácora de Actividad Reciente</h3>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Historial de tus últimas acciones y registros en el sistema.</p>
+      </div>
+    </div>
+
+    {% if actividad_reciente %}
+    <div class="flow-root">
+      <ul role="list" class="-mb-8">
+        {% for log in actividad_reciente %}
+        <li>
+          <div class="relative pb-8">
+            {% if not forloop.last %}
+            <span class="absolute start-5 top-5 -ml-px h-full w-0.5 bg-surface-variant" aria-hidden="true"></span>
+            {% endif %}
+            <div class="relative flex space-x-3">
+              <div>
+                <span class="h-10 w-10 rounded-full flex items-center justify-center ring-8 ring-white
+                  {% if 'crear' in log.accion|lower or 'nuevo' in log.accion|lower or 'registra' in log.accion|lower %}
+                    bg-emerald-50 text-emerald-700
+                  {% elif 'editar' in log.accion|lower or 'actualiza' in log.accion|lower %}
+                    bg-amber-50 text-amber-700
+                  {% elif 'elimina' in log.accion|lower or 'borrar' in log.accion|lower %}
+                    bg-rose-50 text-rose-700
+                  {% else %}
+                    bg-sky-50 text-sky-700
+                  {% endif %}">
+                  <span class="material-symbols-outlined text-xl">
+                    {% if 'crear' in log.accion|lower or 'nuevo' in log.accion|lower or 'registra' in log.accion|lower %}
+                      add_circle
+                    {% elif 'editar' in log.accion|lower or 'actualiza' in log.accion|lower %}
+                      edit
+                    {% elif 'elimina' in log.accion|lower or 'borrar' in log.accion|lower %}
+                      delete
+                    {% else %}
+                      info
+                    {% endif %}
+                  </span>
+                </span>
+              </div>
+              <div class="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
+                <div>
+                  <p class="font-body-md text-body-md text-on-surface font-medium">
+                    {{ log.accion }}
+                    <span class="font-normal text-on-surface-variant">en {{ log.modelo }}</span>
+                  </p>
+                  {% if log.descripcion %}
+                  <p class="font-body-sm text-body-sm text-on-surface-variant mt-1 italic">{{ log.descripcion }}</p>
+                  {% endif %}
+                </div>
+                <div class="text-right text-sm whitespace-nowrap text-on-surface-variant">
+                  <time datetime="{{ log.fecha|date:'Y-m-d H:i' }}" class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-xs icon-outline">schedule</span>
+                    {{ log.fecha|date:"d M Y, H:i" }}
+                  </time>
+                </div>
+              </div>
+            </div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% else %}
+    <div class="py-12 text-center text-on-surface-variant flex flex-col items-center justify-center">
+      <span class="material-symbols-outlined text-outline-variant text-4xl mb-2">history_toggle_off</span>
+      <span class="text-sm font-medium">No se han registrado actividades recientes para este perfil.</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {# Seguridad + Preferencias — solo visibles al editar #}
+  <div id="seccion-edicion" class="md:col-span-12 hidden">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+
+      {# Seguridad #}
+      <div class="bg-surface-container-lowest border border-surface-container-high rounded-xl p-stack-lg shadow-sm flex flex-col">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-full bg-secondary-container/30 flex items-center justify-center text-on-secondary-container">
+            <span class="material-symbols-outlined">security</span>
+          </div>
+          <h3 class="font-body-lg text-body-lg font-semibold text-on-surface">Seguridad</h3>
+        </div>
+        <form method="post" action="{% url 'usuarios:perfil' %}" class="flex flex-col gap-4 flex-1">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="cambiar_password">
+          <div>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="old_password">Contraseña Actual</label>
+            <input id="old_password" name="old_password" type="password"
+              class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              placeholder="••••••••">
+          </div>
+          <div>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="new_password1">Nueva Contraseña</label>
+            <input id="new_password1" name="new_password1" type="password"
+              class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              placeholder="Mínimo 8 caracteres">
+          </div>
+          <div>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="new_password2">Confirmar Contraseña</label>
+            <input id="new_password2" name="new_password2" type="password"
+              class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              placeholder="Repetir contraseña">
+          </div>
+          <button type="submit" class="mt-auto w-full bg-primary text-on-primary font-label-md text-label-md py-2.5 rounded-lg hover:bg-surface-tint transition-colors">
+            Actualizar Contraseña
+          </button>
+        </form>
+      </div>
+
+      {# Preferencias de alertas con SMS #}
+      <div class="bg-surface-container-lowest border border-surface-container-high rounded-xl p-stack-lg shadow-sm flex flex-col">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-full bg-primary-container/30 flex items-center justify-center text-on-primary-container">
+            <span class="material-symbols-outlined">notifications_active</span>
+          </div>
+          <h3 class="font-body-lg text-body-lg font-semibold text-on-surface">Preferencias de Alertas</h3>
+        </div>
+        <form method="post" action="{% url 'usuarios:perfil' %}" class="flex flex-col gap-5 flex-1">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="editar_perfil">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="font-label-md text-label-md text-on-surface">Alertas Críticas de Pacientes</h4>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">Cambios de estado urgentes o cribados alterados.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input checked type="checkbox" class="sr-only peer" aria-label="Alertas críticas">
+              <div class="w-11 h-6 bg-surface-dim rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="font-label-md text-label-md text-on-surface">Resumen Semanal</h4>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">Correo con métricas de atención y seguimientos.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input checked type="checkbox" class="sr-only peer" aria-label="Resumen semanal">
+              <div class="w-11 h-6 bg-surface-dim rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h4 class="font-label-md text-label-md text-on-surface">Notificaciones SMS</h4>
+                <p class="font-body-sm text-body-sm text-on-surface-variant">Alertas urgentes a tu teléfono móvil.</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input id="toggle-sms" name="notif_sms" type="checkbox" onchange="toggleSmsField(this)"
+                  {% if user.telefono %}checked{% endif %}
+                  class="sr-only peer" aria-label="Notificaciones SMS">
+                <div class="w-11 h-6 bg-surface-dim rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+            <div id="campo-telefono" class="{% if not user.telefono %}hidden{% endif %}">
+              <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="sms-telefono">Número de teléfono</label>
+              <div class="relative">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">phone</span>
+                <input id="sms-telefono" name="telefono" type="tel" value="{{ user.telefono }}"
+                  class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-sm text-body-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="809-000-0000">
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="mt-auto w-full bg-primary text-on-primary font-label-md text-label-md py-2.5 rounded-lg hover:bg-surface-tint transition-colors">
+            Guardar Preferencias
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% block extra_scripts %}
+<script>
+  function activarEdicion() {
+    document.getElementById('vista-lectura').classList.add('hidden');
+    document.getElementById('form-edicion').classList.remove('hidden');
+    document.getElementById('seccion-edicion').classList.remove('hidden');
+    const seccionActividad = document.getElementById('seccion-actividad');
+    if (seccionActividad) seccionActividad.classList.add('hidden');
+  }
+  function cancelarEdicion() {
+    document.getElementById('form-edicion').classList.add('hidden');
+    document.getElementById('vista-lectura').classList.remove('hidden');
+    document.getElementById('seccion-edicion').classList.add('hidden');
+    const seccionActividad = document.getElementById('seccion-actividad');
+    if (seccionActividad) seccionActividad.classList.remove('hidden');
+  }
+  function toggleSmsField(checkbox) {
+    var campo = document.getElementById('campo-telefono');
+    if (checkbox.checked) {
+      campo.classList.remove('hidden');
+      document.getElementById('sms-telefono').focus();
+    } else {
+      campo.classList.add('hidden');
+    }
+  }
+
+  // Automáticamente activar edición si viene en la query URL (?edit=1)
+  window.addEventListener('DOMContentLoaded', (event) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('edit') === '1' || urlParams.get('mode') === 'edit') {
+      activarEdicion();
+    }
+  });
+</script>
+{% endblock %}
+
+{% endblock %}

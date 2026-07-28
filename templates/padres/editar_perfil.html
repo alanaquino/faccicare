@@ -1,0 +1,286 @@
+{% extends "layouts/base_padres.html" %}
+{% block title %}Editar Perfil — FACCI Care{% endblock %}
+
+{% block content %}
+<div class="md:px-8 max-w-5xl mx-auto w-full space-y-6">
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="flex items-center gap-3 p-4 rounded-xl border
+    {% if message.tags == 'success' %}bg-[#e8f5e9] border-green-300 text-green-800
+    {% else %}bg-error-container/30 border-error/30 text-on-error-container{% endif %}">
+    <span class="material-symbols-outlined">
+      {% if message.tags == 'success' %}check_circle{% else %}error{% endif %}
+    </span>
+    <span class="font-body-md text-body-md">{{ message }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {# Cabecera #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Editar Perfil</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant">Actualiza tu información de contacto y datos familiares.</p>
+    </div>
+    <a href="{% url 'padres:perfil' %}"
+       class="flex items-center gap-2 px-4 py-2 rounded-xl border border-outline-variant bg-surface hover:bg-surface-container transition-all text-on-surface-variant font-label-md text-label-md active:scale-95 duration-150">
+      <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
+      Ver perfil
+    </a>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {% csrf_token %}
+
+    {# Columna principal #}
+    <div class="lg:col-span-2 space-y-6">
+
+      {# Datos de contacto #}
+      <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-container p-6 space-y-5">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">person</span>
+          Datos de Contacto
+        </h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          {# Solo lectura #}
+          <div>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              Nombre Completo
+              <span class="ml-1 text-xs text-on-surface-variant/60">(no editable)</span>
+            </label>
+            <div class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-on-surface-variant font-body-sm text-body-sm select-none">
+              {{ tutor.nombre }}
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              {{ tutor.tipo_documento|default:"Cédula" }}
+              <span class="ml-1 text-xs text-on-surface-variant/60">(no editable)</span>
+            </label>
+            <div class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface-container text-on-surface-variant font-body-sm text-body-sm select-none">
+              {{ tutor.cedula }}
+            </div>
+          </div>
+
+          {# Editable #}
+          <div>
+            <label for="id_email" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              Correo Electrónico
+            </label>
+            <input
+              type="email"
+              id="id_email"
+              name="email"
+              value="{{ tutor.email }}"
+              required
+              class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm transition-shadow"
+            />
+          </div>
+
+          <div>
+            <label for="id_telefono" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              Teléfono Móvil
+            </label>
+            <input
+              type="tel"
+              id="id_telefono"
+              name="telefono"
+              value="{{ tutor.telefono }}"
+              placeholder="809-000-0000"
+              class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm transition-shadow"
+            />
+          </div>
+
+          <div>
+            <label for="id_provincia" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              Provincia
+            </label>
+            <input
+              type="text"
+              id="id_provincia"
+              name="provincia"
+              value="{{ tutor.provincia }}"
+              class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm transition-shadow"
+            />
+          </div>
+
+          <div>
+            <label for="id_municipio" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              Municipio
+            </label>
+            <input
+              type="text"
+              id="id_municipio"
+              name="municipio"
+              value="{{ tutor.municipio }}"
+              class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm transition-shadow"
+            />
+          </div>
+
+          <div class="sm:col-span-2">
+            <label for="id_direccion" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              Dirección de Residencia
+            </label>
+            <textarea
+              id="id_direccion"
+              name="direccion"
+              rows="2"
+              placeholder="Calle, número, sector…"
+              class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm resize-none transition-shadow"
+            >{{ tutor.direccion }}</textarea>
+          </div>
+
+          <div>
+            <label for="id_ocupacion" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              Ocupación
+            </label>
+            <input
+              type="text"
+              id="id_ocupacion"
+              name="ocupacion"
+              value="{{ tutor.ocupacion }}"
+              placeholder="Ej. Comerciante, Docente…"
+              class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/45 font-body-sm text-body-sm transition-shadow"
+            />
+          </div>
+
+          <div>
+            <label for="id_foto" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              Foto de Perfil
+              <span class="ml-1 text-xs text-on-surface-variant/60">(opcional)</span>
+            </label>
+            <input
+              type="file"
+              id="id_foto"
+              name="foto_perfil"
+              accept="image/*"
+              class="w-full px-3 py-2 rounded-xl border border-outline-variant bg-surface text-on-surface-variant font-body-sm text-body-sm file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:bg-primary-container/30 file:text-primary file:font-label-sm cursor-pointer"
+            />
+          </div>
+
+        </div>
+      </div>
+
+      {# Contacto de emergencia #}
+      <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-container p-6 space-y-5">
+        <div>
+          <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+            <span class="material-symbols-outlined text-secondary">contact_phone</span>
+            Contacto de Emergencia
+          </h3>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+            Persona a contactar si no podemos comunicarnos contigo ante una alerta clínica.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="id_contacto_emergencia" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              Nombre del Contacto
+            </label>
+            <input
+              type="text"
+              id="id_contacto_emergencia"
+              name="contacto_emergencia"
+              value="{{ tutor.contacto_emergencia }}"
+              placeholder="Nombre completo"
+              class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm transition-shadow"
+            />
+          </div>
+
+          <div>
+            <label for="id_telefono_emergencia" class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">
+              Teléfono del Contacto
+            </label>
+            <input
+              type="tel"
+              id="id_telefono_emergencia"
+              name="telefono_emergencia"
+              value="{{ tutor.telefono_emergencia }}"
+              placeholder="809-000-0000"
+              class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm transition-shadow"
+            />
+          </div>
+        </div>
+      </div>
+
+      {# Botones de acción #}
+      <div class="flex flex-col sm:flex-row gap-3 justify-end">
+        <a href="{% url 'padres:perfil' %}"
+           class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-outline-variant bg-surface hover:bg-surface-container transition-all font-label-md text-label-md text-on-surface active:scale-95 duration-150">
+          <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+          Cancelar
+        </a>
+        <button
+          type="submit"
+          class="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-surface-tint hover:shadow-md transition-all font-label-md text-label-md active:scale-95 duration-150">
+          <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+          Guardar Cambios
+        </button>
+      </div>
+
+    </div>
+
+    {# Columna lateral: ficha del paciente #}
+    <div class="space-y-6">
+
+      <div class="bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-container overflow-hidden">
+        <div class="bg-gradient-to-br from-primary-container/20 to-primary/10 px-6 py-5 border-b border-surface-container flex flex-col items-center text-center">
+          <div class="w-16 h-16 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-md mb-3 font-semibold text-lg relative">
+            <span>{{ paciente.iniciales }}</span>
+            <span class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></span>
+          </div>
+          <h4 class="font-headline-md text-headline-md text-on-surface font-bold">{{ paciente.nombre }}</h4>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ paciente.edad }} &middot; {{ paciente.diagnostico }}</p>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <div class="flex justify-between items-center py-2 border-b border-neutral-100">
+            <span class="font-label-sm text-label-sm text-on-surface-variant">Estado</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-primary-container/30 text-primary font-bold text-xs">{{ paciente.estado }}</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-neutral-100">
+            <span class="font-label-sm text-label-sm text-on-surface-variant">Grupo sanguíneo</span>
+            <span class="font-body-sm text-body-sm font-semibold text-on-surface">{{ paciente.grupo_sanguineo }}</span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-neutral-100">
+            <span class="font-label-sm text-label-sm text-on-surface-variant">Alergias</span>
+            <span class="font-body-sm text-body-sm font-semibold text-error">{{ paciente.alergias }}</span>
+          </div>
+          <div class="py-2 border-b border-neutral-100">
+            <span class="font-label-sm text-label-sm text-on-surface-variant block mb-1">Médico tratante</span>
+            <span class="font-body-sm text-body-sm font-semibold text-on-surface flex items-center gap-1">
+              <span class="material-symbols-outlined text-primary" style="font-size:16px;">stethoscope</span>
+              {{ paciente.medico }}
+            </span>
+          </div>
+          <div class="py-2">
+            <span class="font-label-sm text-label-sm text-on-surface-variant block mb-1">Centro hospitalario</span>
+            <span class="font-body-sm text-body-sm font-semibold text-on-surface flex items-center gap-1">
+              <span class="material-symbols-outlined text-secondary" style="font-size:16px;">local_hospital</span>
+              {{ paciente.hospital }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {# Nota informativa #}
+      <div class="bg-primary-container/10 border border-primary/20 rounded-2xl p-4 space-y-2">
+        <div class="flex items-center gap-2 text-primary">
+          <span class="material-symbols-outlined" style="font-size:18px;">info</span>
+          <span class="font-label-md text-label-md">Datos protegidos</span>
+        </div>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">
+          El nombre completo y la cédula solo pueden ser modificados por el personal de FACCI. Contáctanos si necesitas una corrección.
+        </p>
+      </div>
+
+    </div>
+  </form>
+
+</div>
+{% endblock %}

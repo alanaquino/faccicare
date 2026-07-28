@@ -1,0 +1,161 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Reporte Casa FACCI{% endblock %}
+
+{% block extra_head %}
+<style>
+  .reporte-casa-sheet {
+    background: #ffffff;
+    color: #111827;
+    box-shadow: 0 18px 45px rgba(15, 29, 37, 0.12);
+  }
+  .reporte-casa-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .reporte-casa-table th,
+  .reporte-casa-table td {
+    border: 1px solid #cbd5e1;
+    padding: 8px;
+    vertical-align: top;
+  }
+  .reporte-casa-table th {
+    background: #ddeee7;
+    color: #111827;
+    font-weight: 700;
+  }
+  @media print {
+    @page {
+      size: landscape;
+      margin: 12mm;
+    }
+    .no-print {
+      display: none !important;
+    }
+    .reporte-casa-sheet {
+      border: none !important;
+      box-shadow: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 0 !important;
+    }
+    .reporte-casa-table th,
+    .reporte-casa-table td {
+      padding: 6px 8px !important;
+      font-size: 10.5px !important;
+      line-height: 1.3 !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="no-print flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div class="flex items-center gap-3">
+    <a href="{% url 'alojamiento:lista' %}"
+       class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Reporte Casa FACCI</h2>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">Pacientes en estancia Casa FACCI</p>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'alojamiento:reporte_estancias_pdf' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">download</span>Descargar PDF
+    </a>
+    <button type="button" onclick="window.print()"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">print</span>Imprimir
+    </button>
+    <a href="{% url 'alojamiento:lista' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>Volver
+    </a>
+  </div>
+</div>
+
+<article class="print-doc print-page print-letter-landscape print-compact reporte-casa-sheet max-w-[11in] mx-auto p-6 md:p-8 space-y-5">
+  <div class="grid grid-cols-[110px_1fr] gap-4 items-center border border-slate-900 p-4">
+    <div class="text-center">
+      <img src="{{ sistema_config.logo_reportes_url }}" alt="FACCI" class="print-logo h-16 object-contain mx-auto">
+    </div>
+    <div class="text-center">
+      <h1 class="text-xl font-bold tracking-normal">{{ reporte.titulo }}</h1>
+      <p class="text-sm mt-1">Fecha de generacion: {{ reporte.fecha_generacion|date:"d/m/Y h:i A" }}</p>
+      <p class="text-sm">Generado por: {{ reporte.generado_por|default:"Sistema" }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="border border-slate-300 rounded-lg p-3">
+      <p class="text-xs uppercase text-slate-500 font-semibold">Estancias activas</p>
+      <p class="text-2xl font-bold">{{ reporte.resumen.estancias_activas }}</p>
+    </div>
+    <div class="border border-slate-300 rounded-lg p-3">
+      <p class="text-xs uppercase text-slate-500 font-semibold">Habitaciones ocupadas</p>
+      <p class="text-2xl font-bold">{{ reporte.resumen.habitaciones_ocupadas }}</p>
+    </div>
+    <div class="border border-slate-300 rounded-lg p-3">
+      <p class="text-xs uppercase text-slate-500 font-semibold">Habitaciones disponibles</p>
+      <p class="text-2xl font-bold">{{ reporte.resumen.habitaciones_disponibles }}</p>
+    </div>
+    <div class="border border-slate-300 rounded-lg p-3">
+      <p class="text-xs uppercase text-slate-500 font-semibold">Pacientes hospedados</p>
+      <p class="text-2xl font-bold">{{ reporte.resumen.total_pacientes_hospedados }}</p>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="reporte-casa-table text-xs">
+      <thead>
+        <tr>
+          <th>Paciente</th>
+          <th>Edad</th>
+          <th>Diagnostico</th>
+          <th>Familiar responsable</th>
+          <th>Parentesco</th>
+          <th>Telefono / celular</th>
+          <th>Habitacion</th>
+          <th>Ingreso</th>
+          <th>Salida</th>
+          <th>Tiempo</th>
+          <th>Estado</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in reporte.rows %}
+        <tr>
+          <td>{{ row.paciente }}</td>
+          <td>{{ row.edad }}</td>
+          <td>{{ row.diagnostico }}</td>
+          <td>{{ row.responsable }}</td>
+          <td>{{ row.parentesco }}</td>
+          <td>{{ row.telefono }}</td>
+          <td>{{ row.habitacion }}</td>
+          <td>{{ row.fecha_ingreso }}</td>
+          <td>{{ row.fecha_salida|default:"-" }}</td>
+          <td>{{ row.tiempo_estadia|default:"-" }}</td>
+          <td>{{ row.estado }}</td>
+          <td>{{ row.observaciones|default:"-" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="12" class="text-center py-8 text-slate-500">No hay estancias registradas.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <footer class="text-center text-xs text-slate-600 pt-3 border-t border-slate-300">
+    {{ reporte.footer_text }}
+  </footer>
+</article>
+
+{% endblock %}

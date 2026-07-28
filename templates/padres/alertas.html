@@ -1,0 +1,383 @@
+{% extends "layouts/base_padres.html" %}
+{% block title %}Alertas y Notificaciones — FACCI Care{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Transition animations */
+  .fade-out {
+    animation: fadeOutEffect 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  
+  @keyframes fadeOutEffect {
+    from {
+      opacity: 1;
+      transform: scale(1);
+      max-height: 200px;
+      margin-bottom: 12px;
+      padding: 20px;
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.92);
+      max-height: 0;
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-width: 0;
+      overflow: hidden;
+    }
+  }
+
+  .alert-card {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .alert-appear {
+    animation: slideUpAppear 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes slideUpAppear {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="md:px-8 max-w-4xl mx-auto w-full space-y-6">
+
+  {# Header #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <a href="{% url 'padres:estado' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant scale-95 active:scale-90">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </a>
+      <div>
+        <h2 class="font-headline-lg text-headline-lg text-on-background">Centro de Alertas</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant">
+          Tienes <span id="contadorSinLeer" class="font-semibold text-primary">{{ sin_leer }}</span> alerta{{ sin_leer|pluralize:"s" }} sin leer
+        </p>
+      </div>
+    </div>
+    
+    <button onclick="marcarTodasLeidas()" id="btnMarcarTodas" class="flex items-center gap-2 px-4 py-2 rounded-xl border border-outline-variant bg-surface hover:bg-surface-container transition-all text-on-surface-variant font-label-md text-label-md active:scale-95 duration-150 shadow-sm {% if sin_leer == 0 %}opacity-50 pointer-events-none{% endif %}">
+      <span class="material-symbols-outlined" style="font-size:18px;">done_all</span>
+      Marcar todas como leídas
+    </button>
+  </div>
+
+  {# Filtros rápidos interactivos #}
+  <div class="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none">
+    <button onclick="filtrarAlertas('todas', this)" class="btn-filtro inline-flex items-center justify-center gap-1.5 shrink-0 px-4 py-1.5 rounded-full font-label-md text-label-sm leading-none border transition-all shadow-sm bg-primary text-on-primary border-primary">
+      Todas
+    </button>
+    <button onclick="filtrarAlertas('medicamento', this)" class="btn-filtro inline-flex items-center justify-center gap-1.5 shrink-0 px-4 py-1.5 rounded-full font-label-md text-label-sm leading-none border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-high/40 transition-all shadow-sm">
+      <span class="text-sm leading-none">💊</span><span>Medicación</span>
+    </button>
+    <button onclick="filtrarAlertas('seguimiento', this)" class="btn-filtro inline-flex items-center justify-center gap-1.5 shrink-0 px-4 py-1.5 rounded-full font-label-md text-label-sm leading-none border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-high/40 transition-all shadow-sm">
+      <span class="text-sm leading-none">📅</span><span>Seguimientos</span>
+    </button>
+    <button onclick="filtrarAlertas('mensaje', this)" class="btn-filtro inline-flex items-center justify-center gap-1.5 shrink-0 px-4 py-1.5 rounded-full font-label-md text-label-sm leading-none border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-high/40 transition-all shadow-sm">
+      <span class="text-sm leading-none">💬</span><span>Mensajes</span>
+    </button>
+    <button onclick="filtrarAlertas('sintomas', this)" class="btn-filtro inline-flex items-center justify-center gap-1.5 shrink-0 px-4 py-1.5 rounded-full font-label-md text-label-sm leading-none border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-high/40 transition-all shadow-sm">
+      <span class="text-sm leading-none">🤒</span><span>Síntomas</span>
+    </button>
+  </div>
+
+  {# Lista de Alertas #}
+  <div id="listaAlertas" class="space-y-4">
+    {% for notif in notificaciones %}
+    <div id="alerta-{{ notif.id }}" data-tipo="{{ notif.tipo }}" data-leida="{% if notif.leida %}true{% else %}false{% endif %}" 
+         class="alert-card alert-appear bg-surface-container-lowest rounded-2xl border 
+                {% if not notif.leida %}border-primary/25 shadow-md bg-gradient-to-r from-primary-container/5 to-transparent{% else %}border-surface-container shadow-sm{% endif %}">
+      
+      <div class="flex items-start gap-4 p-5">
+        
+        {# Ícono temático #}
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm
+                    {% if notif.color == 'error' %}bg-error-container/30 text-error
+                    {% elif notif.color == 'primary' %}bg-primary-container/30 text-primary
+                    {% elif notif.color == 'secondary' %}bg-secondary-container/30 text-secondary
+                    {% elif notif.color == 'tertiary' %}bg-tertiary-container/30 text-tertiary
+                    {% else %}bg-neutral-100 text-neutral-600{% endif %}">
+          <span class="material-symbols-outlined icon-fill" style="font-size:24px;">{{ notif.icono }}</span>
+        </div>
+
+        {# Contenido principal #}
+        <div class="flex-1 min-w-0">
+          <div class="flex items-start justify-between gap-3 mb-1">
+            <h4 class="font-label-md text-label-md text-on-surface font-semibold flex items-center gap-2">
+              {{ notif.titulo }}
+              {% if not notif.leida %}
+              <span id="dot-{{ notif.id }}" class="w-2 h-2 rounded-full bg-primary inline-block"></span>
+              {% endif %}
+            </h4>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="font-body-sm text-[12px] text-on-surface-variant font-medium">{{ notif.tiempo }}</span>
+            </div>
+          </div>
+          <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">{{ notif.mensaje }}</p>
+
+          {# Fila de acciones contextuales #}
+          <div class="flex flex-wrap gap-2 mt-4">
+            
+            {# Acción Principal #}
+            <a href="{{ notif.resolved_accion_url }}" class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-on-primary font-label-sm text-label-sm hover:bg-surface-tint hover:shadow-sm transition-all duration-200 text-xs scale-95 active:scale-90">
+              <span class="material-symbols-outlined" style="font-size:15px;">open_in_new</span>
+              {{ notif.accion_texto }}
+            </a>
+
+            {# Botón Marcar Leída / Eliminar #}
+            <button onclick="alternarLeido(this)" data-id="{{ notif.id }}" id="btnLeido-{{ notif.id }}" class="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-outline-variant bg-surface hover:bg-surface-container text-on-surface-variant font-label-sm text-label-sm hover:text-primary transition-all duration-200 text-xs scale-95 active:scale-90">
+              {% if not notif.leida %}
+              <span class="material-symbols-outlined text-primary" style="font-size:15px;" id="iconLeido-{{ notif.id }}">check</span>
+              <span id="textLeido-{{ notif.id }}">Marcar leída</span>
+              {% else %}
+              <span class="material-symbols-outlined text-neutral-400" style="font-size:15px;" id="iconLeido-{{ notif.id }}">delete</span>
+              <span id="textLeido-{{ notif.id }}">Eliminar</span>
+              {% endif %}
+            </button>
+
+            {# Botón de Descarte Directo (Solo para leídas) #}
+            <button onclick="eliminarAlerta(this)" data-id="{{ notif.id }}" class="p-2 rounded-xl hover:bg-error-container/20 text-on-surface-variant hover:text-error transition-all duration-150 shrink-0 scale-95 active:scale-90 ml-auto" title="Eliminar Alerta">
+              <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+    {% endfor %}
+
+    {# Tarjeta de Empty State (Se muestra con JS cuando queda vacío) #}
+    <div id="emptyState" class="hidden alert-appear bg-surface-container-lowest rounded-3xl border border-surface-container p-12 text-center max-w-md mx-auto shadow-sm">
+      <div class="w-16 h-16 rounded-full bg-primary-container/20 text-primary flex items-center justify-center mx-auto mb-4">
+        <span class="material-symbols-outlined text-4xl block">notifications_off</span>
+      </div>
+      <h3 class="font-headline-md text-headline-md text-on-surface mb-1">¡Todo en orden!</h3>
+      <p class="font-body-md text-body-md text-on-surface-variant">No tienes alertas pendientes de revisar. Has completado tus actividades y reportes.</p>
+      <a href="{% url 'padres:estado' %}" class="inline-flex mt-5 px-5 py-2 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-all scale-95 active:scale-90 shadow-sm">
+        Volver a Inicio
+      </a>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  let sinLeerCount = parseInt("{{ sin_leer }}");
+
+  // Client-side filtering
+  function filtrarAlertas(filtro, boton) {
+    // 1. Update filter chips visual states
+    const todosBotones = document.querySelectorAll('.btn-filtro');
+    todosBotones.forEach(btn => {
+      btn.className = "btn-filtro inline-flex items-center justify-center gap-1.5 shrink-0 px-4 py-1.5 rounded-full font-label-md text-label-sm leading-none border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-high/40 transition-all shadow-sm";
+    });
+    boton.className = "btn-filtro inline-flex items-center justify-center gap-1.5 shrink-0 px-4 py-1.5 rounded-full font-label-md text-label-sm leading-none border transition-all shadow-sm bg-primary text-on-primary border-primary";
+
+    // 2. Filter list cards
+    const cards = document.querySelectorAll('.alert-card');
+    let visiblesCount = 0;
+    
+    cards.forEach(card => {
+      const tipo = card.getAttribute('data-tipo');
+      if (filtro === 'todas' || tipo === filtro) {
+        card.classList.remove('hidden');
+        visiblesCount++;
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+
+    // 3. Show empty state if no alert is found for selected filter
+    const emptyState = document.getElementById('emptyState');
+    if (visiblesCount === 0) {
+      emptyState.classList.remove('hidden');
+      emptyState.classList.add('block');
+    } else {
+      emptyState.classList.add('hidden');
+      emptyState.classList.remove('block');
+    }
+  }
+
+  // Update Global Counter Badges (Top & Bottom bars)
+  function actualizarContadores(count) {
+    sinLeerCount = count;
+    if (sinLeerCount < 0) sinLeerCount = 0;
+
+    // Update center display text
+    const textCont = document.getElementById('contadorSinLeer');
+    if (textCont) textCont.textContent = sinLeerCount;
+
+    // Update global app headers/footers notification badges
+    const headerBadge = document.querySelector('.p-2.text-primary.rounded-full .bg-error'); // Top bar badge
+    if (headerBadge) {
+      if (sinLeerCount === 0) {
+        headerBadge.classList.add('hidden');
+      } else {
+        headerBadge.classList.remove('hidden');
+      }
+    }
+
+    const navBadge = document.querySelector('a[href*="/padres/alertas/"] .bg-error'); // Mobile bottom badge
+    if (navBadge) {
+      if (sinLeerCount === 0) {
+        navBadge.classList.add('hidden');
+      } else {
+        navBadge.classList.remove('hidden');
+      }
+    }
+
+    // Disable Mark all button if 0
+    const btnAll = document.getElementById('btnMarcarTodas');
+    if (btnAll) {
+      if (sinLeerCount === 0) {
+        btnAll.classList.add('opacity-50', 'pointer-events-none');
+      } else {
+        btnAll.classList.remove('opacity-50', 'pointer-events-none');
+      }
+    }
+  }
+
+  // Mark single item read / delete
+  async function alternarLeido(btnElement) {
+    const id = btnElement.getAttribute('data-id');
+    const card = document.getElementById(`alerta-${id}`);
+    if (!card) return;
+
+    const estaLeida = card.getAttribute('data-leida') === 'true';
+
+    if (!estaLeida) {
+      try {
+        const response = await fetch(`/mensajes/notificaciones/marcar-leida/${id}/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+          }
+        });
+        if (response.ok) {
+          // 1. Mark Read
+          card.setAttribute('data-leida', 'true');
+          card.className = "alert-card alert-appear bg-surface-container-lowest rounded-2xl border border-surface-container shadow-sm";
+          
+          // Hide unread dot
+          const dot = document.getElementById(`dot-${id}`);
+          if (dot) dot.remove();
+
+          // Change button state to delete
+          const icon = document.getElementById(`iconLeido-${id}`);
+          const text = document.getElementById(`textLeido-${id}`);
+          
+          if (icon) {
+            icon.textContent = "delete";
+            icon.className = "material-symbols-outlined text-neutral-400";
+          }
+          if (text) text.textContent = "Eliminar";
+
+          const data = await response.json();
+          actualizarContadores(data.sin_leer);
+        }
+      } catch (err) {
+        console.error('Error marking as read:', err);
+      }
+    } else {
+      // 2. Delete item
+      eliminarAlerta(btnElement);
+    }
+  }
+
+  // Delete Alerta
+  async function eliminarAlerta(btnElement) {
+    const id = btnElement.getAttribute('data-id');
+    const card = document.getElementById(`alerta-${id}`);
+    if (!card) return;
+
+    try {
+      const response = await fetch(`/mensajes/notificaciones/eliminar/${id}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        actualizarContadores(data.sin_leer);
+
+        // Trigger slideUp and fadeOut animation
+        card.classList.add('fade-out');
+
+        setTimeout(() => {
+          card.remove();
+          verificarVacio();
+        }, 360);
+      }
+    } catch (err) {
+      console.error('Error deleting alert:', err);
+    }
+  }
+
+  // Mark all as read
+  async function marcarTodasLeidas() {
+    try {
+      const response = await fetch(`/mensajes/notificaciones/marcar-todas-leidas/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+        }
+      });
+      if (response.ok) {
+        const cards = document.querySelectorAll('.alert-card');
+        cards.forEach(card => {
+          const id = card.id.replace('alerta-', '');
+          const estaLeida = card.getAttribute('data-leida') === 'true';
+          if (!estaLeida) {
+            card.setAttribute('data-leida', 'true');
+            card.className = "alert-card alert-appear bg-surface-container-lowest rounded-2xl border border-surface-container shadow-sm";
+            
+            const dot = document.getElementById(`dot-${id}`);
+            if (dot) dot.remove();
+
+            const icon = document.getElementById(`iconLeido-${id}`);
+            const text = document.getElementById(`textLeido-${id}`);
+            
+            if (icon) {
+              icon.textContent = "delete";
+              icon.className = "material-symbols-outlined text-neutral-400";
+            }
+            if (text) text.textContent = "Eliminar";
+          }
+        });
+
+        actualizarContadores(0);
+      }
+    } catch (err) {
+      console.error('Error marking all as read:', err);
+    }
+  }
+
+  // Check if list is empty
+  function verificarVacio() {
+    const remainingCards = document.querySelectorAll('.alert-card:not(.hidden)');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (remainingCards.length === 0) {
+      emptyState.classList.remove('hidden');
+      emptyState.classList.add('block');
+    }
+  }
+</script>
+{% endblock %}

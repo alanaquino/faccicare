@@ -1,0 +1,189 @@
+{% extends "layouts/base_padres.html" %}
+{% block title %}Subir Documento{% endblock %}
+{% block content %}
+
+<div class="md:px-8 max-w-2xl mx-auto w-full space-y-6">
+
+  {# Header #}
+  <div class="flex items-center gap-4">
+    <a href="{% url 'padres:documentos' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant flex items-center justify-center shrink-0">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">
+        {% if solicitud %}Subir Documento Solicitado{% else %}Subir Documento Médico{% endif %}
+      </h2>
+      <p class="font-body-md text-body-md text-on-surface-variant">
+        {% if solicitud %}Carga el informe solicitado por el equipo médico: <strong>{{ solicitud.titulo }}</strong>{% else %}Registra y sube analíticas, estudios de imágenes o recetas{% endif %}
+      </p>
+    </div>
+  </div>
+
+  {# Formulario #}
+  <form method="post" enctype="multipart/form-data" class="bg-surface-container-lowest rounded-3xl shadow-sm border border-surface-container p-6 md:p-8 space-y-6">
+    {% csrf_token %}
+
+    {# Paciente #}
+    <div class="flex flex-col gap-2">
+      <label for="id_paciente" class="font-label-md text-sm font-semibold text-on-surface">Paciente / Hijo</label>
+      {% if solicitud %}
+        <input type="hidden" name="paciente" value="{{ paciente_inicial.id }}">
+        <div class="p-3 bg-surface-container-low rounded-xl border border-surface-container flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+            {{ paciente_inicial.iniciales }}
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-on-surface">{{ paciente_inicial.nombre_completo }}</p>
+            <p class="text-xs text-outline font-medium">Paciente asignado a la solicitud</p>
+          </div>
+        </div>
+      {% else %}
+        <select name="paciente" id="id_paciente" required data-searchable
+                class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface font-body-sm text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+          {% for p in pacientes %}
+            <option value="{{ p.id }}" {% if p == paciente_inicial %}selected{% endif %}>{{ p.nombre_completo }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+    </div>
+
+    {# Tipo de Documento y Fecha de Estudio en Grid #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      
+      {# Tipo de Documento #}
+      <div class="flex flex-col gap-2">
+        <label for="id_tipo_documento" class="font-label-md text-sm font-semibold text-on-surface">Tipo de Documento</label>
+        <select name="tipo_documento" id="id_tipo_documento" required
+                class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface font-body-sm text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+          <option value="" disabled selected>Seleccionar tipo...</option>
+          {% for value, label in tipos %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# Fecha del Estudio #}
+      <div class="flex flex-col gap-2">
+        <label for="id_fecha_estudio" class="font-label-md text-sm font-semibold text-on-surface">Fecha del Estudio</label>
+        <input type="date" name="fecha_estudio" id="id_fecha_estudio" required
+               value="{% now 'Y-m-d' %}"
+               class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface font-body-sm text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+      </div>
+
+    </div>
+
+    {# Descripción #}
+    <div class="flex flex-col gap-2">
+      <label for="id_descripcion" class="font-label-md text-sm font-semibold text-on-surface">Descripción / Notas adicionales (Opcional)</label>
+      <textarea name="descripcion" id="id_descripcion" rows="3" placeholder="Ej: Resultados normales del control correspondiente al mes de mayo..."
+                class="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface font-body-sm text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none"></textarea>
+    </div>
+
+    {# Carga de Archivo (Drag and Drop Premium) #}
+    <div class="flex flex-col gap-2">
+      <label class="font-label-md text-sm font-semibold text-on-surface">Archivo del Documento (PDF o Imagen)</label>
+      <div id="drop-zone" class="border-2 border-dashed border-outline-variant rounded-2xl p-6 text-center hover:bg-surface-container-low/40 hover:border-primary transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-2 group relative">
+        <input type="file" name="archivo" id="id_archivo" required accept="image/*,.pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+        <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-200">
+          <span class="material-symbols-outlined text-2xl">cloud_upload</span>
+        </div>
+        <div id="drop-text" class="space-y-1">
+          <p class="text-sm font-bold text-on-surface">Arrastra y suelta tu archivo aquí</p>
+          <p class="text-xs text-outline font-medium">o haz clic para explorar en tu dispositivo</p>
+          <p class="text-[10px] text-outline-variant font-medium uppercase mt-2">Formatos permitidos: PDF, JPG, PNG &middot; Máximo 10MB</p>
+        </div>
+        
+        {# File Preview Container #}
+        <div id="file-preview" class="w-full hidden items-center gap-3 p-3 bg-primary-container/10 border border-primary-container/20 rounded-xl">
+          <div class="w-10 h-10 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined" id="file-icon">description</span>
+          </div>
+          <div class="min-w-0 flex-grow text-left">
+            <p class="text-xs font-bold text-on-surface truncate" id="file-name">archivo.pdf</p>
+            <p class="text-[10px] text-outline font-semibold" id="file-size">1.2 MB</p>
+          </div>
+          <button type="button" onclick="clearFileSelection(event)" class="p-1 rounded-full text-outline hover:text-error hover:bg-error-container/20 transition-colors">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {# Botones de Acción #}
+    <div class="flex items-center justify-end gap-3 pt-4 border-t border-surface-container">
+      <a href="{% url 'padres:documentos' %}" 
+         class="px-5 py-3 rounded-full border border-outline-variant hover:bg-surface-container-low text-sm font-semibold text-on-surface-variant transition-colors active:scale-95 duration-100">
+        Cancelar
+      </a>
+      <button type="submit" 
+              class="px-6 py-3 rounded-full bg-primary hover:bg-surface-tint text-on-primary text-sm font-bold shadow-md transition-all scale-100 active:scale-95 duration-100">
+        Subir Documento
+      </button>
+    </div>
+
+  </form>
+
+</div>
+
+{% block extra_scripts %}
+<script>
+  const fileInput = document.getElementById('id_archivo');
+  const dropZone = document.getElementById('drop-zone');
+  const dropText = document.getElementById('drop-text');
+  const filePreview = document.getElementById('file-preview');
+  const fileNameSpan = document.getElementById('file-name');
+  const fileSizeSpan = document.getElementById('file-size');
+  const fileIcon = document.getElementById('file-icon');
+
+  fileInput.addEventListener('change', handleFileSelect);
+
+  function handleFileSelect(e) {
+    const file = fileInput.files[0];
+    if (file) {
+      // Mostrar info del archivo en la previsualización
+      fileNameSpan.textContent = file.name;
+      fileSizeSpan.textContent = formatBytes(file.size);
+
+      // Cambiar icono según tipo de archivo
+      if (file.type.startsWith('image/')) {
+        fileIcon.textContent = 'image';
+      } else {
+        fileIcon.textContent = 'picture_as_pdf';
+      }
+
+      // Intercambiar visibilidad de las zonas
+      dropText.classList.add('hidden');
+      filePreview.classList.remove('hidden');
+      dropZone.classList.remove('border-dashed');
+      dropZone.classList.add('border-solid', 'border-primary/40');
+    }
+  }
+
+  function clearFileSelection(e) {
+    if (e) e.stopPropagation();
+    fileInput.value = '';
+    
+    // Intercambiar visibilidad
+    dropText.classList.remove('hidden');
+    filePreview.classList.add('hidden');
+    dropZone.classList.add('border-dashed');
+    dropZone.classList.remove('border-solid', 'border-primary/40');
+  }
+
+  function formatBytes(bytes, decimals = 1) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+
+  // Prevenir que el click en el botón de borrar propague y abra el selector de archivos
+  filePreview.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+</script>
+{% endblock %}
+
+{% endblock %}

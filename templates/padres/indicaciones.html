@@ -1,0 +1,112 @@
+{% extends "layouts/base_padres.html" %}
+{% block title %}Indicaciones Médicas{% endblock %}
+{% block content %}
+
+<div class="md:px-8 max-w-4xl mx-auto w-full space-y-6">
+
+{# Header #}
+<div class="flex items-center gap-4">
+  <a href="{% url 'padres:estado' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Indicaciones Médicas</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Cuidados en el hogar para {{ paciente.nombre }}</p>
+  </div>
+</div>
+
+{# Banner médico #}
+<div class="flex items-center gap-4 p-5 bg-primary-container/20 border border-primary-container/40 rounded-2xl">
+  <div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center shrink-0">
+    <span class="material-symbols-outlined text-on-primary icon-fill" style="font-size:24px;">stethoscope</span>
+  </div>
+  <div>
+    <p class="font-label-md text-label-md text-on-surface">Indicaciones emitidas por {{ paciente.medico }}</p>
+    <p class="font-body-sm text-body-sm text-on-surface-variant">{{ paciente.hospital }} &middot; Actualizadas: {{ fecha_actualizacion }}</p>
+  </div>
+</div>
+
+{# Indicaciones principales #}
+<div class="space-y-4">
+  {% for indicacion in indicaciones %}
+  <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container overflow-hidden">
+    <div class="flex items-start gap-4 p-5">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0
+                  {% if indicacion.prioridad == 'Alta' %}bg-error-container/30 text-error
+                  {% elif indicacion.prioridad == 'Media' %}bg-primary-container/30 text-primary
+                  {% else %}bg-secondary-container/30 text-secondary{% endif %}">
+        <span class="material-symbols-outlined" style="font-size:24px;">{{ indicacion.icono }}</span>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="font-headline-md text-headline-md text-on-background font-semibold">{{ indicacion.titulo }}</h3>
+            {% if indicacion.tipo_display %}
+              <span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-xs font-medium">{{ indicacion.tipo_display }}</span>
+            {% endif %}
+          </div>
+          <span class="px-2.5 py-0.5 rounded-full font-label-sm text-label-sm font-semibold
+                       {% if indicacion.prioridad == 'Alta' %}bg-error-container text-error
+                       {% elif indicacion.prioridad == 'Media' %}bg-primary-container text-primary
+                       {% else %}bg-secondary-container text-secondary{% endif %}">
+            {{ indicacion.prioridad }}
+          </span>
+        </div>
+        <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">{{ indicacion.descripcion }}</p>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{# Restricciones importantes #}
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-error/20 p-6">
+  <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+    <span class="material-symbols-outlined text-error">block</span>
+    Restricciones Importantes
+  </h3>
+  <ul class="space-y-3">
+    {% for restriccion in restricciones %}
+    <li class="flex items-start gap-3 p-3 bg-error-container/15 rounded-xl border border-error/20">
+      <span class="material-symbols-outlined text-error mt-0.5" style="font-size:18px;">warning</span>
+      <span class="font-body-sm text-body-sm text-on-surface">{{ restriccion }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+
+{# Contacto de emergencia #}
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container p-6">
+  <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+    <span class="material-symbols-outlined text-primary">phone</span>
+    Contacto de Emergencia
+  </h3>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="flex items-center gap-3 p-4 bg-surface-container-low rounded-xl">
+      <span class="material-symbols-outlined text-primary" style="font-size:24px;">local_hospital</span>
+      <div>
+        <p class="font-label-md text-label-md text-on-surface">{{ paciente.hospital }}</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Emergencias pediátricas</p>
+        <p class="font-headline-md text-headline-md text-primary">809-555-0100</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 p-4 bg-surface-container-low rounded-xl">
+      <span class="material-symbols-outlined text-secondary" style="font-size:24px;">stethoscope</span>
+      <div>
+        <p class="font-label-md text-label-md text-on-surface">{{ paciente.medico }}</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Médico tratante</p>
+        <p class="font-headline-md text-headline-md text-secondary">809-555-0200</p>
+      </div>
+    </div>
+  </div>
+  <div class="mt-4 flex gap-3">
+    <a href="{% url 'padres:reportar_sintomas' %}"
+       class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">report</span>
+      Reportar síntoma
+    </a>
+  </div>
+</div>
+
+</div>
+{% endblock %}

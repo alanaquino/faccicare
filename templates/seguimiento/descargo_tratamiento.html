@@ -1,0 +1,264 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Descargo Tratamiento Medico{% endblock %}
+
+{% block extra_head %}
+<style>
+  @page {
+    size: Letter;
+    margin: 5mm 15mm 10mm 15mm;
+  }
+
+  .descargo-sheet {
+    background: #ffffff;
+    color: #111827;
+    box-shadow: 0 18px 45px rgba(15, 29, 37, 0.12);
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  /* En pantalla: sin altura fija, flujo continuo */
+  .print-page-wrapper {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 2.5rem 3rem;
+  }
+
+  .descargo-body {
+    font-size: 15.5px !important;
+    line-height: 1.8 !important;
+  }
+
+  .descargo-body p {
+    text-align: justify;
+    line-height: 1.8;
+    margin-bottom: 1.2rem;
+  }
+
+  .descargo-conditions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .descargo-conditions li {
+    text-align: justify;
+    line-height: 1.8;
+    margin-bottom: 1.2rem;
+    font-size: 15.5px !important;
+  }
+
+  .descargo-warning {
+    border: 1px solid #f59e0b;
+    background: #fffbeb;
+    color: #92400e;
+  }
+
+  .descargo-footer-print {
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.4;
+  }
+
+  /* Ocultos en pantalla, visibles solo al imprimir */
+  .print-only {
+    display: none !important;
+  }
+
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+
+    .descargo-sheet {
+      border: none !important;
+      box-shadow: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    .print-page-wrapper {
+      page-break-after: always;
+      page-break-inside: avoid;
+      height: 249mm !important;
+      min-height: 249mm !important;
+      padding: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      box-sizing: border-box !important;
+    }
+
+    .print-page-wrapper:last-child {
+      page-break-after: avoid;
+    }
+
+    .descargo-body {
+      font-size: 15.5px !important;
+      line-height: 1.85 !important;
+    }
+
+    .descargo-body p {
+      line-height: 1.85 !important;
+      margin-bottom: 14px !important;
+    }
+
+    .descargo-conditions li {
+      line-height: 1.85 !important;
+      margin-bottom: 14px !important;
+      font-size: 15.5px !important;
+    }
+
+    .descargo-footer-print {
+      font-size: 9.5px !important;
+      line-height: 1.35 !important;
+    }
+
+    /* Mostrar elementos exclusivos de impresión */
+    .print-only {
+      display: block !important;
+    }
+
+    /* Logo más grande al imprimir */
+    .descargo-logo {
+      height: 1.4in !important;
+      max-height: 1.4in !important;
+      width: auto !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="no-print flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div class="flex items-center gap-3">
+    <a href="{% url 'indicaciones:paciente_indicaciones' paciente.id %}"
+      class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Descargo tratamiento medico</h2>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">{{ paciente.nombre_completo }} - {{ paciente.codigo_paciente }}</p>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'indicaciones:descargo_tratamiento_pdf' paciente.id %}"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+      Descargar PDF
+    </a>
+    <button type="button" onclick="window.print()"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">print</span>
+      Imprimir
+    </button>
+    <a href="{% url 'indicaciones:paciente_indicaciones' paciente.id %}"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
+      Volver
+    </a>
+  </div>
+</div>
+
+{% if descargo.nacionalidad_warning %}
+<div class="no-print descargo-warning max-w-[8.5in] mx-auto mt-4 rounded-lg px-4 py-3 text-sm font-medium">
+  Nacionalidad no registrada.
+</div>
+{% endif %}
+
+<article
+  class="descargo-sheet print-doc max-w-[8.5in] mx-auto bg-white text-gray-900 shadow-sm border border-slate-200">
+
+  {# ===== PAGINA 1 ===== #}
+  <div class="print-page-wrapper page-1 relative flex flex-col justify-between">
+    <div>
+      {# Header Logo #}
+      <div class="text-center mb-6">
+        <img src="{{ sistema_config.logo_reportes_url }}" alt="FACCI"
+          class="descargo-logo h-32 object-contain mx-auto mb-3">
+        <h1 class="text-[21px] font-bold uppercase tracking-wide text-gray-900">Descargo de Responsabilidad y
+          Consentimiento</h1>
+        <h2 class="text-[17px] font-bold uppercase tracking-wide text-gray-800 mt-1">Para el Tratamiento Médico a un
+          Menor</h2>
+      </div>
+
+      <div class="descargo-body space-y-6">
+        <p>{{ descargo.intro_text|safe }}</p>
+        <ol class="descargo-conditions space-y-5">
+          {% for condition in descargo.conditions|slice:":5" %}
+          <li class="flex gap-2">
+            <span class="font-bold shrink-0 w-5">{{ forloop.counter }})</span>
+            <span>{{ condition|safe }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+    </div>
+
+    <footer
+      class="print-only descargo-footer-print text-center text-[10px] text-slate-500 mt-8 border-t border-slate-200/60 pt-3">
+      <div class="font-bold text-primary text-[11px] mb-1">FUNDACIÓN AMIGOS CONTRA EL CÁNCER INFANTIL</div>
+      <div class="space-x-2">
+        <span>@facci_rd</span> • <span>www.facci.org.do</span> • <span>faccifundacion@facci.org.do</span> • <span>RNC:
+          430-00602-5</span>
+      </div>
+      <div>809-533-7596 • Calle Antonio Maceo #6, sector Mata Hambre, La Feria, Santo Domingo, R.D.</div>
+    </footer>
+  </div>
+
+  {# ===== PAGINA 2 ===== #}
+  <div class="print-page-wrapper page-2 relative flex flex-col justify-between">
+    <div>
+      {# Header Logo Page 2 - solo al imprimir #}
+      <div class="print-only text-center mb-6">
+        <img src="{{ sistema_config.logo_reportes_url }}" alt="FACCI"
+          class="descargo-logo h-32 object-contain mx-auto mb-3">
+      </div>
+
+      <div class="descargo-body space-y-6">
+        <ol class="descargo-conditions space-y-5">
+          {% for condition in descargo.conditions|slice:"5:" %}
+          <li class="flex gap-2">
+            <span class="font-bold shrink-0 w-5">{{ forloop.counter|add:5 }})</span>
+            <span>{{ condition|safe }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+
+        <p class="pt-2">
+          Hecho y firmado de buena fe en dos (2) originales, en la ciudad de <strong>{{ descargo.ciudad }}</strong>,
+          a los <strong>{{ descargo.dia }}</strong> días del mes de <strong>{{ descargo.mes }}</strong>
+          del año <strong>{{ descargo.anio }}</strong>.
+        </p>
+      </div>
+
+      {# Signature Area #}
+      <div class="mt-14 text-center">
+        <div class="border-t border-black w-64 mx-auto pt-1.5 font-bold text-[13px]">
+          Firma de la Madre/Padre
+        </div>
+      </div>
+    </div>
+
+    <footer
+      class="print-only descargo-footer-print text-center text-[10px] text-slate-500 mt-8 border-t border-slate-200/60 pt-3">
+      <div class="font-bold text-primary text-[11px] mb-1">FUNDACIÓN AMIGOS CONTRA EL CÁNCER INFANTIL</div>
+      <div class="space-x-2">
+        <span>@facci_rd</span> • <span>www.facci.org.do</span> • <span>faccifundacion@facci.org.do</span> • <span>RNC:
+          430-00602-5</span>
+      </div>
+      <div>809-533-7596 • Calle Antonio Maceo #6, sector Mata Hambre, La Feria, Santo Domingo, R.D.</div>
+    </footer>
+  </div>
+
+</article>
+
+{% if auto_print %}
+<script>
+  window.addEventListener('load', function () {
+    window.print();
+  });
+</script>
+{% endif %}
+
+{% endblock %}

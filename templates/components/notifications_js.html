@@ -1,0 +1,494 @@
+{# ===== DYNAMIC NOTIFICATIONS LOGIC — MEDICO Y PADRES ===== #}
+
+{# 1) Estilos CSS para el Dropdown, Bell-shake y Toasts premium #}
+<style>
+  /* Animación de sacudida de la campana */
+  @keyframes bellShake {
+    0% { transform: rotate(0); }
+    15% { transform: rotate(15deg); }
+    30% { transform: rotate(-15deg); }
+    45% { transform: rotate(10deg); }
+    60% { transform: rotate(-10deg); }
+    75% { transform: rotate(4deg); }
+    85% { transform: rotate(-4deg); }
+    100% { transform: rotate(0); }
+  }
+  .bell-shake {
+    animation: bellShake 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    backface-visibility: hidden;
+  }
+
+  /* Transición del dropdown */
+  .dropdown-transition {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+    visibility: hidden;
+  }
+  .dropdown-open {
+    transform: scale(1) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+  }
+
+  /* Animación de entrada de los Toasts */
+  @keyframes toastIn {
+    from {
+      transform: translateY(24px) scale(0.92);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+  @keyframes toastOut {
+    from {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      max-height: 150px;
+      margin-bottom: 12px;
+    }
+    to {
+      transform: translateY(-16px) scale(0.9);
+      opacity: 0;
+      max-height: 0;
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-width: 0;
+    }
+  }
+  .toast-appear {
+    animation: toastIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .toast-disappear {
+    animation: toastOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+</style>
+
+{# 2) Contenedor de Toasts (si no existe, se creará dinámicamente) #}
+<div id="toastContainer" class="fixed bottom-5 right-5 z-[9999] flex flex-col gap-3 w-full max-w-sm pointer-events-none px-4 sm:px-0"></div>
+
+{# 3) JavaScript de Lógica de Negocio y Control de UI #}
+<script>
+(function () {
+  let isDropdownOpen = false;
+  let seenNotificationIds = new Set();
+  let firstLoadNotif = true;
+  let pollInterval = null;
+
+  // Mapeo de URLs estáticas de Django a nombres amigables
+  const URL_MAPPING = {
+    'padres:estado': '/padres/',
+    'padres:sintomas': '/padres/evolucion/',
+    'padres:evolucion': '/padres/evolucion/',
+    'padres:reportar_sintomas': '/padres/evolucion/reportar/',
+    'padres:indicaciones': '/padres/indicaciones/',
+    'pacientes:lista': '/pacientes/',
+    'referencias:lista': '/referencias/',
+    'notificaciones:notificaciones': '/mensajes/notificaciones/'
+  };
+
+  function resolveActionUrl(djangoUrl) {
+    if (!djangoUrl) return '#';
+    return URL_MAPPING[djangoUrl] || djangoUrl;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function safeActionUrl(url) {
+    const resolved = resolveActionUrl(url);
+    if (!resolved || resolved === '#') return '#';
+    if (resolved.startsWith('/') || resolved.startsWith('http://') || resolved.startsWith('https://')) {
+      return resolved;
+    }
+    return '#';
+  }
+
+  // Toggles notifications dropdown view
+  window.toggleNotificacionesDropdown = function (event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('dropdownNotificaciones');
+    if (!dropdown) return;
+
+    isDropdownOpen = !isDropdownOpen;
+    if (isDropdownOpen) {
+      if (window.cerrarPerfilDropdown) window.cerrarPerfilDropdown();
+      dropdown.classList.add('dropdown-open');
+      fetchNotifications(); // Refresh list immediately
+    } else {
+      cerrarDropdown();
+    }
+  };
+
+  function cerrarDropdown() {
+    const dropdown = document.getElementById('dropdownNotificaciones');
+    if (!dropdown) return;
+    dropdown.classList.remove('dropdown-open');
+    isDropdownOpen = false;
+  }
+
+  // Close when clicking outside
+  document.addEventListener('click', function (e) {
+    const dropdown = document.getElementById('dropdownNotificaciones');
+    const btnBell = document.getElementById('btnBell');
+    if (dropdown && !dropdown.contains(e.target) && btnBell && !btnBell.contains(e.target)) {
+      if (isDropdownOpen) cerrarDropdown();
+    }
+  });
+
+  // Fetch notifications list from server
+  async function fetchNotifications() {
+    try {
+      const response = await fetch('/mensajes/notificaciones/api/');
+      if (response.ok) {
+        const data = await response.json();
+        renderDropdownList(data.notificaciones);
+        updateCounters(data.sin_leer);
+
+        // Check for new notifications to trigger real-time toasts
+        processNewNotifications(data.notificaciones);
+      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+    }
+  }
+
+  // Render the list inside the notifications dropdown
+  function renderDropdownList(list) {
+    const container = document.getElementById('listaNotificacionesDropdown');
+    if (!container) return;
+
+    if (list.length === 0) {
+      container.innerHTML = `
+        <div class="py-12 px-6 text-center text-on-surface-variant flex flex-col items-center justify-center">
+          <span class="material-symbols-outlined text-outline-variant text-4xl block mb-2">notifications_off</span>
+          <span class="font-label-md text-label-md font-semibold text-on-surface">¡Todo al día!</span>
+          <span class="font-body-sm text-body-sm text-outline mt-1">No tienes alertas pendientes de revisar.</span>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = list.map(n => {
+      const iconColorClass = 
+        n.color === 'error' ? 'bg-error-container/20 text-error' :
+        n.color === 'primary' ? 'bg-primary-container/20 text-primary' :
+        n.color === 'secondary' ? 'bg-secondary-container/20 text-secondary' :
+        n.color === 'tertiary' ? 'bg-tertiary-container/20 text-tertiary' :
+        'bg-surface-container text-on-surface-variant';
+      const icono = escapeHtml(n.icono);
+      const titulo = escapeHtml(n.titulo);
+      const mensaje = escapeHtml(n.mensaje);
+      const tiempo = escapeHtml(n.tiempo);
+      const accionTexto = escapeHtml(n.accion_texto || 'Ver detalles');
+      const actionUrl = safeActionUrl(n.accion_url);
+
+      return `
+        <div class="p-4 hover:bg-surface-container-low transition-colors relative flex items-start gap-3.5 group ${!n.leida ? 'bg-gradient-to-r from-primary-container/5 to-transparent' : ''}" id="drop-item-${n.id}">
+          <!-- Icon -->
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${iconColorClass}">
+            <span class="material-symbols-outlined" style="font-size: 20px;">${icono}</span>
+          </div>
+          <!-- Body -->
+          <div class="flex-grow min-w-0">
+            <div class="flex justify-between items-start mb-0.5 gap-2">
+              <span class="font-label-md text-label-sm text-on-surface font-semibold truncate leading-tight">${titulo}</span>
+              <span class="text-[10px] text-outline whitespace-nowrap shrink-0 mt-0.5">${tiempo}</span>
+            </div>
+            <p class="font-body-sm text-xs text-on-surface-variant line-clamp-2 leading-relaxed mb-2">${mensaje}</p>
+            
+            <div class="flex gap-2 items-center">
+              ${actionUrl !== '#' ? `
+                <a href="${actionUrl}" onclick="handleNotificationClick('${n.id}', event)"
+                   class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-on-primary font-label-sm text-[10px] hover:bg-surface-tint transition-all active:scale-95 duration-100">
+                  <span class="material-symbols-outlined" style="font-size: 11px;">open_in_new</span>
+                  ${accionTexto}
+                </a>` : ''}
+              
+              <button onclick="marcarLeidaDropdown('${n.id}', event)" 
+                      class="text-[10px] font-semibold text-outline-variant hover:text-primary transition-colors py-1 ${n.leida ? 'hidden' : ''}" 
+                      id="drop-btn-read-${n.id}">
+                Marcar leída
+              </button>
+              
+              <button onclick="eliminarDropdown('${n.id}', event)" 
+                      class="text-[10px] font-semibold text-outline-variant hover:text-error transition-colors py-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                Eliminar
+              </button>
+            </div>
+          </div>
+          ${!n.leida ? `<span class="w-1.5 h-1.5 bg-primary rounded-full absolute top-5 right-4" id="drop-dot-${n.id}"></span>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Update counters and badges globally for general notifications
+  function updateCounters(sinLeer) {
+    const badge = document.getElementById('bellBadge');
+    if (badge) {
+      if (sinLeer > 0) {
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+    
+    // Also update any other unread counters on the page if they exist
+    const textCont = document.getElementById('contadorSinLeer');
+    if (textCont) textCont.textContent = sinLeer;
+  }
+
+  // Check and spawn premium toasts for newly arrived notifications
+  function processNewNotifications(notifications) {
+    if (firstLoadNotif) {
+      // On first page load, just populate the seen set without popping up historical toasts
+      notifications.forEach(n => seenNotificationIds.add(n.id));
+      firstLoadNotif = false;
+      return;
+    }
+
+    let hasNew = false;
+
+    notifications.forEach(n => {
+      if (!seenNotificationIds.has(n.id)) {
+        seenNotificationIds.add(n.id);
+        if (!n.leida) {
+          triggerToast(n);
+          hasNew = true;
+        }
+      }
+    });
+
+    if (hasNew) {
+      // Shake the bell!
+      const bell = document.getElementById('bellIcon');
+      if (bell) {
+        bell.classList.remove('bell-shake');
+        void bell.offsetWidth; // Trigger reflow
+        bell.classList.add('bell-shake');
+        setTimeout(() => bell.classList.remove('bell-shake'), 700);
+      }
+    }
+  }
+
+  // Generate a premium Toast Popup on the screen
+  function triggerToast(n) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = "toast-popup toast-appear w-full bg-white/95 backdrop-blur-md rounded-2xl border border-surface-container shadow-2xl p-4.5 flex gap-3.5 items-start pointer-events-auto select-none";
+    toast.style.borderLeft = `4px solid ${n.color === 'error' ? '#ba1a1a' : n.color === 'secondary' ? '#6d4ea2' : '#006a62'}`;
+    toast.dataset.id = n.id;
+    
+    const iconColorClass = 
+      n.color === 'error' ? 'bg-error-container/20 text-error' :
+      n.color === 'primary' ? 'bg-primary-container/20 text-primary' :
+      n.color === 'secondary' ? 'bg-secondary-container/20 text-secondary' :
+      n.color === 'tertiary' ? 'bg-tertiary-container/20 text-tertiary' :
+      'bg-neutral-100 text-neutral-600';
+
+    const toastRedirectUrl = safeActionUrl(n.accion_url);
+    const icono = escapeHtml(n.icono);
+    const titulo = escapeHtml(n.titulo);
+    const mensaje = escapeHtml(n.mensaje);
+    const accionTexto = escapeHtml(n.accion_texto || 'Resolver');
+
+    toast.innerHTML = `
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${iconColorClass}">
+        <span class="material-symbols-outlined" style="font-size:22px;">${icono}</span>
+      </div>
+      <div class="flex-grow min-w-0 cursor-pointer" onclick="handleToastBodyClick('${n.id}', '${toastRedirectUrl}')">
+        <h5 class="font-label-md text-sm text-on-surface font-bold leading-tight mb-0.5">${titulo}</h5>
+        <p class="font-body-sm text-xs text-on-surface-variant line-clamp-2 leading-relaxed">${mensaje}</p>
+        ${toastRedirectUrl !== '#' ? `
+          <span class="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-primary hover:underline">
+            ${accionTexto} <span class="material-symbols-outlined" style="font-size:10px;">arrow_forward</span>
+          </span>` : ''}
+      </div>
+      <button onclick="dismissToast(this.parentElement, true)" class="p-1 rounded-full text-outline-variant hover:text-on-surface hover:bg-black/5 transition-colors shrink-0 flex items-center justify-center self-start">
+        <span class="material-symbols-outlined text-base">close</span>
+      </button>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto dismiss after 7 seconds
+    setTimeout(() => {
+      dismissToast(toast, false);
+    }, 7000);
+  }
+
+  window.dismissToast = async function (toastElement, clickedByUser = false) {
+    if (!toastElement || !toastElement.parentElement) return;
+
+    if (clickedByUser && toastElement.dataset.id) {
+      const id = toastElement.dataset.id;
+      try {
+        const response = await fetch(`/mensajes/notificaciones/marcar-leida/${id}/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          updateCounters(data.sin_leer);
+
+          // Also update dropdown items if they are currently visible
+          const item = document.getElementById(`drop-item-${id}`);
+          if (item) {
+            item.classList.remove('bg-gradient-to-r', 'from-primary-container/5', 'to-transparent');
+            const dot = document.getElementById(`drop-dot-${id}`);
+            if (dot) dot.remove();
+            const btn = document.getElementById(`drop-btn-read-${id}`);
+            if (btn) btn.classList.add('hidden');
+          }
+        }
+      } catch (err) {
+        console.error('Error marking read on close:', err);
+      }
+    }
+
+    toastElement.classList.replace('toast-appear', 'toast-disappear');
+    setTimeout(() => {
+      toastElement.remove();
+    }, 320);
+  };
+
+  window.handleToastBodyClick = async function (id, url) {
+    try {
+      // Mark read in DB
+      await fetch(`/mensajes/notificaciones/marcar-leida/${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+      });
+      // Redirect
+      if (url && url !== '#') {
+        window.location.href = url;
+      } else {
+        fetchNotifications(); // Refresh counters
+      }
+    } catch (err) {
+      window.location.href = url;
+    }
+  };
+
+  // Helper when clicking link in dropdown
+  window.handleNotificationClick = async function (id, event) {
+    // API call to mark read, let redirect happen naturally
+    try {
+      fetch(`/mensajes/notificaciones/marcar-leida/${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+      });
+    } catch (err) {}
+  };
+
+  // Mark single as read inside dropdown
+  window.marcarLeidaDropdown = async function (id, event) {
+    if (event) event.stopPropagation();
+    try {
+      const response = await fetch(`/mensajes/notificaciones/marcar-leida/${id}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+        }
+      });
+      if (response.ok) {
+        const item = document.getElementById(`drop-item-${id}`);
+        if (item) {
+          item.classList.remove('bg-gradient-to-r', 'from-primary-container/5', 'to-transparent');
+          const dot = document.getElementById(`drop-dot-${id}`);
+          if (dot) dot.remove();
+          const btn = document.getElementById(`drop-btn-read-${id}`);
+          if (btn) btn.classList.add('hidden');
+        }
+        const data = await response.json();
+        updateCounters(data.sin_leer);
+      }
+    } catch (err) {
+      console.error('Error marking read:', err);
+    }
+  };
+
+  // Delete notification inside dropdown
+  window.eliminarDropdown = async function (id, event) {
+    if (event) event.stopPropagation();
+    try {
+      const response = await fetch(`/mensajes/notificaciones/eliminar/${id}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+        }
+      });
+      if (response.ok) {
+        const item = document.getElementById(`drop-item-${id}`);
+        if (item) {
+          item.classList.add('transition-all', 'duration-300', 'opacity-0', 'scale-95');
+          setTimeout(() => {
+            item.remove();
+            const remaining = document.querySelectorAll('[id^="drop-item-"]');
+            if (remaining.length === 0) {
+              renderDropdownList([]);
+            }
+          }, 300);
+        }
+        const data = await response.json();
+        updateCounters(data.sin_leer);
+      }
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+    }
+  };
+
+  // Mark all general read inside dropdown
+  window.marcarTodasLeidasDropdown = async function (event) {
+    if (event) event.stopPropagation();
+    try {
+      const response = await fetch(`/mensajes/notificaciones/marcar-todas-leidas/?tipo=general`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+        }
+      });
+      if (response.ok) {
+        const dots = document.querySelectorAll('[id^="drop-dot-"]');
+        dots.forEach(d => d.remove());
+        const btns = document.querySelectorAll('[id^="drop-btn-read-"]');
+        btns.forEach(b => b.classList.add('hidden'));
+        const items = document.querySelectorAll('[id^="drop-item-"]');
+        items.forEach(item => item.classList.remove('bg-gradient-to-r', 'from-primary-container/5', 'to-transparent'));
+        
+        updateCounters(0);
+      }
+    } catch (err) {
+      console.error('Error marking all general as read:', err);
+    }
+  };
+
+  // Initialize background polling every 10 seconds
+  function startPolling() {
+    fetchNotifications();
+    pollInterval = setInterval(() => {
+      fetchNotifications();
+    }, 10000);
+  }
+
+  // Start polling when page loads
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startPolling);
+  } else {
+    startPolling();
+  }
+})();
+</script>

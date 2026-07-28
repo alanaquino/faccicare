@@ -1,0 +1,205 @@
+:root {
+  --facci-letter-width: 8.5in;
+  --facci-letter-height: 11in;
+}
+
+@page {
+  size: 8.5in 11in;
+  margin: 12mm;
+}
+
+@page landscape-page {
+  size: 11in 8.5in;
+  margin: 12mm;
+}
+
+@media screen {
+  .print-letter {
+    width: min(100%, var(--facci-letter-width)) !important;
+    max-width: var(--facci-letter-width) !important;
+    min-height: var(--facci-letter-height);
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .print-letter-landscape {
+    width: min(100%, var(--facci-letter-height)) !important;
+    max-width: var(--facci-letter-height) !important;
+    min-height: var(--facci-letter-width);
+    margin-left: auto !important;
+    margin-right: auto !important;
+    page: landscape-page;
+  }
+}
+
+@media print {
+  html,
+  body {
+    width: 100% !important;
+    min-height: auto !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-size: 11.5px !important;
+    line-height: 1.25 !important;
+  }
+
+  .no-print,
+  .print-hidden,
+  .ficha-actions,
+  .ficha-back,
+  .toolbar {
+    display: none !important;
+  }
+
+  main,
+  .print-page,
+  .print-doc {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  .print-page,
+  .print-doc {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-compact {
+    font-size: 11px !important;
+    line-height: 1.22 !important;
+  }
+
+  .print-compact h1,
+  .print-compact h2,
+  .print-compact h3 {
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
+    line-height: 1.18 !important;
+  }
+
+  .print-compact h1 {
+    font-size: 18px !important;
+  }
+
+  .print-compact h2 {
+    font-size: 14px !important;
+  }
+
+  .print-compact h3 {
+    font-size: 12px !important;
+  }
+
+  .print-compact p,
+  .print-compact section,
+  .print-compact footer {
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
+  }
+
+  .print-compact img:not(.print-logo):not(.descargo-logo) {
+    max-height: 48px !important;
+    max-width: 82px !important;
+    object-fit: contain !important;
+  }
+
+  .print-logo {
+    max-height: 105px !important;
+    max-width: 175px !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin: 0 auto !important;
+  }
+
+  .print-compact td.align-middle-cell {
+    vertical-align: middle !important;
+  }
+
+  .print-compact table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+  }
+
+  .print-compact th,
+  .print-compact td {
+    padding: 3px 4px !important;
+    line-height: 1.12 !important;
+    vertical-align: top !important;
+  }
+
+  .print-compact .text-lg,
+  .print-compact .text-xl,
+  .print-compact .text-2xl,
+  .print-compact .text-3xl,
+  .print-compact .font-headline-lg,
+  .print-compact .font-headline-md {
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+  }
+
+  .print-compact .space-y-4 > :not([hidden]) ~ :not([hidden]),
+  .print-compact .space-y-5 > :not([hidden]) ~ :not([hidden]),
+  .print-compact .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 6px !important;
+  }
+
+  .print-compact .p-10,
+  .print-compact .p-8,
+  .print-compact .p-6,
+  .print-compact .p-5,
+  .print-compact .p-4,
+  .print-compact .p-3,
+  .print-compact .py-10,
+  .print-compact .py-8,
+  .print-compact .py-6,
+  .print-compact .px-16,
+  .print-compact .px-10 {
+    padding: 4px !important;
+  }
+
+  .print-compact .mt-14,
+  .print-compact .mt-12,
+  .print-compact .mt-8,
+  .print-compact .mt-6,
+  .print-compact .mt-5,
+  .print-compact .mt-4,
+  .print-compact .mb-14,
+  .print-compact .mb-8,
+  .print-compact .mb-6,
+  .print-compact .mb-5,
+  .print-compact .mb-4,
+  .print-compact .pt-12,
+  .print-compact .pt-10,
+  .print-compact .pt-6,
+  .print-compact .pt-5,
+  .print-compact .pb-6 {
+    margin-top: 5px !important;
+    margin-bottom: 5px !important;
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+  }
+
+  .print-compact input,
+  .print-compact textarea {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+  }
+
+  .print-compact tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .print-letter-landscape {
+    page: landscape-page;
+  }
+}

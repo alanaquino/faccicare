@@ -1,0 +1,261 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ resultado.nombre_examen }}{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex items-center gap-4">
+  <a href="{% url 'laboratorio:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div class="flex-1 min-w-0">
+    <h2 class="font-headline-lg text-headline-lg text-on-background truncate">{{ resultado.nombre_examen }}</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-0.5">
+      {{ resultado.paciente.nombre_completo }} &middot; {{ resultado.fecha_muestra|date:"d/m/Y" }} &middot; {{ resultado.codigo }}
+    </p>
+  </div>
+  <div class="flex items-center gap-2 shrink-0">
+    {% if puede_revisar %}
+    <form method="post" action="{% url 'laboratorio:marcar_revisado' resultado.pk %}">
+      {% csrf_token %}
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+        <span class="material-symbols-outlined" style="font-size:18px;">check_circle</span>
+        Marcar revisado
+      </button>
+    </form>
+    {% endif %}
+    <a href="{% url 'laboratorio:crear_para_paciente' resultado.paciente.pk %}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">add</span>
+      Nuevo resultado
+    </a>
+  </div>
+</div>
+
+{# Alerta de valores críticos #}
+{% if resultado.hay_valores_criticos %}
+<div class="rounded-xl border border-error bg-error-container/20 p-4 flex items-center gap-4">
+  <span class="material-symbols-outlined text-error text-3xl shrink-0">emergency</span>
+  <div>
+    <p class="font-label-lg text-label-lg text-error font-semibold">Este resultado contiene {{ n_criticos }} valor{{ n_criticos|pluralize:"es" }} crítico{{ n_criticos|pluralize:"s" }}</p>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Los valores marcados en rojo están fuera del rango crítico y requieren atención inmediata.</p>
+  </div>
+</div>
+{% endif %}
+
+{# Info cards #}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+    <p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Paciente</p>
+    <div class="flex items-center gap-2 mt-2">
+      <div class="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-label-sm text-label-sm shrink-0">
+        {{ resultado.paciente.iniciales }}
+      </div>
+      <div>
+        <p class="font-label-md text-label-md text-on-surface">{{ resultado.paciente.nombre_completo }}</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant">{{ resultado.paciente.codigo_paciente }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+    <p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Tipo de examen</p>
+    <span class="inline-flex items-center mt-2 px-3 py-1.5 rounded-full bg-tertiary-container/30 text-tertiary font-label-md text-label-md">
+      {{ resultado.get_tipo_display }}
+    </span>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-2">Muestra: {{ resultado.fecha_muestra|date:"d/m/Y" }}</p>
+    {% if resultado.fecha_resultado %}
+    <p class="font-body-sm text-body-sm text-on-surface-variant">Resultado: {{ resultado.fecha_resultado|date:"d/m/Y" }}</p>
+    {% endif %}
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+    <p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Estado</p>
+    <div class="mt-2">
+      {% if resultado.estado == 'CRITICO' %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-error-container text-error font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-error"></span>{{ resultado.get_estado_display }}
+      </span>
+      {% elif resultado.estado == 'REVISADO' %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-container/30 text-primary font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-primary"></span>{{ resultado.get_estado_display }}
+      </span>
+      {% elif resultado.estado == 'RECIBIDO' %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary-container/40 text-secondary font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-secondary"></span>{{ resultado.get_estado_display }}
+      </span>
+      {% else %}
+      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md">
+        <span class="w-2 h-2 rounded-full bg-outline-variant"></span>{{ resultado.get_estado_display }}
+      </span>
+      {% endif %}
+    </div>
+    {% if resultado.revisado_por %}
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-2">Revisado por: {{ resultado.revisado_por.nombre_completo }}</p>
+    {% endif %}
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+    <p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Solicitado por</p>
+    <p class="font-label-md text-label-md text-on-surface mt-2">
+      {{ resultado.solicitado_por.nombre_completo|default:"—" }}
+    </p>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">{{ resultado.created_at|date:"d/m/Y H:i" }}</p>
+    {% if n_criticos > 0 or n_alterados > 0 %}
+    <div class="flex gap-2 mt-2 flex-wrap">
+      {% if n_criticos > 0 %}
+      <span class="inline-flex items-center gap-0.5 px-2 py-0.5 bg-error-container text-error rounded-full font-label-sm text-label-sm">
+        {{ n_criticos }} crítico{{ n_criticos|pluralize:"s" }}
+      </span>
+      {% endif %}
+      {% if n_alterados > 0 %}
+      <span class="inline-flex items-center gap-0.5 px-2 py-0.5 bg-secondary-container/40 text-secondary rounded-full font-label-sm text-label-sm">
+        {{ n_alterados }} alterado{{ n_alterados|pluralize:"s" }}
+      </span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{# Tabla de valores #}
+{% if valores %}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+  <div class="flex items-center gap-3 p-5 border-b border-surface-container bg-surface-container-low">
+    <span class="material-symbols-outlined text-secondary">table_chart</span>
+    <h3 class="font-headline-md text-headline-md text-on-background">Valores del examen</h3>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-left">
+      <thead>
+        <tr class="bg-surface-container-low border-b border-surface-container text-on-surface-variant font-label-sm text-label-sm">
+          <th class="p-4 font-semibold">Parámetro</th>
+          <th class="p-4 font-semibold">Estudio</th>
+          <th class="p-4 font-semibold">Valor</th>
+          <th class="p-4 font-semibold">Unidad</th>
+          <th class="p-4 font-semibold">Ref. min.</th>
+          <th class="p-4 font-semibold">Ref. max.</th>
+          <th class="p-4 font-semibold">Rango normal</th>
+          <th class="p-4 font-semibold">Comentario</th>
+          <th class="p-4 font-semibold">Estado</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-container">
+        {% for v in valores %}
+        <tr class="{% if v.bandera == 'CRITICO_BAJO' or v.bandera == 'CRITICO_ALTO' %}bg-error-container/10{% elif v.bandera == 'BAJO' or v.bandera == 'ALTO' %}bg-secondary-container/10{% endif %}">
+          <td class="p-4 font-label-md text-label-md text-on-surface">{{ v.parametro }}</td>
+          <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">
+            {% if v.parametro_catalogo %}
+              {{ v.parametro_catalogo.estudio.nombre }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td class="p-4">
+            <span class="font-headline-sm text-headline-sm
+              {% if v.bandera == 'CRITICO_BAJO' or v.bandera == 'CRITICO_ALTO' %}text-error
+              {% elif v.bandera == 'BAJO' or v.bandera == 'ALTO' %}text-secondary
+              {% else %}text-on-surface{% endif %}">
+              {{ v.valor }}
+            </span>
+          </td>
+          <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">{{ v.unidad|default:"—" }}</td>
+          <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">{{ v.referencia_min|default:"-" }}</td>
+          <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">{{ v.referencia_max|default:"-" }}</td>
+          <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">
+            {% if v.referencia_min and v.referencia_max %}
+              {{ v.referencia_min }} – {{ v.referencia_max }}
+            {% elif v.referencia_min %}
+              ≥ {{ v.referencia_min }}
+            {% elif v.referencia_max %}
+              ≤ {{ v.referencia_max }}
+            {% elif v.referencia_texto %}
+              {{ v.referencia_texto }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">
+            {{ v.comentario|default:"—" }}
+          </td>
+          <td class="p-4">
+            {% if v.bandera == 'CRITICO_BAJO' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-error-container text-error font-label-sm text-label-sm">
+              <span class="material-symbols-outlined" style="font-size:13px;">arrow_downward</span>Crítico bajo
+            </span>
+            {% elif v.bandera == 'CRITICO_ALTO' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-error-container text-error font-label-sm text-label-sm">
+              <span class="material-symbols-outlined" style="font-size:13px;">arrow_upward</span>Crítico alto
+            </span>
+            {% elif v.bandera == 'BAJO' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-container/40 text-secondary font-label-sm text-label-sm">
+              <span class="material-symbols-outlined" style="font-size:13px;">arrow_downward</span>Bajo
+            </span>
+            {% elif v.bandera == 'ALTO' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-container/40 text-secondary font-label-sm text-label-sm">
+              <span class="material-symbols-outlined" style="font-size:13px;">arrow_upward</span>Alto
+            </span>
+            {% elif v.bandera == 'NORMAL' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-container/30 text-primary font-label-sm text-label-sm">
+              <span class="material-symbols-outlined" style="font-size:13px;">check</span>Normal
+            </span>
+            {% else %}
+            <span class="font-body-sm text-body-sm text-on-surface-variant">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# Resultado narrativo #}
+{% if resultado.resultado_narrativo %}
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+  <div class="flex items-center gap-2 mb-3">
+    <span class="material-symbols-outlined text-tertiary">description</span>
+    <h3 class="font-headline-md text-headline-md text-on-background">Resultado narrativo / Interpretación</h3>
+  </div>
+  <p class="font-body-md text-body-md text-on-surface whitespace-pre-wrap">{{ resultado.resultado_narrativo }}</p>
+</div>
+{% endif %}
+
+{# Observaciones + Archivo #}
+{% if resultado.observaciones or resultado.archivo %}
+<div class="grid grid-cols-1 {% if resultado.observaciones and resultado.archivo %}md:grid-cols-2{% endif %} gap-gutter">
+  {% if resultado.observaciones %}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <h3 class="font-headline-sm text-headline-sm text-on-background mb-3">Observaciones</h3>
+    <p class="font-body-md text-body-md text-on-surface-variant whitespace-pre-wrap">{{ resultado.observaciones }}</p>
+  </div>
+  {% endif %}
+  {% if resultado.archivo %}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <h3 class="font-headline-sm text-headline-sm text-on-background mb-3">Archivo adjunto</h3>
+    <a href="{{ resultado.archivo.url }}" target="_blank" rel="noopener"
+       class="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-primary-container/30 text-on-primary-container font-label-md text-label-md hover:bg-primary-container/50 transition-colors">
+      <span class="material-symbols-outlined">download</span>
+      Descargar archivo
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{# Histórico del paciente #}
+<div class="flex items-center justify-between">
+  <a href="{% url 'pacientes:expediente' resultado.paciente.pk %}"
+     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+    <span class="material-symbols-outlined" style="font-size:18px;">person</span>
+    Ver expediente del paciente
+  </a>
+  <a href="{% url 'laboratorio:lista' %}?paciente={{ resultado.paciente.pk }}"
+     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+    <span class="material-symbols-outlined" style="font-size:18px;">history</span>
+    Historial de resultados
+  </a>
+</div>
+
+{% endblock %}

@@ -1,0 +1,321 @@
+{% extends "layouts/base.html" %}
+{% load l10n %}
+{% block title %}{{ centro.nombre }} — Editar{% endblock %}
+{% block content %}
+
+<form method="post" action="{% url 'editar_centro' centro.pk %}">
+{% csrf_token %}
+
+{# ── Header ─────────────────────────────────────────────────────── #}
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">{{ centro.nombre }}</h2>
+    <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Actualice la información general, capacidades y personal del centro de salud.</p>
+  </div>
+  <div class="flex gap-3 shrink-0">
+    <a href="{% url 'centros_salud' %}"
+       class="px-5 py-2.5 rounded-lg border border-outline-variant text-on-surface font-label-md text-label-md hover:bg-surface-container transition-colors">
+      Cancelar
+    </a>
+    <button type="submit"
+            class="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">save</span>
+      Guardar Cambios
+    </button>
+  </div>
+</div>
+
+{# ── Grid principal ──────────────────────────────────────────────── #}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+  {# ── Columna izquierda (2/3) ─────────────────────────────────── #}
+  <div class="lg:col-span-2 space-y-gutter">
+
+    {# Información General #}
+    <div class="bg-surface-container-lowest rounded-2xl border border-surface-container p-6 shadow-sm">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary" style="font-size:20px;">info</span>
+        Información General
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div class="sm:col-span-2">
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="f-nombre">Nombre del Centro</label>
+          <input id="f-nombre" name="nombre" type="text" required value="{{ centro.nombre }}"
+                 class="w-full rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition">
+        </div>
+
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="f-tipo">Tipo de Centro</label>
+          <select id="f-tipo" name="tipo"
+                  class="w-full appearance-none rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition">
+            {% for val, label in tipos %}
+            <option value="{{ val }}" {% if centro.tipo == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="f-telefono">Teléfono</label>
+          <input id="f-telefono" name="telefono" type="text" value="{{ centro.telefono }}"
+                 placeholder="809-000-0000"
+                 class="w-full rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition">
+        </div>
+
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="f-provincia">Provincia / Ciudad</label>
+          <input id="f-provincia" name="provincia" type="text" value="{{ centro.provincia }}"
+                 placeholder="Santo Domingo"
+                 class="w-full rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition">
+        </div>
+
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="f-municipio">Municipio</label>
+          <input id="f-municipio" name="municipio" type="text" value="{{ centro.municipio }}"
+                 placeholder="Distrito Nacional"
+                 class="w-full rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition">
+        </div>
+
+        <div class="sm:col-span-2">
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="f-direccion">Dirección Exacta</label>
+          <input id="f-direccion" name="direccion" type="text" value="{{ centro.direccion }}"
+                 placeholder="Av. …"
+                 class="w-full rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition">
+        </div>
+
+        <div class="sm:col-span-2">
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="f-correo">Correo electrónico</label>
+          <input id="f-correo" name="correo" type="email" value="{{ centro.correo }}"
+                 placeholder="contacto@centro.org"
+                 class="w-full rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition">
+        </div>
+
+        <div class="sm:col-span-2 flex items-center gap-3 pt-1">
+          <input id="f-activo" name="activo" type="checkbox" {% if centro.activo %}checked{% endif %}
+                 class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary">
+          <label class="font-label-md text-label-md text-on-surface" for="f-activo">Centro activo</label>
+        </div>
+
+      </div>
+    </div>
+
+    {# Capacidades Clínicas #}
+    <div class="bg-surface-container-lowest rounded-2xl border border-surface-container p-6 shadow-sm">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary" style="font-size:20px;">local_hospital</span>
+        Capacidades Clínicas
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        {# Camas oncológicas #}
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Camas Oncológicas (Disponibles / Total)</label>
+          <div class="flex items-center gap-3">
+            <input name="camas_disponibles" type="number" min="0" value="{{ centro.camas_disponibles }}"
+                   class="w-full rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
+                   placeholder="0">
+            <span class="font-body-md text-body-md text-on-surface-variant">/</span>
+            <input name="camas_total" type="number" min="0" value="{{ centro.camas_total }}"
+                   class="w-full rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
+                   placeholder="0">
+          </div>
+        </div>
+
+        {# Estado derivación #}
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="f-estado">Estado de Derivación</label>
+          <select id="f-estado" name="estado_derivacion"
+                  class="w-full appearance-none rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition">
+            {% for val, label in estados_derivacion %}
+            <option value="{{ val }}" {% if centro.estado_derivacion == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {# Especialidades #}
+        <div class="sm:col-span-2">
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-3">Especialidades Integradas</label>
+          <div class="grid grid-cols-2 gap-3">
+            {% with esps=centro.esp_oncologia_pediatrica|yesno:'checked,' %}
+            <label class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors
+                          {% if centro.esp_oncologia_pediatrica %}border-primary bg-primary/5{% else %}border-outline-variant hover:bg-surface-container-low{% endif %}">
+              <input type="checkbox" name="esp_oncologia_pediatrica" {% if centro.esp_oncologia_pediatrica %}checked{% endif %}
+                     class="w-4 h-4 rounded text-primary focus:ring-primary/40">
+              <span class="font-label-md text-label-md text-on-surface">Oncología Pediátrica</span>
+            </label>
+            {% endwith %}
+            <label class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors
+                          {% if centro.esp_pediatria_general %}border-primary bg-primary/5{% else %}border-outline-variant hover:bg-surface-container-low{% endif %}">
+              <input type="checkbox" name="esp_pediatria_general" {% if centro.esp_pediatria_general %}checked{% endif %}
+                     class="w-4 h-4 rounded text-primary focus:ring-primary/40">
+              <span class="font-label-md text-label-md text-on-surface">Pediatría General</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors
+                          {% if centro.esp_imagenes_diagnosticas %}border-primary bg-primary/5{% else %}border-outline-variant hover:bg-surface-container-low{% endif %}">
+              <input type="checkbox" name="esp_imagenes_diagnosticas" {% if centro.esp_imagenes_diagnosticas %}checked{% endif %}
+                     class="w-4 h-4 rounded text-primary focus:ring-primary/40">
+              <span class="font-label-md text-label-md text-on-surface">Imágenes Diagnósticas</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors
+                          {% if centro.esp_laboratorio_avanzado %}border-primary bg-primary/5{% else %}border-outline-variant hover:bg-surface-container-low{% endif %}">
+              <input type="checkbox" name="esp_laboratorio_avanzado" {% if centro.esp_laboratorio_avanzado %}checked{% endif %}
+                     class="w-4 h-4 rounded text-primary focus:ring-primary/40">
+              <span class="font-label-md text-label-md text-on-surface">Laboratorio Clínico Avanzado</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {# ── Columna derecha (1/3) ───────────────────────────────────── #}
+  <div class="space-y-gutter">
+
+    {# Personal y Entrenamiento #}
+    <div class="bg-surface-container-lowest rounded-2xl border border-surface-container p-6 shadow-sm">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-tertiary" style="font-size:20px;">group</span>
+        Personal y Entrenamiento
+      </h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Especialistas Disponibles</label>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mb-1.5">Médicos titulares en turno</p>
+          <input name="medicos_titulares" type="number" min="0" value="{{ centro.medicos_titulares }}"
+                 class="w-full rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
+                 placeholder="0">
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Entrenados FACCI</label>
+          <input name="entrenados_facci" type="number" min="0" value="{{ centro.entrenados_facci }}"
+                 class="w-full rounded-xl border border-outline-variant px-4 py-2.5 font-body-md text-body-md text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
+                 placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    {# Ubicación Exacta #}
+    <div class="bg-surface-container-lowest rounded-2xl border border-surface-container p-6 shadow-sm">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-on-surface-variant" style="font-size:20px;">location_on</span>
+        Ubicación Exacta
+      </h3>
+
+      {# Mini mapa interactivo #}
+      <div id="mini-mapa" class="rounded-xl border border-outline-variant overflow-hidden mb-4 isolate" style="height:320px; width:100%;"></div>
+
+      <p class="font-body-sm text-body-sm text-on-surface-variant mb-3">
+        Haz clic en el mapa para ajustar las coordenadas, o ingrésalas manualmente.
+      </p>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Latitud</label>
+          <input id="f-lat" name="latitud" type="number" step="any"
+                 value="{% if centro.latitud %}{{ centro.latitud|unlocalize }}{% endif %}"
+                 placeholder="18.4739"
+                 class="w-full rounded-xl border border-outline-variant px-3 py-2 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition">
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Longitud</label>
+          <input id="f-lng" name="longitud" type="number" step="any"
+                 value="{% if centro.longitud %}{{ centro.longitud|unlocalize }}{% endif %}"
+                 placeholder="-69.9240"
+                 class="w-full rounded-xl border border-outline-variant px-3 py-2 font-body-sm text-body-sm text-on-surface bg-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition">
+        </div>
+      </div>
+
+      <button type="button" onclick="geocodificarDireccion(this)"
+              class="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-primary text-primary font-label-md text-label-md hover:bg-primary/5 transition-colors">
+        <span class="material-symbols-outlined" style="font-size:16px;">my_location</span>
+        Detectar desde dirección
+      </button>
+    </div>
+
+  </div>
+</div>
+
+</form>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const geoData   = {{ centro_geo|safe }};
+  const latInput  = document.getElementById('f-lat');
+  const lngInput  = document.getElementById('f-lng');
+
+  const DR_CENTER = [18.735, -70.163];
+  const initLat   = geoData ? geoData.lat : DR_CENTER[0];
+  const initLng   = geoData ? geoData.lng : DR_CENTER[1];
+  const initZoom  = geoData ? 14 : 8;
+
+  const mapa = L.map('mini-mapa').setView([initLat, initLng], initZoom);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(mapa);
+
+  let marker = null;
+
+  function colocarMarcador(lat, lng) {
+    if (marker) mapa.removeLayer(marker);
+    marker = L.marker([lat, lng], { draggable: true }).addTo(mapa);
+    marker.on('dragend', function () {
+      const p = marker.getLatLng();
+      latInput.value = p.lat.toFixed(6);
+      lngInput.value = p.lng.toFixed(6);
+    });
+  }
+
+  if (geoData) colocarMarcador(geoData.lat, geoData.lng);
+
+  mapa.on('click', function (e) {
+    latInput.value = e.latlng.lat.toFixed(6);
+    lngInput.value = e.latlng.lng.toFixed(6);
+    colocarMarcador(e.latlng.lat, e.latlng.lng);
+  });
+
+  // Actualizar mapa cuando el usuario escribe en los inputs
+  [latInput, lngInput].forEach(inp => inp.addEventListener('change', function () {
+    const lat = parseFloat(latInput.value);
+    const lng = parseFloat(lngInput.value);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      mapa.setView([lat, lng], 14);
+      colocarMarcador(lat, lng);
+    }
+  }));
+
+  // Geocodificación Nominatim
+  window.geocodificarDireccion = async function (btn) {
+    const dir  = document.getElementById('f-direccion') ? document.getElementById('f-direccion').value.trim() : '';
+    const mun  = document.getElementById('f-municipio') ? document.getElementById('f-municipio').value.trim() : '';
+    const prov = document.getElementById('f-provincia') ? document.getElementById('f-provincia').value.trim() : '';
+    const q    = [dir, mun, prov, 'República Dominicana'].filter(Boolean).join(', ');
+    if (!q.replace('República Dominicana', '').trim()) { alert('Ingrese dirección o provincia primero.'); return; }
+
+    const orig = btn.textContent; btn.textContent = 'Buscando…'; btn.disabled = true;
+    try {
+      const data = await (await fetch(
+        'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q),
+        { headers: { 'Accept-Language': 'es' } }
+      )).json();
+      if (data.length) {
+        const lat = parseFloat(data[0].lat), lng = parseFloat(data[0].lon);
+        latInput.value = lat.toFixed(6); lngInput.value = lng.toFixed(6);
+        mapa.setView([lat, lng], 15); colocarMarcador(lat, lng);
+        btn.textContent = '✓ Coordenadas encontradas';
+      } else { btn.textContent = 'No encontrado. Ingrese manualmente.'; }
+    } catch { btn.textContent = 'Error de red.'; }
+    finally { btn.disabled = false; setTimeout(() => btn.textContent = orig, 3000); }
+  };
+});
+</script>
+{% endblock %}

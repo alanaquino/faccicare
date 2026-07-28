@@ -1,0 +1,229 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Ficha de Ingreso Casa FACCI{% endblock %}
+
+{% block extra_head %}
+<style>
+  .ingreso-casa-sheet {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #111827;
+    box-shadow: 0 18px 45px rgba(15, 29, 37, 0.12);
+  }
+  .ingreso-casa-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .ingreso-casa-table th,
+  .ingreso-casa-table td {
+    border: 1px solid #111827;
+    padding: 8px 10px;
+    vertical-align: top;
+  }
+  .ingreso-section-title {
+    background: #ddeee7;
+    font-weight: 700;
+  }
+  .ingreso-label {
+    width: 20%;
+    background: #f8fafc;
+    font-weight: 700;
+    font-size: 0.78rem;
+  }
+  .ingreso-value {
+    width: 30%;
+    min-height: 32px;
+    font-size: 0.86rem;
+  }
+  /* Firma: linea + leyenda pegadas abajo, con espacio en blanco arriba para
+     firmar SOBRE la linea. Selector con td para ganarle al vertical-align:top
+     base. Aplica en pantalla; en impresion lo refuerza la regla de @media print. */
+  .ingreso-casa-table td.firma-cell {
+    height: 130px;
+    vertical-align: bottom;
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+    .ingreso-casa-sheet {
+      border: none !important;
+      box-shadow: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 0 !important;
+    }
+    .ingreso-casa-table {
+      margin-bottom: 16px !important;
+      page-break-inside: avoid;
+    }
+    .ingreso-casa-table th,
+    .ingreso-casa-table td {
+      padding: 6px 8px !important;
+    }
+    .ingreso-value {
+      min-height: 22px !important;
+      font-size: 11px !important;
+    }
+    .ingreso-label {
+      font-size: 10px !important;
+    }
+    .ingreso-section-title {
+      font-size: 11px !important;
+      padding: 6px 8px !important;
+    }
+    /* Remove outer borders of nested table to avoid double borders */
+    .ingreso-casa-table td table {
+      border: none !important;
+      margin: 0 !important;
+      width: 100% !important;
+    }
+    .ingreso-casa-table td table tr:first-child th,
+    .ingreso-casa-table td table tr:first-child td {
+      border-top: none !important;
+    }
+    .ingreso-casa-table td table tr:last-child th,
+    .ingreso-casa-table td table tr:last-child td {
+      border-bottom: none !important;
+    }
+    .ingreso-casa-table td table tr th:first-child,
+    .ingreso-casa-table td table tr td:first-child {
+      border-left: none !important;
+    }
+    .ingreso-casa-table td table tr th:last-child,
+    .ingreso-casa-table td table tr td:last-child {
+      border-right: none !important;
+    }
+    /* Logo: llena la celda del encabezado al imprimir */
+    .print-logo {
+      height: 90px !important;
+      max-height: 90px !important;
+      width: 100% !important;
+      object-fit: contain !important;
+      display: block !important;
+    }
+    /* Celda del logo: no comprimir */
+    .logo-cell {
+      padding: 8px !important;
+      width: 20% !important;
+    }
+    /* Celdas de firma: la linea + leyenda van pegadas abajo y el espacio en
+       blanco queda arriba para poder firmar SOBRE la linea. */
+    .firma-cell {
+      min-height: 130px !important;
+      height: 130px !important;
+      vertical-align: bottom !important;
+      padding-top: 12px !important;
+      padding-bottom: 10px !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="no-print flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  <div class="flex items-center gap-3">
+    <a href="{% if referencia %}{% url 'referencias:detalle' referencia.pk %}{% else %}{% url 'referencias:historial_paciente' paciente.pk %}{% endif %}"
+       class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Ficha de Ingreso Casa FACCI</h2>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">{{ paciente.nombre_completo }} - {{ paciente.codigo_paciente }}</p>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'referencias:formulario_ingreso_casa_facci_pdf' ingreso.pk %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">download</span>Descargar PDF
+    </a>
+    <a href="{% url 'referencias:formulario_ingreso_casa_facci_pdf' ingreso.pk %}?inline=1"
+       target="_blank" rel="noopener"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">print</span>Imprimir
+    </a>
+    <a href="{% if referencia %}{% url 'referencias:detalle' referencia.pk %}{% else %}{% url 'referencias:lista' %}{% endif %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>Volver
+    </a>
+  </div>
+</div>
+
+<article class="print-doc print-page print-letter print-compact ingreso-casa-sheet max-w-[8.5in] mx-auto p-6 md:p-8 space-y-4">
+  <table class="ingreso-casa-table">
+    <tr>
+      <td class="logo-cell w-1/5 text-center align-middle">
+        <img src="{{ sistema_config.logo_reportes_url }}" alt="FACCI" class="print-logo max-h-24 w-full object-contain mx-auto">
+      </td>
+      <td class="text-center align-middle">
+        <h1 class="text-lg font-bold tracking-normal">{{ titulo }}</h1>
+      </td>
+      <td class="w-1/4 p-0">
+        <table class="ingreso-casa-table text-sm">
+          <tr>
+            <th class="text-left bg-slate-50">Codigo:</th>
+            <td>{{ codigo_documento }}</td>
+          </tr>
+          <tr>
+            <th class="text-left bg-slate-50">Fecha:</th>
+            <td>{{ fecha_documento }}</td>
+          </tr>
+          <tr>
+            <th class="text-left bg-slate-50">Formulario:</th>
+            <td>{{ ingreso.codigo }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {% for section in sections %}
+  <table class="ingreso-casa-table">
+    <tr>
+      <th colspan="4" class="ingreso-section-title text-left">{{ section.title }}</th>
+    </tr>
+    {% for row in section.rows %}
+    <tr>
+      {% for field in row %}
+      <td class="ingreso-label">{{ field.label }}</td>
+      <td class="ingreso-value">{% if field.value %}{{ field.value }}{% else %}&nbsp;{% endif %}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+  {% endfor %}
+
+  <table class="ingreso-casa-table">
+    <tr>
+      <th class="ingreso-section-title text-left">4. FIRMA Y VALIDACION</th>
+    </tr>
+    <tr>
+      <td class="firma-cell align-bottom h-32 pb-3 text-center text-sm">
+        <div class="border-t border-black w-80 max-w-full mx-auto pt-2">Firma del familiar responsable</div>
+      </td>
+    </tr>
+    <tr>
+      <td class="firma-cell align-bottom h-32 pb-3 text-center text-sm">
+        <div class="border-t border-black w-80 max-w-full mx-auto pt-2">Firma y sello FACCI</div>
+      </td>
+    </tr>
+  </table>
+
+  <footer class="text-center text-xs text-slate-600 pt-3">
+    {{ footer_text }}
+  </footer>
+</article>
+
+{% if auto_print %}
+<script>
+  window.addEventListener('load', function () {
+    window.print();
+  });
+</script>
+{% endif %}
+
+{% endblock %}

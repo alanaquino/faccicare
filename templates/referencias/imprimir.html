@@ -1,0 +1,501 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}{{ referencia.codigo }} — Formulario MSP{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Configuración de tamaño de página Letter (8.5x11 pulgadas) */
+  @page {
+    size: 8.5in 11in;
+    margin: 0.35in 0.4in;
+  }
+
+  @media print {
+    body {
+      background: white !important;
+      color: black !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .no-print {
+      display: none !important;
+    }
+    .msp-form-container {
+      width: 100% !important;
+      max-width: 100% !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    .line-input {
+      border-bottom: 1px solid #000000 !important;
+      background: transparent !important;
+    }
+    textarea {
+      border: none !important;
+      resize: none !important;
+      padding: 0 !important;
+    }
+    /* Ocultar textos de ejemplos / placeholders al imprimir */
+    input::placeholder, textarea::placeholder {
+      color: transparent !important;
+      opacity: 0 !important;
+    }
+    /* Estilos de impresión para checkboxes y líneas */
+    .msp-checkbox {
+      border: 1px solid #000000 !important;
+      background: transparent !important;
+    }
+    .line-checkbox {
+      border: none !important;
+      border-bottom: 1px solid #000000 !important;
+      background: transparent !important;
+    }
+  }
+
+  @media screen {
+    .msp-form-container {
+      max-width: 8.5in;
+      margin: 2rem auto;
+      padding: 0.5in;
+      border: 1px solid #d1d5db;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      background-color: white;
+      border-radius: 0.5rem;
+    }
+  }
+
+  /* Clases específicas para el diseño exacto del formulario MSP */
+  .msp-header-box {
+    background-color: #122a53 !important;
+    color: white !important;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 8px;
+    text-transform: uppercase;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .msp-header-box.italic {
+    font-style: italic;
+  }
+
+  .msp-border {
+    border: 1px solid #000000;
+  }
+
+  .msp-border-b {
+    border-bottom: 1px solid #000000;
+  }
+
+  .msp-border-r {
+    border-right: 1px solid #000000;
+  }
+
+  .underline-field {
+    border-bottom: 1px solid #000000;
+    display: inline-block;
+    font-weight: 600;
+    padding: 0 4px;
+  }
+
+  .line-input {
+    border: none !important;
+    border-bottom: 1px solid #000000 !important;
+    outline: none !important;
+    background: transparent !important;
+    font-weight: 600 !important;
+    padding: 0 4px !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .line-input:focus {
+    border-bottom: 2px solid #122a53 !important;
+    outline: none !important;
+  }
+
+  /* Checkbox cuadrado MSP: simula un checkbox físico en impresión */
+  .msp-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid #000000;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    vertical-align: middle;
+    margin-bottom: 2px;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .msp-checkbox:checked::after {
+    content: 'X';
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: bold;
+    color: black;
+  }
+
+  /* Checkbox de línea MSP: simula un espacio subrayado '___' con una 'X' encima si está activo */
+  .line-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 32px;
+    height: 16px;
+    border: none;
+    border-bottom: 1px solid #000000;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    vertical-align: middle;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .line-checkbox:checked::after {
+    content: 'X';
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: bold;
+    color: black;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Barra de acción (No se imprime) ── #}
+<div class="no-print flex items-center justify-between gap-3 mb-6 p-4 bg-surface-container rounded-xl border border-outline-variant max-w-3xl mx-auto">
+  <div class="flex items-center gap-3">
+    <a href="{% url 'referencias:detalle' referencia.pk %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-high transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>Volver
+    </a>
+    <span class="font-semibold text-on-surface text-body-md">
+      Formulario MSP ({{ referencia.codigo }})
+    </span>
+  </div>
+  <div class="flex items-center gap-2">
+    <button type="submit" form="mspForm"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-secondary text-on-secondary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">save</span>Guardar en Expediente
+    </button>
+    <button type="button" onclick="window.print()"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">print</span>Imprimir Formulario
+    </button>
+  </div>
+</div>
+
+{# ════════════ CONTENEDOR DEL FORMULARIO MSP (TAMAÑO CARTA) ════════════ #}
+<form method="POST" action="{% url 'referencias:guardar_documento_msp' referencia.pk %}" id="mspForm" class="msp-form-container text-black text-xs leading-tight bg-white">
+  {% csrf_token %}
+  
+  {# ── ENCABEZADO ── #}
+  <div class="flex items-center justify-between pb-2 mb-2 msp-border-b">
+    <div class="w-[180px] shrink-0">
+      <img src="{% static 'img/logo_msp.jpeg' %}" alt="Ministerio de Salud Pública" class="h-14 w-auto object-contain">
+    </div>
+    <div class="flex-1 text-center pr-[100px]">
+      <h1 class="text-base font-bold text-[#122a53] uppercase leading-tight tracking-tight">
+        Formulario para Referencia y Contrarreferencia
+      </h1>
+      <h2 class="text-xs font-bold text-black uppercase tracking-tight mt-0.5">
+        Ante sospecha de cáncer infantil
+      </h2>
+    </div>
+  </div>
+
+  {# ── FILA GENERAL ── #}
+  <div class="flex justify-between items-center mb-3">
+    <div>
+      Fecha: <span class="underline-field min-w-[130px] text-center">{{ referencia.fecha_referencia|date:"d/m/Y" }}</span>
+    </div>
+    <div>
+      Establecimiento de salud que refiere: 
+      <input type="text" name="establecimiento_refiere" 
+             value="{{ referencia.medico_referente.centro_medico|default:'Fundación de Ayuda al Cáncer Infantil (FACCI)' }}" 
+             class="line-input min-w-[280px] text-center">
+    </div>
+  </div>
+
+  {# ── SECCIÓN 1: NOMBRE DEL PACIENTE ── #}
+  <div class="flex items-center mb-1">
+    <div class="msp-header-box shrink-0">Nombre del Paciente</div>
+    <div class="border-b border-black flex-1 ml-2 font-bold px-2 text-sm leading-none pt-0.5">
+      {{ paciente.nombre_completo }}
+    </div>
+  </div>
+
+  {# ── CUADRO DE DETALLES DEL PACIENTE ── #}
+  <table class="w-full border-collapse msp-border text-[11px] mb-3">
+    <tr>
+      <!-- Edad -->
+      <td class="w-[15%] p-1.5 msp-border-r align-top">
+        <span class="block text-[9px] font-bold text-gray-700 uppercase">Edad</span>
+        <span class="font-semibold text-xs mt-0.5 block">{{ paciente.edad }}</span>
+      </td>
+      <!-- Sexo (Editable) -->
+      <td class="w-[20%] p-1.5 msp-border-r align-top">
+        <span class="block text-[9px] font-bold text-gray-700 uppercase mb-1">Sexo</span>
+        <div class="flex gap-3">
+          <span class="inline-flex items-center gap-1 font-semibold">
+            M <input type="checkbox" name="sexo_m" value="1" {% if paciente.sexo == 'M' %}checked{% endif %} class="msp-checkbox">
+          </span>
+          <span class="inline-flex items-center gap-1 font-semibold">
+            F <input type="checkbox" name="sexo_f" value="1" {% if paciente.sexo == 'F' %}checked{% endif %} class="msp-checkbox">
+          </span>
+        </div>
+      </td>
+      <!-- Nacionalidad (Editable) -->
+      <td class="w-[35%] p-1.5 msp-border-r align-top">
+        <span class="block text-[9px] font-bold text-gray-700 uppercase mb-1">Nacionalidad</span>
+        <div class="flex flex-col gap-1">
+          <div class="flex gap-4">
+            <span class="inline-flex items-center gap-1">
+              Dom. <input type="checkbox" name="nacionalidad_dom" value="1" {% if not paciente.padre_tutor.nacionalidad or 'domin' in paciente.padre_tutor.nacionalidad.lower %}checked{% endif %} class="msp-checkbox">
+            </span>
+            <span class="inline-flex items-center gap-1">
+              Extranjero <input type="checkbox" name="nacionalidad_ext" value="1" {% if paciente.padre_tutor.nacionalidad and 'domin' not in paciente.padre_tutor.nacionalidad.lower %}checked{% endif %} class="msp-checkbox">
+            </span>
+          </div>
+          <div>
+            <span class="text-[9px]">Especifique:</span>
+            <input type="text" name="nacionalidad_especifique" 
+                   value="{% if paciente.padre_tutor.nacionalidad and 'domin' not in paciente.padre_tutor.nacionalidad.lower %}{{ paciente.padre_tutor.nacionalidad }}{% endif %}" 
+                   class="line-input w-[110px] text-center font-semibold text-[10px]">
+          </div>
+        </div>
+      </td>
+      <!-- ARS y Tipo (Editable) -->
+      <td class="w-[30%] p-1.5 align-top">
+        <span class="block text-[9px] font-bold text-gray-700 uppercase mb-1">ARS y Tipo</span>
+        <div class="font-semibold text-[10px] border-b border-gray-300 pb-0.5 mb-1 truncate">
+          <input type="text" name="ars_nombre" 
+                 value="{{ paciente.seguro_medico|default:'' }} {% if paciente.numero_seguro %}(No. {{ paciente.numero_seguro }}){% endif %}" 
+                 placeholder="Ej. SeNaSa"
+                 class="line-input w-full font-semibold">
+        </div>
+        <div class="flex gap-2">
+          <span class="inline-flex items-center gap-1 text-[10px]">
+            Cont. <input type="checkbox" name="ars_cont" value="1" {% if 'contri' in paciente.seguro_medico.lower %}checked{% endif %} class="msp-checkbox">
+          </span>
+          <span class="inline-flex items-center gap-1 text-[10px]">
+            Subs. <input type="checkbox" name="ars_subs" value="1" {% if 'subsi' in paciente.seguro_medico.lower or 'senasa' in paciente.seguro_medico.lower and 'contri' not in paciente.seguro_medico.lower %}checked{% endif %} class="msp-checkbox">
+          </span>
+          <span class="inline-flex items-center gap-1 text-[10px]">
+            Otro <input type="checkbox" name="ars_otro" value="1" {% if paciente.seguro_medico and 'contri' not in paciente.seguro_medico.lower and 'subsi' not in paciente.seguro_medico.lower and 'senasa' not in paciente.seguro_medico.lower %}checked{% endif %} class="msp-checkbox">
+          </span>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {# ── SECCIÓN 2: BREVE HISTORIA POR LA QUE SE REFIERE AL PACIENTE ── #}
+  <div class="msp-header-box italic mb-1">Breve Historia por la que se refiere al paciente</div>
+  <div class="msp-border p-2 min-h-[75px] text-xs leading-normal mb-3 whitespace-pre-wrap font-serif">
+    {{ referencia.motivo_referencia }}
+  </div>
+
+  {# ── SECCIÓN 3: SIGNOS VITALES (EDITABLES) ── #}
+  <div class="msp-header-box italic mb-1">Signos Vitales</div>
+  <div class="flex justify-between msp-border p-2 text-xs mb-3">
+    <div>TA: <input type="text" name="ta" value="" placeholder="Ej. 120/80" class="line-input w-20 text-center font-semibold"></div>
+    <div>FC: <input type="text" name="fc" value="" placeholder="Ej. 80" class="line-input w-20 text-center font-semibold"> lpm</div>
+    <div>FR: <input type="text" name="fr" value="" placeholder="Ej. 18" class="line-input w-20 text-center font-semibold"> rpm</div>
+    <div>TEMPERATURA: <input type="text" name="temperatura" value="" placeholder="Ej. 37.2" class="line-input w-20 text-center font-semibold"> °C</div>
+  </div>
+
+  {# ── SECCIÓN 4: SIGNOS DE ALERTA DE CÁNCER INFANTIL (EDITABLES) ── #}
+  <div class="msp-header-box italic mb-1">Signos de Alerta de Cáncer Infantil</div>
+  {% with cribado=referencia.cuestionario|default:ultimo_cribado %}
+  <div class="msp-border p-2 text-[11px] mb-3 space-y-2">
+    <!-- Fila 1 -->
+    <div class="flex justify-between gap-4">
+      <div class="w-[33%]">
+        Fiebre <input type="checkbox" name="sintoma_fiebre" value="1" {% if cribado.fiebre_persistente %}checked{% endif %} class="line-checkbox">
+      </div>
+      <div class="w-[33%]">
+        Masa en Abdomen <input type="checkbox" name="sintoma_masa" value="1" {% if cribado.masa_abdominal %}checked{% endif %} class="line-checkbox">
+      </div>
+      <div class="w-[33%]">
+        Moretones en piel o sangrado <input type="checkbox" name="sintoma_moretones" value="1" {% if cribado.moretones or cribado.sangrado %}checked{% endif %} class="line-checkbox">
+      </div>
+    </div>
+    <!-- Fila 2 -->
+    <div class="flex justify-between gap-4">
+      <div class="w-[25%]">
+        Pérdida de Peso <input type="checkbox" name="sintoma_peso" value="1" {% if cribado.perdida_peso %}checked{% endif %} class="line-checkbox">
+      </div>
+      <div class="w-[35%]">
+        Mancha blanca o masa en el ojo <input type="checkbox" name="sintoma_ojo" value="1" {% if cribado.leucocoria %}checked{% endif %} class="line-checkbox">
+      </div>
+      <div class="w-[20%]">
+        Vómitos mañaneros <input type="checkbox" name="sintoma_vomitos" value="1" {% if cribado.vomitos %}checked{% endif %} class="line-checkbox">
+      </div>
+      <div class="w-[20%]">
+        Dolor de Huesos <input type="checkbox" name="sintoma_huesos" value="1" {% if cribado.dolor_huesos %}checked{% endif %} class="line-checkbox">
+      </div>
+    </div>
+    <!-- Fila 3 -->
+    <div class="flex justify-between gap-4">
+      <div class="w-[30%]">
+        Sudoración Abundante <input type="checkbox" name="sintoma_sudoracion" value="1" {% if 'sudor' in cribado.observaciones.lower or 'sudor' in referencia.observaciones.lower %}checked{% endif %} class="line-checkbox">
+      </div>
+      <div class="w-[30%]">
+        Crecimiento de ganglios <input type="checkbox" name="sintoma_ganglios" value="1" {% if cribado.ganglios %}checked{% endif %} class="line-checkbox">
+      </div>
+      <div class="w-[40%]">
+        Fatiga, pérdida apetito <input type="checkbox" name="sintoma_fatiga" value="1" {% if cribado.fatiga %}checked{% endif %} class="line-checkbox">
+      </div>
+    </div>
+    <!-- Fila 4: Otro -->
+    <div>
+      <span>Otro:</span>
+      <input type="text" name="sintoma_otro" 
+             value="{% if cribado.palidez %}Palidez. {% endif %}{% if cribado.infecciones_recurrentes %}Infecciones recurrentes. {% endif %}{% if cribado.dolor_cabeza %}Dolor de cabeza persistente. {% endif %}{% if cribado.observaciones %}{{ cribado.observaciones }}{% endif %}" 
+             class="line-input w-[88%] pl-2 font-semibold">
+    </div>
+  </div>
+  {% endwith %}
+
+  {# ── SECCIÓN 5: DESTINO Y MÉDICO QUE REFIERE ── #}
+  <table class="w-full border-collapse msp-border text-xs mb-2">
+    <tr>
+      <!-- Columna izquierda: Datos de referencia -->
+      <td class="w-[70%] msp-border-r p-0 align-top">
+        <div class="flex items-center border-b border-black">
+          <div class="msp-header-box italic shrink-0 w-[170px] text-center">
+            Centro al cual se refiere
+          </div>
+          <div class="px-3 font-semibold text-xs leading-none pt-0.5">
+            {{ referencia.hospital_destino|default:"—" }}
+          </div>
+        </div>
+        <div class="flex items-center">
+          <div class="msp-header-box shrink-0 w-[170px] text-center">
+            Nombre del médico que refiere
+          </div>
+          <div class="px-3 font-semibold text-xs leading-none pt-0.5">
+            {{ referencia.medico_referente.get_full_name }}
+          </div>
+        </div>
+      </td>
+      <!-- Columna derecha: Sello -->
+      <td class="w-[30%] p-1.5 text-center align-middle">
+        <div class="font-bold text-[9px] uppercase text-gray-500 mb-5 leading-none">Sello del Centro que Refiere</div>
+        <div class="border-t border-dashed border-gray-400 w-24 mx-auto mt-2"></div>
+      </td>
+    </tr>
+  </table>
+
+  {# ── SEPARADOR ── #}
+  <div class="border-t border-black my-2.5"></div>
+
+  {# ════════════ SECCIÓN: CONTRARREFERENCIA (EDITABLES) ════════════ #}
+  <div class="text-center font-bold text-xs uppercase tracking-wider mb-2">
+    Contra-Referencia
+  </div>
+
+  {% with contra=referencia.contrarreferencia %}
+  <div class="flex justify-between items-center mb-2">
+    <div>
+      Fecha: 
+      <input type="text" name="contra_fecha" 
+             value="{% if contra %}{{ contra.fecha_atencion|date:'d/m/Y' }}{% endif %}" 
+             placeholder="dd/mm/aaaa"
+             class="line-input min-w-[130px] text-center font-semibold">
+    </div>
+  </div>
+
+  {# Historia de Atención #}
+  <div class="msp-header-box mb-1">Historia de Atención</div>
+  <div class="msp-border p-1 mb-2">
+    <textarea name="contra_historia" rows="2" placeholder="Describa el diagnóstico o historia de atención..." class="w-full border-0 p-1 font-serif text-xs focus:ring-0 focus:outline-none bg-transparent">{% if contra %}Diagnóstico: {{ contra.diagnostico }}{% if contra.tratamiento_realizado %}&#10;Tratamiento: {{ contra.tratamiento_realizado }}{% endif %}{% if contra.recomendaciones %}&#10;Recomendaciones: {{ contra.recomendaciones }}{% endif %}{% endif %}</textarea>
+  </div>
+
+  {# Medicación indicada #}
+  <div class="msp-header-box mb-1">Medicación indicada</div>
+  <div class="msp-border p-1 mb-2">
+    <textarea name="contra_medicamentos" rows="2" placeholder="Listar medicamentos indicados..." class="w-full border-0 p-1 font-serif text-xs focus:ring-0 focus:outline-none bg-transparent">{% if contra %}{{ contra.medicamentos_indicados }}{% endif %}</textarea>
+  </div>
+
+  {# Estudios y/o imágenes realizadas #}
+  <div class="msp-header-box mb-1">Estudios y/o imágenes realizadas</div>
+  <div class="msp-border p-1 mb-2">
+    <textarea name="contra_estudios" rows="2" placeholder="Describa estudios realizados..." class="w-full border-0 p-1 font-serif text-xs focus:ring-0 focus:outline-none bg-transparent">{% if contra %}{{ contra.estudios_realizados }}{% endif %}</textarea>
+  </div>
+
+  {# Médico que contra-refiere y Sello #}
+  <table class="w-full border-collapse msp-border text-xs mt-3">
+    <tr>
+      <!-- Médico que contra-refiere -->
+      <td class="w-[65%] msp-border-r p-0 align-top">
+        <div class="flex items-center">
+          <div class="msp-header-box shrink-0 w-[190px] text-center leading-normal py-1">
+            Nombre del médico que contra-refiere
+          </div>
+          <div class="px-3 flex-1">
+            <input type="text" name="contra_medico" 
+                   value="{% if contra %}{{ contra.medico_contrarreferente.get_full_name }}{% endif %}" 
+                   placeholder="Nombre del médico"
+                   class="line-input w-full font-semibold">
+          </div>
+        </div>
+      </td>
+      <!-- Sello -->
+      <td class="w-[35%] p-1 text-center align-middle">
+        <div class="font-bold text-[8px] uppercase text-gray-500 mb-4 leading-none">Sello del Centro que contra-refiere</div>
+        <div class="border-t border-dashed border-gray-400 w-24 mx-auto mt-2"></div>
+      </td>
+    </tr>
+  </table>
+  {% endwith %}
+
+</form>
+
+<script>
+  // Enforzar exclusividad mutua para las casillas de Sexo
+  document.querySelectorAll('input[name="sexo_m"], input[name="sexo_f"]').forEach(el => {
+    el.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        const other = e.target.name === 'sexo_m' ? 'sexo_f' : 'sexo_m';
+        const otherEl = document.querySelector(`input[name="${other}"]`);
+        if (otherEl) otherEl.checked = false;
+      }
+    });
+  });
+
+  // Enforzar exclusividad mutua para las casillas de Nacionalidad
+  document.querySelectorAll('input[name="nacionalidad_dom"], input[name="nacionalidad_ext"]').forEach(el => {
+    el.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        const other = e.target.name === 'nacionalidad_dom' ? 'nacionalidad_ext' : 'nacionalidad_dom';
+        const otherEl = document.querySelector(`input[name="${other}"]`);
+        if (otherEl) otherEl.checked = false;
+      }
+    });
+  });
+
+  // Enforzar exclusividad mutua para las casillas de Tipo de ARS
+  document.querySelectorAll('input[name="ars_cont"], input[name="ars_subs"], input[name="ars_otro"]').forEach(el => {
+    el.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        const others = ['ars_cont', 'ars_subs', 'ars_otro'].filter(name => name !== e.target.name);
+        others.forEach(name => {
+          const otherEl = document.querySelector(`input[name="${name}"]`);
+          if (otherEl) otherEl.checked = false;
+        });
+      }
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends "layouts/base.html" %}
+{% block title %}Administración de Indicaciones Médicas{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-stack-md">
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background">Indicaciones Médicas</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-1">Gestión centralizada de protocolos y pautas médicas para el Portal de Padres.</p>
+  </div>
+  <div class="relative w-full md:w-80 shadow-sm rounded-full">
+    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+    <input id="buscadorPacientes" 
+      class="w-full pl-11 pr-5 py-3 bg-surface-container-lowest border border-outline-variant rounded-full focus:ring-2 focus:ring-primary outline-none font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/70 transition-all shadow-inner"
+      placeholder="Buscar paciente por nombre o código..." type="text" onkeyup="filtrarPacientes()">
+  </div>
+</div>
+
+{# Tarjetas de Resumen Clínico #}
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-gutter mb-6">
+  {# Total Pacientes #}
+  <div class="bg-surface-container-lowest border border-outline-variant/40 rounded-2xl p-5 flex items-center gap-4 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+    <div class="absolute top-0 left-0 w-1.5 h-full bg-primary"></div>
+    <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+      <span class="material-symbols-outlined text-2xl icon-fill">child_care</span>
+    </div>
+    <div>
+      <p class="font-label-sm text-xs text-on-surface-variant uppercase tracking-wider font-semibold">Total Pacientes</p>
+      <h3 class="font-headline-xl text-3xl font-bold text-on-surface mt-1">{{ total_pacientes }}</h3>
+    </div>
+  </div>
+
+  {# Indicaciones Definidas #}
+  <div class="bg-surface-container-lowest border border-outline-variant/40 rounded-2xl p-5 flex items-center gap-4 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+    <div class="absolute top-0 left-0 w-1.5 h-full bg-tertiary"></div>
+    <div class="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:scale-110 transition-transform">
+      <span class="material-symbols-outlined text-2xl">task_alt</span>
+    </div>
+    <div>
+      <p class="font-label-sm text-xs text-on-surface-variant uppercase tracking-wider font-semibold">Definidas</p>
+      <h3 class="font-headline-xl text-3xl font-bold text-on-surface mt-1">{{ definidos }}</h3>
+    </div>
+  </div>
+
+  {# Indicaciones Pendientes #}
+  <div class="bg-surface-container-lowest border border-outline-variant/40 rounded-2xl p-5 flex items-center gap-4 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+    <div class="absolute top-0 left-0 w-1.5 h-full bg-error"></div>
+    <div class="w-12 h-12 rounded-xl bg-error/10 flex items-center justify-center text-error group-hover:scale-110 transition-transform">
+      <span class="material-symbols-outlined text-2xl">pending_actions</span>
+    </div>
+    <div>
+      <p class="font-label-sm text-xs text-on-surface-variant uppercase tracking-wider font-semibold">Pendientes</p>
+      <h3 class="font-headline-xl text-3xl font-bold text-on-surface mt-1">{{ pendientes }}</h3>
+    </div>
+  </div>
+</div>
+
+{# Listado de Pacientes #}
+<div class="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden shadow-sm">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container border-b border-outline-variant">
+          <th class="px-6 py-4 font-headline-md text-sm font-semibold text-on-surface">Paciente</th>
+          <th class="px-6 py-4 font-headline-md text-sm font-semibold text-on-surface">Código</th>
+          <th class="px-6 py-4 font-headline-md text-sm font-semibold text-on-surface">Médico Asignado</th>
+          <th class="px-6 py-4 font-headline-md text-sm font-semibold text-on-surface">Protocolo Activo</th>
+          <th class="px-6 py-4 font-headline-md text-sm font-semibold text-on-surface">Pauta Médica</th>
+          <th class="px-6 py-4 font-headline-md text-sm font-semibold text-on-surface text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaPacientesBody" class="divide-y divide-outline-variant/30">
+        {% for data in pacientes_data %}
+        <tr class="hover:bg-primary-container/10 focus-within:bg-primary-container/10 transition-colors fila-paciente cursor-pointer" 
+            data-nombre="{{ data.paciente.nombre_completo|lower }}" 
+            data-codigo="{{ data.paciente.codigo_paciente|lower }}"
+            data-href="{% url 'indicaciones:paciente_indicaciones' data.paciente.id %}"
+            role="link"
+            tabindex="0"
+            title="Ver indicaciones de {{ data.paciente.nombre_completo }}">
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+              {# Avatar con iniciales en HSL para dar viveza visual #}
+              <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-bold text-sm select-none border border-outline-variant/30"
+                   style="background-color: hsl({% widthratio data.paciente.id.int 1000000 360 %}, 75%, 92%); color: hsl({% widthratio data.paciente.id.int 1000000 360 %}, 85%, 28%);">
+                {{ data.paciente.iniciales }}
+              </div>
+              <div class="min-w-0">
+                <a href="{% url 'indicaciones:paciente_indicaciones' data.paciente.id %}"
+                   class="block font-label-md text-sm font-bold text-on-surface hover:text-primary transition-colors whitespace-nowrap">
+                  {{ data.paciente.nombre_completo }}
+                </a>
+                <p class="font-body-sm text-xs text-on-surface-variant whitespace-nowrap">{{ data.paciente.edad }} &middot; {{ data.paciente.get_sexo_display }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            <span class="font-mono text-xs font-semibold bg-surface-container px-2.5 py-1 rounded-md text-on-surface-variant border border-outline-variant/30 whitespace-nowrap">
+              {{ data.paciente.codigo_paciente }}
+            </span>
+          </td>
+          <td class="px-6 py-4 font-body-sm text-sm text-on-surface">
+            {% if data.paciente.medico_asignado %}
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-base text-primary">stethoscope</span>
+              <span>{{ data.paciente.medico_asignado.nombre_completo }}</span>
+            </div>
+            {% else %}
+            <span class="text-on-surface-variant/60 italic">Sin asignar</span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-4">
+            {% if data.ultimo_seguimiento.tratamiento_actual %}
+            <div class="flex flex-col gap-1">
+              <span class="inline-flex w-fit items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-tertiary/10 text-tertiary font-label-sm text-xs font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>Definido
+              </span>
+              <span class="font-body-sm text-xs text-on-surface-variant truncate max-w-[160px]" title="{{ data.ultimo_seguimiento.tratamiento_actual }}">
+                {{ data.ultimo_seguimiento.tratamiento_actual }}
+              </span>
+            </div>
+            {% else %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-outline-variant/20 text-on-surface-variant/80 font-label-sm text-xs font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-outline"></span>Sin definir
+            </span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-4">
+            {% if data.ultimo_seguimiento.observaciones %}
+            <div class="flex flex-col gap-1">
+              <span class="inline-flex w-fit items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-tertiary/10 text-tertiary font-label-sm text-xs font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>Definido
+              </span>
+              <span class="font-body-sm text-xs text-on-surface-variant truncate max-w-[160px]" title="{{ data.ultimo_seguimiento.observaciones }}">
+                {{ data.ultimo_seguimiento.observaciones }}
+              </span>
+            </div>
+            {% else %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-outline-variant/20 text-on-surface-variant/80 font-label-sm text-xs font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-outline"></span>Sin definir
+            </span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-4 text-right">
+            <div class="inline-flex items-center justify-end gap-2">
+              
+              <a href="{% url 'indicaciones:descargo_tratamiento' data.paciente.id %}"
+                 class="inline-flex items-center justify-center p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                 title="Descargo tratamiento medico">
+                <span class="material-symbols-outlined text-lg">description</span>
+              </a>
+              <a href="{% url 'indicaciones:descargo_tratamiento_pdf' data.paciente.id %}"
+                 class="inline-flex items-center justify-center p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                 title="Descargar descargo PDF">
+                <span class="material-symbols-outlined text-lg">download</span>
+              </a>
+              <a href="{% url 'indicaciones:paciente_indicaciones' data.paciente.id %}"
+                 class="inline-flex items-center justify-center p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                 title="Ver indicaciones de {{ data.paciente.nombre_completo }}"
+                 aria-label="Ver indicaciones de {{ data.paciente.nombre_completo }}">
+                <span class="material-symbols-outlined text-lg">visibility</span>
+              </a>
+              <a href="{% url 'seguimiento:indicaciones_admin_editar' data.paciente.id %}"
+                 class="inline-flex items-center justify-center p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                 title="Editar indicaciones de {{ data.paciente.nombre_completo }}"
+                 aria-label="Editar indicaciones de {{ data.paciente.nombre_completo }}">
+                <span class="material-symbols-outlined text-lg">edit</span>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="px-6 py-12 text-center text-on-surface-variant/70 font-body-md text-sm">
+            <span class="material-symbols-outlined text-4xl mb-2 text-outline-variant">assignment_late</span>
+            <p>No se encontraron pacientes en el sistema.</p>
+          </td>
+        </tr>
+        {% endfor %}
+        {# Fila de no resultados para el buscador #}
+        <tr id="filaNoResultados" class="hidden">
+          <td colspan="6" class="px-6 py-12 text-center text-on-surface-variant/70 font-body-md text-sm">
+            <span class="material-symbols-outlined text-4xl mb-2 text-outline-variant">search_off</span>
+            <p>No se encontraron pacientes que coincidan con la búsqueda.</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  function filtrarPacientes() {
+    const query = document.getElementById('buscadorPacientes').value.toLowerCase().trim();
+    const filas = document.querySelectorAll('.fila-paciente');
+    const noResultados = document.getElementById('filaNoResultados');
+    let encontrados = 0;
+
+    filas.forEach(fila => {
+      const nombre = fila.getAttribute('data-nombre');
+      const codigo = fila.getAttribute('data-codigo');
+
+      if (nombre.includes(query) || codigo.includes(query)) {
+        fila.classList.remove('hidden');
+        encontrados++;
+      } else {
+        fila.classList.add('hidden');
+      }
+    });
+
+    if (encontrados === 0 && query !== '') {
+      noResultados.classList.remove('hidden');
+    } else {
+      noResultados.classList.add('hidden');
+    }
+  }
+
+  document.querySelectorAll('.fila-paciente[data-href]').forEach(fila => {
+    const abrirIndicaciones = () => {
+      window.location.href = fila.dataset.href;
+    };
+
+    fila.addEventListener('click', event => {
+      if (event.target.closest('a, button, input, select, textarea, label')) {
+        return;
+      }
+      abrirIndicaciones();
+    });
+
+    fila.addEventListener('keydown', event => {
+      if (event.target.closest('a, button, input, select, textarea, label')) {
+        return;
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        abrirIndicaciones();
+      }
+    });
+  });
+</script>
+
+{% endblock %}

@@ -1,0 +1,153 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Iniciar Sesión — {{ sistema_config.nombre_aplicacion }}</title>
+  <link rel="icon" type="image/png" href="{{ sistema_config.logo_aplicacion_url }}">
+  <link rel="shortcut icon" type="image/png" href="{{ sistema_config.logo_aplicacion_url }}">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  </style>
+</head>
+<body class="min-h-screen bg-[#f0f7f6] flex">
+
+  {# Panel izquierdo — decorativo #}
+  <section class="hidden lg:flex w-1/2 bg-[#d8eeec] items-center justify-center p-12">
+    <div class="max-w-lg text-center">
+      <div class="w-36 h-36 rounded-3xl bg-white mx-auto mb-8 flex items-center justify-center shadow-md border border-[#b2ceca] p-4">
+        <img src="{{ sistema_config.logo_aplicacion_url }}" alt="Logo App" class="w-full h-full object-contain">
+      </div>
+      <h1 class="text-4xl font-bold text-[#006a62] mb-4">{{ sistema_config.nombre_aplicacion }}</h1>
+      <p class="text-lg text-[#3d5450] leading-relaxed">
+        Backend clínico pediátrico para pacientes, referencias, seguimiento, alertas y reportes.
+      </p>
+    </div>
+  </section>
+
+  {# Panel derecho — formulario #}
+  <main class="w-full lg:w-1/2 flex items-center justify-center px-6 py-12 bg-white">
+    <div class="w-full max-w-sm">
+
+      {# Encabezado #}
+      <div class="mb-8 text-center">
+        <div class="flex items-center justify-center gap-3 mb-3">
+          <img src="{{ sistema_config.logo_aplicacion_url }}" alt="Logo App" class="w-10 h-10 object-contain">
+          <h2 class="text-2xl font-bold text-[#006a62]">{{ sistema_config.nombre_aplicacion }}</h2>
+        </div>
+        <p class="text-[#5a7370] text-sm">Acceso al Dashboard Clínico.</p>
+      </div>
+
+      {# Mensajes de error #}
+      {% if messages %}
+      <div class="mb-5 space-y-2">
+        {% for message in messages %}
+        <div class="rounded-lg bg-[#ffdad6] text-[#93000a] px-4 py-3 text-sm flex items-center gap-2">
+          <span class="material-symbols-outlined text-base">error</span>
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# Formulario #}
+      <form class="space-y-5" action="{% url 'auth_app:login' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        {# Nombre de usuario o Correo #}
+        <div>
+          <label class="block text-sm font-semibold text-[#1a2e2c] mb-2" for="username">
+            Nombre de usuario o Correo
+          </label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#7a9490] text-xl pointer-events-none">account_circle</span>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              required
+              placeholder="usuario o correo@hospital.com"
+              class="w-full rounded-xl border border-[#bcc9c6] pl-10 pr-4 py-3 text-sm text-[#1a2e2c] placeholder-[#a0b4b1] focus:outline-none focus:ring-2 focus:ring-[#006a62] focus:border-transparent transition"
+            >
+          </div>
+        </div>
+
+        {# Contraseña #}
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-semibold text-[#1a2e2c]" for="password">Contraseña</label>
+            <a href="{% url 'auth_app:recuperar' %}" class="text-xs text-[#006a62] hover:underline font-medium">
+              ¿Olvidó su contraseña?
+            </a>
+          </div>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#7a9490] text-xl pointer-events-none">lock</span>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              placeholder="••••••••"
+              class="w-full rounded-xl border border-[#bcc9c6] pl-10 pr-12 py-3 text-sm text-[#1a2e2c] placeholder-[#a0b4b1] focus:outline-none focus:ring-2 focus:ring-[#006a62] focus:border-transparent transition"
+            >
+            <button
+              type="button"
+              onclick="togglePassword()"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-[#7a9490] hover:text-[#006a62] transition-colors"
+              tabindex="-1"
+            >
+              <span class="material-symbols-outlined text-xl" id="eye-icon">visibility_off</span>
+            </button>
+          </div>
+        </div>
+
+        {# Botón #}
+        <button
+          type="submit"
+          class="w-full rounded-xl bg-[#006a62] text-white font-semibold py-3 flex items-center justify-center gap-2 hover:bg-[#00544e] active:scale-[.98] transition-all text-sm"
+        >
+          Iniciar Sesión
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+        </button>
+      </form>
+
+      {# Link portal padres #}
+      <div class="mt-5 text-center">
+        <a class="text-sm text-[#006a62] hover:underline font-medium" href="{% url 'auth_app:login_padres' %}">
+          Acceso portal de padres
+        </a>
+      </div>
+
+      {# Badge de seguridad #}
+      <div class="mt-8 flex items-center gap-3 bg-[#eaf5f4] border border-[#b2d9d5] rounded-xl px-4 py-3">
+        <span class="material-symbols-outlined text-[#006a62] text-xl flex-shrink-0">verified_user</span>
+        <p class="text-xs text-[#3d5450] leading-snug">
+          Conexión cifrada de extremo a extremo. Privacidad clínica asegurada.
+        </p>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    function togglePassword() {
+      var input = document.getElementById('password');
+      var icon = document.getElementById('eye-icon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.textContent = 'visibility';
+      } else {
+        input.type = 'password';
+        icon.textContent = 'visibility_off';
+      }
+    }
+  </script>
+
+</body>
+</html>

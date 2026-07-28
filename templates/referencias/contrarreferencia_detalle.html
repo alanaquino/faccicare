@@ -1,0 +1,235 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ contra.codigo }}{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+  <div class="flex items-center gap-3 min-w-0">
+    <a href="{% url 'referencias:detalle' referencia.pk %}"
+       class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant shrink-0">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div class="min-w-0">
+      <h2 class="font-headline-lg text-headline-lg text-on-background">{{ contra.codigo }}</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant">
+        {{ referencia.paciente }} &middot; Atendido: {{ contra.fecha_atencion|date:"d/m/Y" }}
+      </p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2 shrink-0">
+    <a href="{% url 'referencias:imprimir' referencia.pk %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">description</span>
+      Formulario MSP
+    </a>
+    <button type="button" onclick="window.print()"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined icon-sm">print</span>
+      Imprimir
+    </button>
+  </div>
+</div>
+
+{# Badge resultado #}
+<div class="flex items-center gap-3 flex-wrap">
+  <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full font-label-md text-label-md
+    {% if contra.resultado_atencion == 'CONFIRMADO_SEGUIMIENTO' or contra.resultado_atencion == 'TRATAMIENTO_INICIADO' %}bg-primary-container/30 text-primary
+    {% elif contra.resultado_atencion == 'ALTA_MEDICA' %}bg-tertiary-container/30 text-tertiary
+    {% elif contra.resultado_atencion == 'FALLECIDO' %}bg-error-container/30 text-error
+    {% elif contra.resultado_atencion == 'NO_PRESENTADO' %}bg-secondary-container/30 text-secondary
+    {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+    <span class="material-symbols-outlined" style="font-size:16px;">
+      {% if contra.resultado_atencion == 'CONFIRMADO_SEGUIMIENTO' %}verified
+      {% elif contra.resultado_atencion == 'TRATAMIENTO_INICIADO' %}play_circle
+      {% elif contra.resultado_atencion == 'ALTA_MEDICA' %}check_circle
+      {% elif contra.resultado_atencion == 'FALLECIDO' %}sentiment_very_dissatisfied
+      {% elif contra.resultado_atencion == 'NO_PRESENTADO' %}person_off
+      {% else %}swap_horiz{% endif %}
+    </span>
+    {{ contra.get_resultado_atencion_display }}
+  </span>
+  {% if contra.requiere_seguimiento_facci %}
+  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-label-sm text-label-sm bg-primary-container/20 text-primary">
+    <span class="material-symbols-outlined" style="font-size:14px;">home_health</span>
+    Seguimiento FACCI requerido
+  </span>
+  {% endif %}
+  <span class="font-body-sm text-body-sm text-on-surface-variant">
+    Emitida por {{ contra.medico_contrarreferente.get_full_name|default:contra.medico_contrarreferente.username }}
+  </span>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+  {# Columna principal #}
+  <div class="lg:col-span-2 space-y-gutter">
+
+    {# Datos de la atención #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-5 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">medical_services</span>
+        Datos de la Atención
+      </h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Paciente</p>
+          <p class="font-body-md text-body-md text-on-surface font-medium">{{ referencia.paciente }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ referencia.edad }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Médico que atiende</p>
+          <p class="font-body-md text-body-md text-on-surface">
+            {{ contra.medico_contrarreferente.get_full_name|default:contra.medico_contrarreferente.username }}
+          </p>
+        </div>
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Fecha de atención</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ contra.fecha_atencion|date:"d/m/Y" }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Hospital / Centro</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ referencia.hospital_destino|default:"—" }}</p>
+        </div>
+        {% if contra.tipo_cancer %}
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Tipo de cáncer</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ contra.get_tipo_cancer_display }}</p>
+        </div>
+        {% endif %}
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Estadio clínico</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ contra.get_estadio_display }}</p>
+        </div>
+      </div>
+
+      <div class="mt-5 pt-4 border-t border-surface-container">
+        <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-2">Diagnóstico establecido</p>
+        <div class="p-4 bg-surface-container-low rounded-lg border-l-4 border-primary">
+          <p class="font-body-md text-body-md text-on-surface">{{ contra.diagnostico }}</p>
+        </div>
+      </div>
+    </div>
+
+    {# Tratamiento y medicamentos #}
+    {% if contra.tratamiento_realizado or contra.medicamentos_indicados or contra.estudios_realizados %}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-4">
+      <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary">medication</span>
+        Tratamiento y Medicamentos
+      </h3>
+      {% if contra.tratamiento_realizado %}
+      <div>
+        <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-2">Tratamiento realizado / indicado</p>
+        <p class="font-body-md text-body-md text-on-surface whitespace-pre-line">{{ contra.tratamiento_realizado }}</p>
+      </div>
+      {% endif %}
+      {% if contra.estudios_realizados %}
+      <div class="{% if contra.tratamiento_realizado %}pt-4 border-t border-surface-container{% endif %}">
+        <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-2">Estudios y/o imágenes realizadas</p>
+        <p class="font-body-md text-body-md text-on-surface whitespace-pre-line">{{ contra.estudios_realizados }}</p>
+      </div>
+      {% endif %}
+      {% if contra.medicamentos_indicados %}
+      <div class="{% if contra.tratamiento_realizado or contra.estudios_realizados %}pt-4 border-t border-surface-container{% endif %}">
+        <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-2">Medicamentos indicados</p>
+        <div class="p-4 bg-secondary-container/20 rounded-lg">
+          <p class="font-body-md text-body-md text-on-surface whitespace-pre-line">{{ contra.medicamentos_indicados }}</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# Recomendaciones #}
+    {% if contra.recomendaciones %}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-tertiary">tips_and_updates</span>
+        Recomendaciones al Médico Referente
+      </h3>
+      <div class="p-4 bg-tertiary-container/20 rounded-lg border-l-4 border-tertiary">
+        <p class="font-body-md text-body-md text-on-surface whitespace-pre-line">{{ contra.recomendaciones }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# Columna lateral #}
+  <div class="space-y-gutter">
+
+    {# Seguimiento #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 space-y-3">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Seguimiento</h3>
+      <div class="flex items-center gap-3 p-3 rounded-lg
+                  {% if contra.requiere_seguimiento_facci %}bg-primary-container/20{% else %}bg-surface-container-low{% endif %}">
+        <span class="material-symbols-outlined
+                     {% if contra.requiere_seguimiento_facci %}text-primary{% else %}text-on-surface-variant{% endif %}">
+          {% if contra.requiere_seguimiento_facci %}home_health{% else %}do_not_disturb{% endif %}
+        </span>
+        <p class="font-body-sm text-body-sm text-on-surface">
+          {% if contra.requiere_seguimiento_facci %}
+            Requiere seguimiento en FACCI Care
+          {% else %}
+            No requiere seguimiento adicional en FACCI
+          {% endif %}
+        </p>
+      </div>
+      {% if contra.proxima_cita %}
+      <div>
+        <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Próxima cita</p>
+        <p class="font-body-md text-body-md text-on-surface font-medium">{{ contra.proxima_cita|date:"d/m/Y" }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    {# Referencia original #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 space-y-3">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Referencia de origen</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-on-surface-variant">Código</span>
+          <span class="font-medium text-on-surface">{{ referencia.codigo }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-on-surface-variant">Prioridad</span>
+          <span class="font-medium
+            {% if referencia.prioridad == 'URGENTE' or referencia.prioridad == 'ALTA' %}text-error{% else %}text-on-surface{% endif %}">
+            {{ referencia.get_prioridad_display }}
+          </span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-on-surface-variant">Médico referente</span>
+          <span class="font-medium text-on-surface">{{ referencia.medico_origen }}</span>
+        </div>
+      </div>
+      <a href="{% url 'referencias:detalle' referencia.pk %}"
+         class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors block text-center">
+        <span class="material-symbols-outlined" style="font-size:16px;">open_in_new</span>
+        Ver referencia
+      </a>
+    </div>
+
+    {# Paciente #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5 space-y-3">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Paciente</h3>
+      <div class="flex items-center gap-3 p-3 bg-surface-container-low rounded-lg">
+        <div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+          <span class="font-label-md text-label-md text-on-primary-container">{{ referencia.paciente.iniciales }}</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-label-md text-label-md text-on-surface">{{ referencia.paciente }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ referencia.edad }}</p>
+        </div>
+      </div>
+      <a href="{% url 'pacientes:expediente' referencia.paciente.id %}"
+         class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors block text-center">
+        <span class="material-symbols-outlined" style="font-size:16px;">folder_open</span>
+        Ver expediente
+      </a>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

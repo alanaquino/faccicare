@@ -1,0 +1,178 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Ajustes del Sistema{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-gutter">
+  
+  {# ===== HEADER ===== #}
+  <div>
+    <h2 class="font-headline-lg text-headline-lg text-on-background mb-1">Ajustes del Sistema</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">Configuración global del portal y marca institucional.</p>
+  </div>
+
+  {# ===== AJUSTES CARD ===== #}
+  <div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-surface-container space-y-8">
+    
+    <div class="border-b border-surface-variant/40 pb-4">
+      <h3 class="font-headline-md text-headline-md text-on-background">Identidad y Marca</h3>
+      <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Configura por separado los logotipos y nombres del portal web y de los reportes impresos oficiales.</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-8">
+      {% csrf_token %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        {# ===== COLUMNA 1: APLICACIÓN WEB ===== #}
+        <div class="space-y-6 p-4 rounded-xl bg-surface-container-low/30 border border-outline-variant/20">
+          <div class="border-b border-surface-variant/20 pb-3">
+            <h4 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+              <span class="material-symbols-outlined text-xl">web</span>
+              Portal de la Aplicación
+            </h4>
+            <p class="text-[11px] text-on-surface-variant mt-0.5">Controla el nombre e imagen mostrados en menús, logueo y barra lateral.</p>
+          </div>
+
+          {# Nombre de la Aplicación #}
+          <div class="space-y-2">
+            <label for="nombre_aplicacion" class="block font-label-md text-label-md text-on-surface">Nombre de la aplicación</label>
+            <input type="text" name="nombre_aplicacion" id="nombre_aplicacion" 
+                   value="{{ config.nombre_aplicacion }}" required
+                   class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2 text-body-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+          </div>
+
+          {# Logo Aplicación Upload #}
+          <div class="space-y-3">
+            <label class="block font-label-md text-label-md text-on-surface">Logo de la aplicación</label>
+            
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+              {# Vista previa #}
+              <div class="w-24 h-24 rounded-lg bg-surface-container-low border border-outline-variant/30 flex items-center justify-center p-2 shadow-inner">
+                <img id="logoAppPreview" src="{{ config.logo_aplicacion_url }}" alt="Logo App" class="max-w-full max-h-full object-contain">
+              </div>
+
+              {# Upload #}
+              <div class="flex-1 w-full">
+                <label for="logo-app-upload" class="flex flex-col items-center justify-center w-full h-24 border border-dashed border-outline-variant rounded-lg cursor-pointer bg-surface hover:bg-surface-container-low/40 transition-all p-3 text-center">
+                  <span class="material-symbols-outlined text-outline text-2xl mb-1">upload_file</span>
+                  <span class="font-label-sm text-label-sm text-on-surface-variant">Subir logo de app</span>
+                  <input id="logo-app-upload" name="logo_aplicacion" type="file" accept="image/*" class="hidden" onchange="previewImage(this, 'logoAppPreview')">
+                </label>
+              </div>
+            </div>
+            
+            {% if config.logo_aplicacion %}
+            <div class="text-right">
+              <button type="button" onclick="confirmResetLogo('aplicacion')"
+                      class="inline-flex items-center gap-1 text-[11px] text-error font-medium hover:underline">
+                <span class="material-symbols-outlined text-sm">delete</span>
+                Restaurar Logo de App por Defecto
+              </button>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        {# ===== COLUMNA 2: INSTITUCIÓN Y REPORTES ===== #}
+        <div class="space-y-6 p-4 rounded-xl bg-surface-container-low/30 border border-outline-variant/20">
+          <div class="border-b border-surface-variant/20 pb-3">
+            <h4 class="font-headline-sm text-headline-sm text-primary flex items-center gap-2">
+              <span class="material-symbols-outlined text-xl">description</span>
+              Reportes e Institución
+            </h4>
+            <p class="text-[11px] text-on-surface-variant mt-0.5">Controla la marca e imagen oficial que saldrán impresos en todas las fichas y reportes PDF.</p>
+          </div>
+
+          {# Nombre de la Institución #}
+          <div class="space-y-2">
+            <label for="nombre_institucion" class="block font-label-md text-label-md text-on-surface">Nombre de la institución</label>
+            <input type="text" name="nombre_institucion" id="nombre_institucion" 
+                   value="{{ config.nombre_institucion }}" required
+                   class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2 text-body-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+          </div>
+
+          {# Logo Reportes Upload #}
+          <div class="space-y-3">
+            <label class="block font-label-md text-label-md text-on-surface">Logo oficial para reportes</label>
+            
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+              {# Vista previa #}
+              <div class="w-24 h-24 rounded-lg bg-surface-container-low border border-outline-variant/30 flex items-center justify-center p-2 shadow-inner">
+                <img id="logoRepPreview" src="{{ config.logo_reportes_url }}" alt="Logo Reportes" class="max-w-full max-h-full object-contain">
+              </div>
+
+              {# Upload #}
+              <div class="flex-1 w-full">
+                <label for="logo-rep-upload" class="flex flex-col items-center justify-center w-full h-24 border border-dashed border-outline-variant rounded-lg cursor-pointer bg-surface hover:bg-surface-container-low/40 transition-all p-3 text-center">
+                  <span class="material-symbols-outlined text-outline text-2xl mb-1">upload_file</span>
+                  <span class="font-label-sm text-label-sm text-on-surface-variant">Subir logo oficial</span>
+                  <input id="logo-rep-upload" name="logo_reportes" type="file" accept="image/*" class="hidden" onchange="previewImage(this, 'logoRepPreview')">
+                </label>
+              </div>
+            </div>
+
+            {% if config.logo_reportes %}
+            <div class="text-right">
+              <button type="button" onclick="confirmResetLogo('reportes')"
+                      class="inline-flex items-center gap-1 text-[11px] text-error font-medium hover:underline">
+                <span class="material-symbols-outlined text-sm">delete</span>
+                Restaurar Logo Oficial por Defecto
+              </button>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+
+      {# Acciones de guardado #}
+      <div class="flex flex-wrap gap-3 pt-4 border-t border-surface-variant/40">
+        <button type="submit" 
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm">
+          <span class="material-symbols-outlined text-lg">save</span>
+          Guardar Cambios
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Formularios ocultos para eliminar logos #}
+<form id="deleteLogoAppForm" method="post" class="hidden">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="delete_logo_aplicacion">
+</form>
+
+<form id="deleteLogoRepForm" method="post" class="hidden">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="delete_logo_reportes">
+</form>
+
+<script>
+  function previewImage(input, previewId) {
+    if (input.files && input.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById(previewId).src = e.target.result;
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  function confirmResetLogo(type) {
+    var msg = type === 'aplicacion' 
+      ? '¿Está seguro de que desea eliminar el logo personalizado de la aplicación y volver al por defecto?'
+      : '¿Está seguro de que desea eliminar el logo oficial para reportes y volver al por defecto?';
+    
+    if (confirm(msg)) {
+      if (type === 'aplicacion') {
+        document.getElementById('deleteLogoAppForm').submit();
+      } else {
+        document.getElementById('deleteLogoRepForm').submit();
+      }
+    }
+  }
+</script>
+{% endblock %}

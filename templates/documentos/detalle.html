@@ -1,0 +1,385 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ documento.nombre }}{% endblock %}
+
+{% block content %}
+
+{# Header #}
+<div class="flex items-center gap-4 mb-6">
+  <a href="{% url 'documentos:lista' %}" class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </a>
+  <div class="flex-1">
+    <h2 class="font-headline-lg text-headline-lg text-on-background">{{ documento.nombre }}</h2>
+    <p class="font-body-md text-body-md text-on-surface-variant">{{ documento.paciente.nombre_completo }}</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+  {# ──────────── Columna principal ──────────── #}
+  <div class="lg:col-span-2 space-y-gutter">
+
+    {# Tarjeta del visor #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container overflow-hidden">
+
+      {# Barra superior del visor #}
+      <div class="flex items-center justify-between px-5 py-3 border-b border-surface-container bg-surface-container/50">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary" style="font-size:20px;">{{ documento.icono }}</span>
+          <span class="font-label-md text-label-md text-on-surface">Vista Previa</span>
+          <span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container text-on-surface-variant">{{ documento.extension|upper }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          {% if documento.extension == 'pdf' %}
+          {# controles de paginación PDF #}
+          <button id="btn-prev" onclick="pdfPrevPage()" title="Página anterior"
+                  class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-40">
+            <span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span>
+          </button>
+          <span id="pdf-page-info" class="font-body-sm text-on-surface-variant px-1 select-none">— / —</span>
+          <button id="btn-next" onclick="pdfNextPage()" title="Página siguiente"
+                  class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors">
+            <span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span>
+          </button>
+          <div class="w-px h-5 bg-surface-container-high mx-1"></div>
+          <button onclick="pdfZoomOut()" title="Alejar"
+                  class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors">
+            <span class="material-symbols-outlined" style="font-size:18px;">zoom_out</span>
+          </button>
+          <button onclick="pdfZoomIn()" title="Acercar"
+                  class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors">
+            <span class="material-symbols-outlined" style="font-size:18px;">zoom_in</span>
+          </button>
+          {% elif documento.extension in 'jpg,jpeg,png,gif,webp' %}
+          <button onclick="abrirModal()" title="Pantalla completa"
+                  class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors">
+            <span class="material-symbols-outlined" style="font-size:18px;">fullscreen</span>
+          </button>
+          {% endif %}
+          <a href="{% url 'documentos:descargar' documento.id %}" title="Descargar"
+             class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors">
+            <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+          </a>
+        </div>
+      </div>
+
+      {# ── Área de previsualización ── #}
+      <div id="preview-area" class="relative w-full bg-surface-container/20" style="min-height: 480px;">
+
+        {# ── PDF con PDF.js ── #}
+        {% if documento.extension == 'pdf' %}
+        {# Loading state #}
+        <div id="pdf-loading" class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-surface-container/20">
+          <div style="width:40px;height:40px;border:3px solid var(--md-sys-color-primary,#1976d2);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;"></div>
+          <p class="font-body-sm text-on-surface-variant">Cargando PDF...</p>
+        </div>
+        {# Error state #}
+        <div id="pdf-error" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
+          <span class="material-symbols-outlined text-error" style="font-size:56px;">description_off</span>
+          <p class="font-headline-md text-headline-md text-on-surface">No se pudo cargar el PDF</p>
+          <p class="font-body-sm text-on-surface-variant" id="pdf-error-msg">El archivo puede estar dañado o no disponible.</p>
+          <a href="{% url 'documentos:descargar' documento.id %}"
+             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity">
+            <span class="material-symbols-outlined" style="font-size:18px;">download</span> Descargar PDF
+          </a>
+        </div>
+        {# Canvas container #}
+        <div id="pdf-canvas-container" class="hidden overflow-y-auto p-4 flex flex-col items-center gap-4" style="max-height:680px; background: #525659;">
+          <canvas id="pdf-canvas" class="block shadow-2xl rounded" style="max-width:100%;"></canvas>
+        </div>
+
+        {# ── Imágenes ── #}
+        {% elif documento.extension in 'jpg,jpeg,png,gif,webp' %}
+        <div class="flex items-center justify-center p-6" style="min-height:480px;">
+          <div class="relative group cursor-zoom-in" onclick="abrirModal()">
+            <img
+              id="preview-img"
+              src="{% url 'documentos:preview' documento.id %}"
+              alt="{{ documento.nombre }}"
+              class="max-w-full object-contain rounded-lg shadow-md transition-transform duration-300"
+              style="max-height:600px; display:block; margin:auto;"
+              onerror="this.parentElement.innerHTML='<div class=\'py-16 text-center\'><span class=\'material-symbols-outlined text-error block mb-2\' style=\'font-size:48px;\'>broken_image</span><p class=\'font-body-sm text-on-surface-variant\'>No se pudo cargar la imagen</p></div>'"
+            />
+            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-lg">
+              <div class="bg-black/50 rounded-full p-2">
+                <span class="material-symbols-outlined text-white" style="font-size:28px;">zoom_in</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ── Formato no visualizable ── #}
+        {% else %}
+        <div class="flex flex-col items-center justify-center text-center p-12" style="min-height:480px;">
+          <div class="w-24 h-24 rounded-2xl flex items-center justify-center mx-auto mb-6
+                      {% if documento.color == 'primary' %}bg-primary-container/40 text-primary
+                      {% elif documento.color == 'error' %}bg-error-container/40 text-error
+                      {% elif documento.color == 'secondary' %}bg-secondary-container/40 text-secondary
+                      {% else %}bg-surface-container text-on-surface-variant{% endif %}">
+            <span class="material-symbols-outlined" style="font-size:52px;">{{ documento.icono }}</span>
+          </div>
+          <p class="font-headline-md text-headline-md text-on-surface mb-2">{{ documento.get_tipo_documento_display }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mb-1">{{ documento.nombre }}</p>
+          <p class="font-body-sm text-body-sm text-outline mb-6">{{ documento.tamano }}</p>
+          <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-container text-on-surface-variant font-body-sm text-body-sm mb-6">
+            <span class="material-symbols-outlined" style="font-size:16px;">info</span>
+            El formato <strong>.{{ documento.extension|upper }}</strong> no puede visualizarse en el navegador. Descárgalo para abrirlo.
+          </div>
+          <a href="{% url 'documentos:descargar' documento.id %}"
+             class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+            <span class="material-symbols-outlined" style="font-size:18px;">download</span> Descargar Archivo
+          </a>
+        </div>
+        {% endif %}
+
+      </div>{# /preview-area #}
+    </div>
+
+    {# Info del documento #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4">Información del Documento</h3>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <p class="font-label-md text-label-md text-on-surface-variant">Tipo</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ documento.get_tipo_documento_display }}</p>
+        </div>
+        <div>
+          <p class="font-label-md text-label-md text-on-surface-variant">Tamaño</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ documento.tamano }}</p>
+        </div>
+        <div>
+          <p class="font-label-md text-label-md text-on-surface-variant">Fecha del Documento</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ documento.fecha_documento|date:"d/m/Y" }}</p>
+        </div>
+        <div>
+          <p class="font-label-md text-label-md text-on-surface-variant">Subido por</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ documento.subido_por.get_full_name }}</p>
+        </div>
+        <div>
+          <p class="font-label-md text-label-md text-on-surface-variant">Fecha de Subida</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ documento.created_at|date:"d/m/Y H:i" }}</p>
+        </div>
+        {% if documento.descripcion %}
+        <div class="col-span-2">
+          <p class="font-label-md text-label-md text-on-surface-variant">Descripción</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ documento.descripcion }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  {# ──────────── Columna lateral ──────────── #}
+  <div class="space-y-gutter">
+
+    {# Estado #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 sticky top-20">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4">Estado</h3>
+
+      <div class="mb-6 p-4 rounded-lg
+                  {% if documento.estado == 'PENDIENTE' %}bg-warning-container/30 border border-warning
+                  {% elif documento.estado == 'REVISADO' %}bg-success-container/30 border border-success
+                  {% elif documento.estado == 'CORRECCION' %}bg-error-container/30 border border-error
+                  {% else %}bg-surface-container border border-surface-container{% endif %}">
+        <p class="font-label-md text-label-md
+                  {% if documento.estado == 'PENDIENTE' %}text-warning
+                  {% elif documento.estado == 'REVISADO' %}text-success
+                  {% elif documento.estado == 'CORRECCION' %}text-error
+                  {% else %}text-on-surface{% endif %}">
+          {{ documento.get_estado_display }}
+        </p>
+      </div>
+
+      {% if puede_modificar %}
+      <form action="{% url 'documentos:cambiar_estado' documento.id %}" method="post">
+        {% csrf_token %}
+        <select name="estado" class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md mb-3">
+          {% for value, label in documento.EstadoDocumento.choices %}
+          <option value="{{ value }}" {% if documento.estado == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="w-full px-4 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity">
+          Actualizar Estado
+        </button>
+      </form>
+
+      <form action="{% url 'documentos:cambiar_visibilidad' documento.id %}" method="post" class="mt-4">
+        {% csrf_token %}
+        <label class="flex items-center gap-3 mb-3 cursor-pointer">
+          <input type="checkbox" name="visible_padre" {% if documento.visible_padre %}checked{% endif %}
+                 class="rounded border-outline-variant text-primary focus:ring-primary">
+          <span class="font-body-sm text-body-sm text-on-surface">Visible en Portal Padres</span>
+        </label>
+        <button type="submit" class="w-full px-4 py-2.5 rounded-lg border border-outline-variant text-on-surface font-label-md text-label-md hover:bg-surface-container">
+          Actualizar visibilidad
+        </button>
+      </form>
+      {% endif %}
+
+      <div class="mt-6 pt-6 border-t border-surface-container space-y-3">
+        <a href="{% url 'documentos:descargar' documento.id %}"
+           class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity">
+          <span class="material-symbols-outlined" style="font-size:18px;">download</span> Descargar
+        </a>
+        {% if puede_modificar %}
+        <form action="{% url 'documentos:eliminar' documento.id %}" method="post"
+              onsubmit="return confirm('¿Eliminar este documento definitivamente?');">
+          {% csrf_token %}
+          <button type="submit" class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-error text-on-error font-label-md text-label-md hover:opacity-90 transition-opacity">
+            <span class="material-symbols-outlined" style="font-size:18px;">delete</span> Eliminar
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Paciente #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4">Paciente</h3>
+      <div class="space-y-3">
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant">Nombre</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ documento.paciente.nombre_completo }}</p>
+        </div>
+        <div>
+          <p class="font-label-sm text-label-sm text-on-surface-variant">Cédula</p>
+          <p class="font-body-md text-body-md text-on-surface">{{ documento.paciente.cedula }}</p>
+        </div>
+        <a href="{% url 'pacientes:expediente' documento.paciente.id %}"
+           class="inline-block mt-3 px-4 py-2 rounded-lg bg-surface-container text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-colors">
+          Ver Expediente
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{# ── Modal fullscreen para imágenes ── #}
+{% if documento.extension in 'jpg,jpeg,png,gif,webp' %}
+<div id="modal-zoom" onclick="cerrarModal()"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/90 p-4 cursor-zoom-out"
+     style="backdrop-filter:blur(4px);">
+  <button onclick="cerrarModal();event.stopPropagation();"
+          class="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white z-10">
+    <span class="material-symbols-outlined">close</span>
+  </button>
+  <img src="{% url 'documentos:preview' documento.id %}"
+       alt="{{ documento.nombre }}"
+       class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+       onclick="event.stopPropagation()" />
+</div>
+{% endif %}
+
+<style>
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+{% if documento.extension == 'pdf' %}
+<script>
+  // ── PDF.js viewer ──────────────────────────────────────────────
+  const PREVIEW_URL = "{% url 'documentos:preview' documento.id %}";
+
+  let pdfDoc     = null;
+  let currentPage = 1;
+  let totalPages  = 0;
+  let currentScale = 1.4;
+
+  const loadingEl  = document.getElementById('pdf-loading');
+  const errorEl    = document.getElementById('pdf-error');
+  const errorMsgEl = document.getElementById('pdf-error-msg');
+  const containerEl = document.getElementById('pdf-canvas-container');
+  const canvas     = document.getElementById('pdf-canvas');
+  const ctx        = canvas.getContext('2d');
+  const pageInfoEl = document.getElementById('pdf-page-info');
+
+  // Cargar PDF.js desde CDN
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  script.onload = initPdfJs;
+  script.onerror = () => showError('No se pudo cargar el motor de PDF. Comprueba tu conexión.');
+  document.head.appendChild(script);
+
+  function initPdfJs() {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const loadingTask = pdfjsLib.getDocument({
+      url: PREVIEW_URL,
+      withCredentials: true,   // envía la cookie de sesión de Django
+    });
+
+    loadingTask.promise.then(pdf => {
+      pdfDoc = pdf;
+      totalPages = pdf.numPages;
+      loadingEl.classList.add('hidden');
+      containerEl.classList.remove('hidden');
+      renderPage(currentPage);
+    }).catch(err => {
+      console.error('PDF.js error:', err);
+      showError(err.message || 'El PDF no pudo cargarse.');
+    });
+  }
+
+  function renderPage(num) {
+    pdfDoc.getPage(num).then(page => {
+      const viewport = page.getViewport({ scale: currentScale });
+      canvas.width  = viewport.width;
+      canvas.height = viewport.height;
+
+      page.render({ canvasContext: ctx, viewport }).promise.then(() => {
+        pageInfoEl.textContent = `${num} / ${totalPages}`;
+        document.getElementById('btn-prev').disabled = (num <= 1);
+        document.getElementById('btn-next').disabled = (num >= totalPages);
+      });
+    });
+  }
+
+  function pdfNextPage() {
+    if (currentPage < totalPages) { currentPage++; renderPage(currentPage); }
+  }
+  function pdfPrevPage() {
+    if (currentPage > 1) { currentPage--; renderPage(currentPage); }
+  }
+  function pdfZoomIn()  { currentScale = Math.min(currentScale + 0.25, 3.0); renderPage(currentPage); }
+  function pdfZoomOut() { currentScale = Math.max(currentScale - 0.25, 0.5); renderPage(currentPage); }
+
+  function showError(msg) {
+    loadingEl.classList.add('hidden');
+    containerEl.classList.add('hidden');
+    errorMsgEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+    errorEl.classList.add('flex');
+  }
+
+  // Teclas de navegación
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') pdfNextPage();
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   pdfPrevPage();
+    if (e.key === '+') pdfZoomIn();
+    if (e.key === '-') pdfZoomOut();
+  });
+</script>
+{% endif %}
+
+{% if documento.extension in 'jpg,jpeg,png,gif,webp' %}
+<script>
+  function abrirModal() {
+    const m = document.getElementById('modal-zoom');
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+  }
+  function cerrarModal() {
+    const m = document.getElementById('modal-zoom');
+    m.classList.add('hidden');
+    m.classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+</script>
+{% endif %}
+
+{% endblock %}

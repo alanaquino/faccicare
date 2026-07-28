@@ -1,0 +1,178 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ titulo_pagina }}{% endblock %}
+{% block content %}
+
+{# Header #}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="flex items-center gap-4">
+    <a href="{% url 'pacientes:expediente' cribado.paciente.id %}?tab=cribados"
+       class="p-2 rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <div>
+      <h2 class="font-headline-lg text-headline-lg text-on-background">Detalle del Cribado</h2>
+      <p class="font-body-sm text-body-sm text-on-surface-variant">
+        {{ cribado.paciente.nombre_completo }} &middot;
+        {% if cribado.fecha_evaluacion %}{{ cribado.fecha_evaluacion|date:"d M, Y" }}{% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="{% url 'cribado:editar' cribado.pk %}"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">edit</span>
+      Editar
+    </a>
+    <a href="{% url 'referencias:crear' %}?cribado={{ cribado.pk }}"
+       class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+      <span class="material-symbols-outlined" style="font-size:18px;">send</span>
+      Crear Referencia
+    </a>
+  </div>
+</div>
+
+{# Resumen nivel de riesgo #}
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <div class="sm:col-span-2 bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 flex items-center gap-6">
+    {% if cribado.nivel_riesgo == 'ALTO' %}
+      <div class="w-16 h-16 rounded-full bg-error-container flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-error" style="font-size:32px;">warning</span>
+      </div>
+      <div>
+        <span class="inline-block px-3 py-1 rounded-full bg-error-container text-error font-label-md text-label-md mb-1">
+          Alerta Roja — Riesgo Alto
+        </span>
+        <p class="font-body-md text-body-md text-on-surface-variant">Se recomienda referencia inmediata a oncología pediátrica.</p>
+      </div>
+    {% elif cribado.nivel_riesgo == 'MEDIO' %}
+      <div class="w-16 h-16 rounded-full bg-secondary-container/40 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-secondary" style="font-size:32px;">help</span>
+      </div>
+      <div>
+        <span class="inline-block px-3 py-1 rounded-full bg-secondary-container/40 text-secondary font-label-md text-label-md mb-1">
+          Riesgo Moderado
+        </span>
+        <p class="font-body-md text-body-md text-on-surface-variant">Seguimiento estrecho y reevaluación en 2 semanas.</p>
+      </div>
+    {% else %}
+      <div class="w-16 h-16 rounded-full bg-primary-container/30 flex items-center justify-center shrink-0">
+        <span class="material-symbols-outlined text-primary" style="font-size:32px;">check_circle</span>
+      </div>
+      <div>
+        <span class="inline-block px-3 py-1 rounded-full bg-primary-container/30 text-primary font-label-md text-label-md mb-1">
+          Riesgo Bajo
+        </span>
+        <p class="font-body-md text-body-md text-on-surface-variant">Continuar vigilancia rutinaria mensual.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-4">
+    <div>
+      <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Puntaje Total</p>
+      <p class="font-headline-lg text-headline-lg text-on-background">{{ cribado.puntaje_total }}<span class="font-body-md text-body-md text-on-surface-variant">/{{ score_maximo }}</span></p>
+    </div>
+    <div>
+      <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide mb-1">Médico Evaluador</p>
+      <p class="font-body-md text-body-md text-on-surface">{{ cribado.medico.get_full_name }}</p>
+    </div>
+    {% if cribado.requiere_referencia %}
+    <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-error-container/20">
+      <span class="material-symbols-outlined text-error" style="font-size:18px;">send</span>
+      <span class="font-label-sm text-label-sm text-error">Requiere referencia</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+  {# Síntomas evaluados #}
+  <div class="lg:col-span-2 bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6">
+    <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary">checklist</span>
+      Síntomas Evaluados
+    </h3>
+    <div class="space-y-2">
+      {% for s in sintomas %}
+      <div class="flex items-center justify-between py-3 border-b border-surface-container last:border-0">
+        <span class="font-body-md text-body-md text-on-surface">{{ s.nombre }}</span>
+        {% if s.presente %}
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-error-container/30 text-error font-label-sm text-label-sm">
+            <span class="material-symbols-outlined" style="font-size:14px;">close</span> Presente
+          </span>
+        {% else %}
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-container/20 text-primary font-label-sm text-label-sm">
+            <span class="material-symbols-outlined" style="font-size:14px;">check</span> Negativo
+          </span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Panel lateral #}
+  <div class="space-y-gutter">
+
+    {# Síntomas positivos #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-3 flex items-center gap-2">
+        <span class="material-symbols-outlined text-error" style="font-size:18px;">warning</span>
+        Hallazgos ({{ sintomas_positivos|length }})
+      </h3>
+      {% if sintomas_positivos %}
+        <ul class="space-y-2">
+          {% for s in sintomas_positivos %}
+          <li class="flex items-start gap-2 font-body-sm text-body-sm text-on-surface">
+            <span class="material-symbols-outlined text-error mt-0.5" style="font-size:16px;">fiber_manual_record</span>
+            {{ s.nombre }}
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="font-body-sm text-body-sm text-on-surface-variant">Sin hallazgos positivos.</p>
+      {% endif %}
+    </div>
+
+    {# Observaciones #}
+    {% if cribado.observaciones %}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-3">Observaciones</h3>
+      <p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{{ cribado.observaciones }}</p>
+    </div>
+    {% endif %}
+
+    {# Datos del cribado #}
+    <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-5">
+      <h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-3">Información</h3>
+      <div class="space-y-3">
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Paciente</p>
+          <p class="font-label-md text-label-md text-on-surface">{{ cribado.paciente.nombre_completo }}</p>
+        </div>
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Código</p>
+          <p class="font-label-md text-label-md text-on-surface">{{ cribado.paciente.codigo_paciente }}</p>
+        </div>
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Fecha evaluación</p>
+          <p class="font-label-md text-label-md text-on-surface">
+            {% if cribado.fecha_evaluacion %}{{ cribado.fecha_evaluacion|date:"d M, Y — H:i" }}{% else %}—{% endif %}
+          </p>
+        </div>
+        <div>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">Resultado</p>
+          <p class="font-label-md text-label-md text-on-surface">{{ cribado.get_resultado_display }}</p>
+        </div>
+      </div>
+    </div>
+
+    <a href="{% url 'pacientes:expediente' cribado.paciente.id %}?tab=cribados"
+       class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg border border-outline-variant text-on-surface-variant font-label-md text-label-md hover:bg-surface-container transition-colors">
+      <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
+      Volver al expediente
+    </a>
+  </div>
+</div>
+
+{% endblock %}

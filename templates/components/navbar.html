@@ -1,0 +1,163 @@
+{# ===== TOP NAVBAR — Portal Médico ===== #}
+<header class="no-print flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-16 z-50 bg-surface-container-lowest shadow-sm sticky top-0 border-b border-surface-variant md:border-none">
+
+  <div class="flex items-center gap-4">
+    {# Botón menú mobile #}
+    <button id="btnMobileMenu" onclick="toggleMobileMenu()" class="md:hidden text-on-surface p-2 rounded-full hover:bg-surface-container-low">
+      <span class="material-symbols-outlined">menu</span>
+    </button>
+    {# Barra de búsqueda (Desktop) #}
+    <form method="get" action="{% url 'pacientes:lista' %}" class="hidden md:flex relative text-on-surface-variant">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" style="font-size:20px;">search</span>
+      <input class="bg-surface-container rounded-full py-2 pl-10 pr-4 text-body-sm font-body-sm border-none focus:ring-2 focus:ring-primary w-64 md:w-80 outline-none transition-shadow"
+             placeholder="Buscar pacientes..." type="search" name="q"/>
+    </form>
+    {# Título mobile → Home #}
+    <a href="{% url 'home' %}" class="md:hidden font-headline-md text-headline-md font-bold text-primary hover:text-surface-tint transition-colors">{{ sistema_config.nombre_aplicacion }}</a>
+  </div>
+
+  <div class="flex items-center gap-2">
+    {# Notificaciones #}
+    <div class="relative">
+      <button onclick="toggleNotificacionesDropdown(event)" id="btnBell" aria-label="Notificaciones"
+         class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors relative flex items-center justify-center">
+        <span id="bellIcon" class="material-symbols-outlined">notifications</span>
+        <span id="bellBadge" class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full {% if unread_notifications_count == 0 %}hidden{% endif %}"></span>
+      </button>
+      
+      {# Floating Panel Dropdown #}
+      <div id="dropdownNotificaciones" class="absolute right-0 mt-2 w-80 sm:w-96 bg-white/95 backdrop-blur-md rounded-2xl border border-surface-container shadow-2xl z-[1000] overflow-hidden dropdown-transition origin-top-right">
+        {# Dropdown Header #}
+        <div class="flex items-center justify-between px-5 py-4 border-b border-surface-variant shrink-0 bg-surface-container-lowest">
+          <span class="font-label-md text-sm font-bold text-on-background">Notificaciones</span>
+          <div class="flex items-center gap-3">
+            <a href="{% url 'notificaciones' %}" class="text-xs text-primary font-medium hover:underline">Ver todas</a>
+            <button onclick="marcarTodasLeidasDropdown(event)" class="text-xs text-primary font-medium hover:underline">
+              Marcar todas leídas
+            </button>
+          </div>
+        </div>
+        {# Dropdown Items List #}
+        <div id="listaNotificacionesDropdown" class="max-h-[360px] overflow-y-auto divide-y divide-surface-container bg-surface-container-lowest scrollbar-thin">
+          <div class="py-12 text-center text-on-surface-variant flex flex-col items-center justify-center">
+            <span class="material-symbols-outlined text-outline-variant text-4xl mb-2 animate-spin">sync</span>
+            <span class="text-xs">Cargando notificaciones...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    {# Ayuda #}
+    <button aria-label="Ayuda" class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors hidden sm:block">
+      <span class="material-symbols-outlined">help</span>
+    </button>
+    {# Avatar usuario #}
+    <div class="relative ml-2">
+      <button onclick="togglePerfilDropdown(event)" id="btnPerfil" aria-label="Mi Cuenta"
+         class="w-9 h-9 rounded-full border-2 border-primary-container overflow-hidden shrink-0 cursor-pointer hover:ring-2 hover:ring-primary-container/50 transition-all bg-primary-container flex items-center justify-center relative">
+        {% if request.user.foto_perfil %}
+        <img src="{{ request.user.foto_perfil.url }}" alt="Avatar" class="w-full h-full object-cover">
+        {% else %}
+        <span class="text-sm font-bold text-on-primary-container">{{ request.user.iniciales }}</span>
+        {% endif %}
+      </button>
+
+      {# Dropdown de Perfil Estilo Google #}
+      <div id="dropdownPerfil" class="absolute right-0 mt-2 w-[340px] bg-white/95 backdrop-blur-md text-on-background rounded-[28px] border border-surface-container shadow-2xl z-[1000] overflow-hidden dropdown-transition origin-top-right">
+        {# Header: Email & Close #}
+        <div class="flex justify-between items-center px-6 py-4 border-b border-surface-container bg-surface-container-lowest">
+          <span class="text-sm font-medium text-on-surface-variant truncate max-w-[240px]">{{ request.user.email }}</span>
+          <button onclick="togglePerfilDropdown(event)" class="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container-low transition-colors flex items-center justify-center">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        {# Cuerpo central #}
+        <div class="p-6 flex flex-col items-center text-center">
+          {# Avatar grande con anillo multicolor de Google #}
+          <div class="relative mb-4 group">
+            {# Anillo con gradiente circular de los colores de la marca/sistema #}
+            <div class="absolute inset-0 -m-1.5 rounded-full p-[3px] bg-gradient-to-tr from-primary via-secondary to-tertiary">
+            </div>
+            {# Foto real o iniciales #}
+            <div class="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white bg-primary-container flex items-center justify-center">
+              {% if request.user.foto_perfil %}
+              <img src="{{ request.user.foto_perfil.url }}" alt="Foto Grande" class="w-full h-full object-cover">
+              {% else %}
+              <span class="text-3xl font-bold text-on-primary-container">{{ request.user.iniciales }}</span>
+              {% endif %}
+            </div>
+            {# Botón de cámara (Editar) superpuesto al estilo Google #}
+            <a href="{% url 'usuarios:perfil' %}?edit=1" title="Cambiar foto de perfil"
+               class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-surface-container-high border-2 border-white text-on-surface hover:bg-surface-container transition-colors flex items-center justify-center shadow-lg cursor-pointer">
+              <span class="material-symbols-outlined text-base">photo_camera</span>
+            </a>
+          </div>
+
+          {# Saludo #}
+          <h4 class="text-xl font-semibold text-on-surface">¡Hola, {{ request.user.first_name|default:request.user.username }}!</h4>
+          <p class="text-xs text-on-surface-variant mt-1 mb-4">{{ request.user.get_rol_display|default:"Usuario" }}</p>
+
+          {# Botón principal redondeado "Ver mi perfil completo" #}
+          <a href="{% url 'usuarios:perfil' %}" 
+             class="w-full py-3 px-4 rounded-full border border-outline-variant hover:bg-surface-container-low text-sm font-semibold text-primary transition-colors duration-200">
+            Ver mi perfil completo
+          </a>
+        </div>
+
+        {# Acciones inferiores #}
+        <div class="px-6 py-4 border-t border-surface-container bg-surface-container-lowest flex flex-col gap-2">
+          <a href="{% url 'usuarios:perfil' %}?edit=1" class="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-container-low text-sm text-on-surface transition-colors">
+            <span class="material-symbols-outlined text-lg text-primary">manage_accounts</span>
+            <span>Editar configuración de perfil</span>
+          </a>
+          <a href="{% url 'auth_app:logout' %}" class="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-error-container/20 text-sm text-error transition-colors">
+            <span class="material-symbols-outlined text-lg text-error">logout</span>
+            <span>Cerrar sesión de mi cuenta</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function() {
+        let isPerfilDropdownOpen = false;
+
+        window.togglePerfilDropdown = function(event) {
+          if (event) event.stopPropagation();
+          const dropdown = document.getElementById('dropdownPerfil');
+          if (!dropdown) return;
+
+          isPerfilDropdownOpen = !isPerfilDropdownOpen;
+          if (isPerfilDropdownOpen) {
+            // Cerrar otros dropdowns si estuvieran abiertos
+            const notifDropdown = document.getElementById('dropdownNotificaciones');
+            if (notifDropdown) notifDropdown.classList.remove('dropdown-open');
+
+            dropdown.classList.add('dropdown-open');
+          } else {
+            cerrarPerfilDropdown();
+          }
+        };
+
+        function cerrarPerfilDropdown() {
+          const dropdown = document.getElementById('dropdownPerfil');
+          if (!dropdown) return;
+          dropdown.classList.remove('dropdown-open');
+          isPerfilDropdownOpen = false;
+        }
+
+        // Cerrar al hacer clic afuera
+        document.addEventListener('click', function(e) {
+          const dropdown = document.getElementById('dropdownPerfil');
+          const btnPerfil = document.getElementById('btnPerfil');
+          if (dropdown && !dropdown.contains(e.target) && btnPerfil && !btnPerfil.contains(e.target)) {
+            if (isPerfilDropdownOpen) cerrarPerfilDropdown();
+          }
+        });
+
+        window.cerrarPerfilDropdown = cerrarPerfilDropdown;
+      })();
+    </script>
+  </div>
+
+</header>

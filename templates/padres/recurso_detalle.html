@@ -1,0 +1,153 @@
+{% extends "layouts/base_padres.html" %}
+{% block title %}{{ recurso.titulo }}{% endblock %}
+
+{% block content %}
+<article class="md:px-8 max-w-5xl mx-auto w-full space-y-8">
+  <header>
+    <a href="{% url 'padres:recursos_educativos' %}"
+       class="mb-5 inline-flex min-h-11 items-center gap-2 rounded-full px-3 font-label-md text-label-md text-primary hover:bg-primary/5 focus:outline-none focus:ring-4 focus:ring-primary/25">
+      <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+      Volver a recursos
+    </a>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="inline-flex rounded-full bg-primary/10 px-3 py-1 font-label-md text-label-md text-primary">
+        {{ recurso.get_categoria_display }}
+      </span>
+      {% if video_embed_url %}
+      <span class="inline-flex items-center gap-1 rounded-full bg-surface-container px-3 py-1 font-label-sm text-label-sm text-on-surface-variant">
+        <span class="material-symbols-outlined" style="font-size:16px;" aria-hidden="true">play_circle</span>
+        Incluye video
+      </span>
+      {% endif %}
+    </div>
+
+    <h1 class="mt-4 font-headline-lg text-3xl sm:text-headline-lg text-on-background">{{ recurso.titulo }}</h1>
+    <p class="mt-3 max-w-3xl font-body-lg text-body-lg leading-relaxed text-on-surface-variant">{{ recurso.resumen }}</p>
+  </header>
+
+  {% if video_embed_url %}
+  <div class="aspect-video overflow-hidden rounded-lg border border-surface-container bg-black">
+    <iframe src="{{ video_embed_url }}"
+            title="Video relacionado: {{ recurso.titulo }}"
+            class="h-full w-full"
+            loading="lazy"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen></iframe>
+  </div>
+  {% else %}
+  <figure class="overflow-hidden rounded-lg border border-surface-container bg-surface-container">
+    <img src="{{ imagen_url }}"
+         alt="Imagen educativa sobre {{ recurso.titulo|lower }}"
+         class="aspect-[16/8] w-full object-cover sm:aspect-[16/7]">
+  </figure>
+  {% endif %}
+
+  <section aria-labelledby="explicacion">
+    <h2 id="explicacion" class="font-headline-md text-headline-md text-on-background">Lo más importante</h2>
+    <p class="mt-3 font-body-md text-body-md leading-7 text-on-surface">{{ recurso.contenido|default:recurso.descripcion }}</p>
+  </section>
+
+  <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+    <section aria-labelledby="actividades" class="rounded-lg border border-surface-container bg-surface-container-lowest p-5 sm:p-6">
+      <div class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span class="material-symbols-outlined" aria-hidden="true">interests</span>
+        </span>
+        <h2 id="actividades" class="font-headline-md text-xl text-on-background">Actividades recomendadas</h2>
+      </div>
+      <ul class="mt-5 space-y-3">
+        {% for actividad in recurso.actividades %}
+        <li class="flex gap-3 font-body-md text-body-md leading-6 text-on-surface">
+          <span class="material-symbols-outlined mt-0.5 shrink-0 text-tertiary" style="font-size:20px;" aria-hidden="true">check_circle</span>
+          <span>{{ actividad }}</span>
+        </li>
+        {% empty %}
+        <li class="text-on-surface-variant">Siga las recomendaciones personalizadas del equipo médico.</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section aria-labelledby="acciones-familia" class="rounded-lg border border-surface-container bg-surface-container-lowest p-5 sm:p-6">
+      <div class="flex items-center gap-3">
+        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-secondary/10 text-secondary">
+          <span class="material-symbols-outlined" aria-hidden="true">family_restroom</span>
+        </span>
+        <h2 id="acciones-familia" class="font-headline-md text-xl text-on-background">Qué puede hacer la familia</h2>
+      </div>
+      <ol class="mt-5 space-y-3">
+        {% for paso in recurso.pasos_padres %}
+        <li class="flex gap-3 font-body-md text-body-md leading-6 text-on-surface">
+          <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-xs font-semibold text-secondary">{{ forloop.counter }}</span>
+          <span>{{ paso }}</span>
+        </li>
+        {% empty %}
+        <li class="text-on-surface-variant">Converse con el equipo tratante sobre las acciones adecuadas para su hijo.</li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+
+  <section aria-labelledby="contactar-medico" class="rounded-lg border border-amber-300 bg-amber-50 p-5 sm:p-6">
+    <div class="flex items-start gap-3">
+      <span class="material-symbols-outlined shrink-0 text-amber-700" aria-hidden="true">warning</span>
+      <div>
+        <h2 id="contactar-medico" class="font-headline-md text-xl text-amber-950">Cuándo contactar al médico</h2>
+        <ul class="mt-3 space-y-2 text-amber-950">
+          {% for alerta in recurso.cuando_contactar %}
+          <li class="flex gap-2">
+            <span aria-hidden="true">•</span>
+            <span>{{ alerta }}</span>
+          </li>
+          {% empty %}
+          <li>Consulte ante cualquier síntoma nuevo, persistente o que le preocupe.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <aside class="rounded-lg border-l-4 border-primary bg-primary/5 p-5" role="note">
+    <div class="flex items-start gap-3">
+      <span class="material-symbols-outlined shrink-0 text-primary" aria-hidden="true">medical_information</span>
+      <p class="font-body-md text-body-md leading-relaxed text-on-surface">
+        <strong>Esta guía es educativa y no sustituye la orientación del equipo médico.</strong>
+        Ante fiebre, dolor intenso, sangrado, dificultad para respirar, vómitos persistentes o cualquier empeoramiento,
+        contacte al personal médico.
+      </p>
+    </div>
+  </aside>
+
+  {% if recurso.url %}
+  <a href="{{ recurso.url }}"
+     target="_blank"
+     rel="noopener noreferrer"
+     class="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 font-label-md text-label-md text-on-primary hover:bg-on-primary-container focus:outline-none focus:ring-4 focus:ring-primary/25">
+    <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+    Consultar material adicional
+  </a>
+  {% endif %}
+
+  {% if relacionados %}
+  <section aria-labelledby="relacionados" class="border-t border-surface-container pt-8">
+    <h2 id="relacionados" class="font-headline-md text-headline-md text-on-background">Recursos relacionados</h2>
+    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {% for relacionado in relacionados %}
+      <a href="{% url 'padres:detalle_recurso' relacionado.slug %}"
+         class="cursor-pointer overflow-hidden rounded-lg border border-surface-container bg-surface-container-lowest transition-colors hover:border-primary focus:outline-none focus:ring-4 focus:ring-primary/25">
+        <img src="{{ relacionado.imagen_presentacion }}"
+             alt=""
+             class="aspect-[16/7] w-full object-cover"
+             loading="lazy">
+        <div class="p-4">
+          <span class="material-symbols-outlined text-primary" aria-hidden="true">{{ relacionado.icono }}</span>
+          <h3 class="mt-2 font-label-md text-label-md leading-5 text-on-background">{{ relacionado.titulo }}</h3>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}
