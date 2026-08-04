@@ -1,0 +1,3015 @@
+{
+  "meta": {
+    "proyecto": "FACCI Care",
+    "descripcion": "Sistema web de detección temprana, referencia oportuna y seguimiento clínico de cáncer pediátrico (República Dominicana). Integra el portal clínico, el portal de padres/tutores y la operación de la Fundación (FACCI).",
+    "version_grafo": "1.0.0",
+    "generado": "2026-08-04",
+    "repositorio": "alanaquino/faccicare",
+    "stack": [
+      "Python / Django 6.0",
+      "Django REST Framework + SimpleJWT",
+      "SQLite (desarrollo) / MySQL (producción, DB_ENGINE)",
+      "Argon2 (hash de contraseñas)",
+      "Fernet / cryptography (cifrado de campos sensibles)",
+      "ReportLab (PDF) + openpyxl (Excel)",
+      "Plantillas Django + Django Admin",
+      "python-decouple (configuración por entorno)"
+    ],
+    "entrypoints": {
+      "wsgi": "config/wsgi.py",
+      "asgi": "config/asgi.py",
+      "settings": "config/settings.py",
+      "urlconf": "config/urls.py",
+      "cli": "manage.py"
+    },
+    "convenciones": {
+      "apps": "Cada módulo de negocio es una app Django dentro de apps/.",
+      "ids_modelo": "Casi todos los modelos de dominio usan UUID como clave primaria.",
+      "permisos": "La matriz de acceso vive como propiedades del modelo CustomUser (apps/auth_app/models.py) y es la única fuente de verdad para el menú lateral y para los decoradores de vistas.",
+      "idioma": "Código, modelos y UI en español."
+    },
+    "estadisticas": {
+      "apps": 16,
+      "lineas_python_aprox": 23819,
+      "plantillas_html": 103,
+      "nodos": 37,
+      "aristas": 110,
+      "flujos": 18
+    },
+    "observaciones": [
+      "apps/notificaciones/api_urls.py y apps/casos/api_urls.py existen pero NO están montados en config/urls.py: esos endpoints REST no son alcanzables.",
+      "apps.core.middleware.AuditarAccesoMiddleware está definido pero no aparece en la lista MIDDLEWARE de config/settings.py (la auditoría real la hacen las señales de apps/core/signals.py).",
+      "apps.casos está marcada en settings.py como 'kept for migration history', pero conserva vistas, URLs (/casos/) y plantillas activas.",
+      "apps/referencias/urls.py registra dos nombres ('contrarreferencia_crear' y 'contrarreferir') para la misma ruta; lo mismo ocurre en apps/reportes/urls.py con 'generacion' y 'generar'.",
+      "El middleware LoginRequiredMiddleware deja /api/ fuera de la exigencia de sesión: la protección de la API recae en DEFAULT_PERMISSION_CLASSES = IsAuthenticated."
+    ]
+  },
+  "layers": [
+    {
+      "id": "actor",
+      "label": "Actores",
+      "color": "#3f6ae0",
+      "descripcion": "Personas y sistemas que consumen la aplicación."
+    },
+    {
+      "id": "acceso",
+      "label": "Borde y control",
+      "color": "#8054d8",
+      "descripcion": "URLconf, middleware, decoradores y matriz de permisos por rol."
+    },
+    {
+      "id": "auth",
+      "label": "Autenticación",
+      "color": "#0e9aa0",
+      "descripcion": "Los tres caminos de entrada: portal clínico, portal de padres y API con JWT."
+    },
+    {
+      "id": "clinico",
+      "label": "Dominio clínico",
+      "color": "#e2603c",
+      "descripcion": "Apps que sostienen la ruta de detección temprana del paciente."
+    },
+    {
+      "id": "soporte",
+      "label": "Operación y soporte",
+      "color": "#d99414",
+      "descripcion": "Dashboards, alertas, reportes, psicosocial, alojamiento y usuarios."
+    },
+    {
+      "id": "portal",
+      "label": "Portal de familias",
+      "color": "#d64593",
+      "descripcion": "Espacio separado para el padre, madre o tutor del paciente."
+    },
+    {
+      "id": "servicio",
+      "label": "Servicios internos",
+      "color": "#1f9d63",
+      "descripcion": "Motores transversales: alertas, notificaciones, reportes, PDF, auditoría y cifrado."
+    },
+    {
+      "id": "datos",
+      "label": "Persistencia y salida",
+      "color": "#61718c",
+      "descripcion": "ORM, base de datos, archivos y plantillas."
+    }
+  ],
+  "edgeKinds": [
+    {
+      "id": "peticion",
+      "label": "Petición HTTP",
+      "default": true,
+      "dash": null,
+      "descripcion": "Recorrido de una petición desde el navegador o el cliente API."
+    },
+    {
+      "id": "flujo",
+      "label": "Flujo de dominio",
+      "default": true,
+      "dash": null,
+      "descripcion": "Relación de negocio entre módulos (un cribado origina una referencia, etc.)."
+    },
+    {
+      "id": "evento",
+      "label": "Evento / señal",
+      "default": true,
+      "dash": "6 4",
+      "descripcion": "Disparado por señales de Django (post_save/pre_save) o por servicios reactivos."
+    },
+    {
+      "id": "salida",
+      "label": "Documento / archivo",
+      "default": true,
+      "dash": "2 4",
+      "descripcion": "Generación de PDF, Excel o CSV y almacenamiento de adjuntos."
+    },
+    {
+      "id": "acceso",
+      "label": "Control de acceso",
+      "default": false,
+      "dash": "1 5",
+      "descripcion": "Propiedad de la matriz de permisos que protege cada módulo."
+    },
+    {
+      "id": "auditoria",
+      "label": "Auditoría",
+      "default": false,
+      "dash": "8 4",
+      "descripcion": "Registro en LogActividad de creaciones, ediciones y accesos."
+    },
+    {
+      "id": "cifrado",
+      "label": "Cifrado Fernet",
+      "default": false,
+      "dash": "3 3",
+      "descripcion": "Campos sensibles cifrados en reposo."
+    },
+    {
+      "id": "datos",
+      "label": "Persistencia",
+      "default": false,
+      "dash": "4 4",
+      "descripcion": "Escritura y lectura vía ORM sobre la base de datos."
+    }
+  ],
+  "nodes": [
+    {
+      "id": "actor_clinico",
+      "label": "Personal clínico",
+      "sublabel": "7 roles del portal interno",
+      "layer": "actor",
+      "type": "actor",
+      "path": "apps/auth_app/models.py",
+      "summary": "Administrador, Pediatra, Médico General, Oncólogo, Enfermera/Técnico, Trabajo Social/Psicología y Coordinador FACCI. Cada rol ve un menú y un alcance de datos distinto.",
+      "detalles": [
+        "ADMIN — visión global; única restricción: no crea cribados.",
+        "MEDICO y PEDIATRA — únicos que pueden crear cribados; ven lo que crearon o tienen asignado.",
+        "ONCOLOGO — solo los pacientes que le fueron referidos (especialista_destino).",
+        "ENFERMERA — laboratorio y documentos; el resto en solo lectura.",
+        "TRABAJADORA_SOCIAL — psicosocial y Casa FACCI, con visión global de pacientes.",
+        "PERSONAL_FACCI — coordinación: Casa FACCI, reportes y matrices; nada clínico."
+      ],
+      "x": 110,
+      "y": 300,
+      "w": 176,
+      "h": 62
+    },
+    {
+      "id": "actor_padre",
+      "label": "Padre / Tutor",
+      "sublabel": "PADRE_TUTOR",
+      "layer": "actor",
+      "type": "actor",
+      "path": "apps/padres/models.py",
+      "summary": "La familia del paciente. Entra por un portal separado con el código del paciente (o su correo) más un PIN, y solo ve a su hijo o hija.",
+      "detalles": [
+        "Consulta estado, indicaciones, seguimiento, documentos compartidos y recursos educativos.",
+        "Puede reportar síntomas observados en casa y subir los estudios que le solicita el equipo.",
+        "El middleware lo confina a /padres/, /recursos/ y las notificaciones."
+      ],
+      "x": 110,
+      "y": 560,
+      "w": 176,
+      "h": 62
+    },
+    {
+      "id": "actor_api",
+      "label": "Cliente API",
+      "sublabel": "integración / agente",
+      "layer": "actor",
+      "type": "actor",
+      "path": "config/urls.py",
+      "summary": "Consumidor de la API REST autenticado con JWT (o sesión) para leer pacientes, cribados, referencias, seguimientos, alertas y documentos.",
+      "detalles": [
+        "Rate limiting: 30 peticiones/min anónimas, 200/min autenticadas.",
+        "Autenticación: JWTAuthentication, SessionAuthentication y BasicAuthentication."
+      ],
+      "x": 110,
+      "y": 840,
+      "w": 176,
+      "h": 62
+    },
+    {
+      "id": "urlconf",
+      "label": "URLconf raíz",
+      "sublabel": "config/urls.py",
+      "layer": "acceso",
+      "type": "routing",
+      "path": "config/urls.py",
+      "summary": "Punto único de enrutamiento. Reparte hacia el portal clínico, el portal de padres, el admin de Django y la API REST.",
+      "detalles": [
+        "home_view redirige a padres:estado si el usuario es PADRE_TUTOR; si no, entrega el dashboard por rol.",
+        "Monta 16 apps más /admin/, /api/token/ y /api-auth/.",
+        "En DEBUG sirve además MEDIA_URL."
+      ],
+      "rutas": [
+        "/",
+        "/admin/",
+        "/api/token/",
+        "/dashboard/",
+        "/pacientes/",
+        "/cribado/",
+        "/referencias/",
+        "/seguimiento/",
+        "/padres/",
+        "…"
+      ],
+      "x": 360,
+      "y": 120,
+      "w": 194,
+      "h": 62
+    },
+    {
+      "id": "mw_login",
+      "label": "Sesión requerida",
+      "sublabel": "LoginRequiredMiddleware",
+      "layer": "acceso",
+      "type": "middleware",
+      "path": "apps/core/middleware.py:14",
+      "summary": "Exige sesión para toda vista web y deja pasar las rutas públicas. También fija la petición actual en un contextvar para que la auditoría sepa quién actúa y desde qué IP.",
+      "detalles": [
+        "Rutas públicas: /login/, /logout/, /acceso/, /admin/, /api/, /api-auth/, /static/, /media/.",
+        "Redirige a LOGIN_URL conservando ?next=.",
+        "set_current_request / reset_current_request alimentan apps/core/audit.py."
+      ],
+      "x": 360,
+      "y": 230,
+      "w": 194,
+      "h": 62
+    },
+    {
+      "id": "mw_rol",
+      "label": "Portales por rol",
+      "sublabel": "ControlAccesoPorRol",
+      "layer": "acceso",
+      "type": "middleware",
+      "path": "apps/core/middleware.py:42",
+      "summary": "Separa físicamente los dos portales: el tutor no puede salir de /padres/ y el personal no puede entrar en él.",
+      "detalles": [
+        "PADRE_TUTOR fuera de sus rutas permitidas → redirect a padres:estado.",
+        "Cualquier rol de personal que pida /padres/ → redirect a home.",
+        "Rutas permitidas al tutor: /padres/, /recursos/, /notificaciones/, /mensajes/notificaciones/…"
+      ],
+      "x": 360,
+      "y": 330,
+      "w": 194,
+      "h": 62
+    },
+    {
+      "id": "auth_clinico",
+      "label": "Login clínico",
+      "sublabel": "apps/auth_app",
+      "layer": "auth",
+      "type": "app",
+      "path": "apps/auth_app/views.py:6",
+      "summary": "Autenticación del personal: acepta nombre de usuario o correo, y distingue el caso de la cuenta deshabilitada para poder avisarlo.",
+      "detalles": [
+        "Argon2 como hasher principal, con PBKDF2 de respaldo para hashes antiguos.",
+        "Las señales user_logged_in / user_logged_out escriben en LogActividad.",
+        "El logout devuelve al tutor a su propio login."
+      ],
+      "rutas": [
+        "/login/",
+        "/logout/",
+        "/acceso/recuperar/"
+      ],
+      "x": 360,
+      "y": 470,
+      "w": 194,
+      "h": 62
+    },
+    {
+      "id": "auth_padres",
+      "label": "Login de padres",
+      "sublabel": "código de paciente + PIN",
+      "layer": "auth",
+      "type": "app",
+      "path": "apps/auth_app/views.py:75",
+      "summary": "Resuelve al tutor por correo, por código de paciente (ej. FACCI-MR01) o por nombre de usuario, y valida el PIN, que internamente es la contraseña de su CustomUser.",
+      "detalles": [
+        "El PIN de 6 dígitos se genera al registrar al paciente y puede reiniciarse desde la ficha.",
+        "Tras el login, redirige siempre a padres:estado."
+      ],
+      "rutas": [
+        "/acceso/padres/"
+      ],
+      "x": 360,
+      "y": 580,
+      "w": 194,
+      "h": 62
+    },
+    {
+      "id": "api_jwt",
+      "label": "API REST + JWT",
+      "sublabel": "DRF · SimpleJWT",
+      "layer": "auth",
+      "type": "api",
+      "path": "config/urls.py:56",
+      "summary": "Superficie REST del sistema: obtención y refresco de token, y ViewSets de pacientes, cribado, seguimiento (referencias, seguimientos y alertas), documentos y core.",
+      "detalles": [
+        "IsAuthenticated por defecto en todos los endpoints.",
+        "Throttling anon 30/min, user 200/min.",
+        "apps/notificaciones/api_urls.py y apps/casos/api_urls.py existen pero no están montados."
+      ],
+      "rutas": [
+        "/api/token/",
+        "/api/token/refresh/",
+        "/api/pacientes/",
+        "/api/cribado/",
+        "/api/seguimiento/",
+        "/api/documentos/",
+        "/api/core/"
+      ],
+      "x": 360,
+      "y": 840,
+      "w": 194,
+      "h": 62
+    },
+    {
+      "id": "decoradores",
+      "label": "Decoradores",
+      "sublabel": "apps/core/decorators.py",
+      "layer": "acceso",
+      "type": "guard",
+      "path": "apps/core/decorators.py",
+      "summary": "Guardias a nivel de vista. @requiere_acceso('puede_ver_x') ata la vista a la MISMA propiedad que decide la visibilidad del menú, evitando que menú y permiso real se desincronicen.",
+      "detalles": [
+        "roles_requeridos(*roles) — lista blanca explícita de roles.",
+        "requiere_acceso(propiedad) — consulta la matriz; ADMIN pasa siempre.",
+        "solo_personal, medico_requerido, staff_facci_requerido, enfermera_requerida.",
+        "Todo rechazo se registra en el logger 'facci.acceso' con usuario, rol, ruta e IP."
+      ],
+      "x": 610,
+      "y": 230,
+      "w": 194,
+      "h": 62
+    },
+    {
+      "id": "matriz_acceso",
+      "label": "Matriz de permisos",
+      "sublabel": "CustomUser · módulo × rol",
+      "layer": "acceso",
+      "type": "policy",
+      "path": "apps/auth_app/models.py:130",
+      "summary": "Fuente única de verdad de la autorización: propiedades puede_ver_* (lectura y menú) y puede_gestionar_* / puede_crear_* / puede_generar_* (escritura) sobre el modelo de usuario.",
+      "detalles": [
+        "puede_hacer_cribado → solo MEDICO y PEDIATRA (ni el ADMIN).",
+        "puede_generar_reportes → ADMIN y PERSONAL_FACCI.",
+        "puede_ver_matrices → ADMIN y PERSONAL_FACCI.",
+        "puede_ver_psicosocial → equipo FACCI (Coordinador + Trabajo Social) y ADMIN.",
+        "puede_subir_documentos → equipo clínico ampliado (excluye al Coordinador FACCI)."
+      ],
+      "x": 610,
+      "y": 340,
+      "w": 194,
+      "h": 62
+    },
+    {
+      "id": "core",
+      "label": "core",
+      "sublabel": "núcleo transversal",
+      "layer": "soporte",
+      "type": "app",
+      "path": "apps/core/",
+      "summary": "Base del sistema: centros de salud, configuración institucional, geocodificación, utilidades, middleware, decoradores, cifrado, auditoría y el comando seed_data.",
+      "modelos": [
+        "CentroSalud",
+        "LogActividad",
+        "SistemaConfiguracion"
+      ],
+      "detalles": [
+        "CentroSalud guarda capacidad oncológica, especialidades, estado de derivación y coordenadas (geocodificación automática al guardar).",
+        "SistemaConfiguracion centraliza logos y nombre institucional (singleton get_solo()).",
+        "Comandos: seed_data, backup, migrate_to_mysql."
+      ],
+      "rutas": [
+        "/centros-salud/",
+        "/centros-salud/<pk>/",
+        "/api/core/centros-salud/mapa/"
+      ],
+      "x": 610,
+      "y": 560,
+      "w": 194,
+      "h": 62
+    },
+    {
+      "id": "pacientes",
+      "label": "pacientes",
+      "sublabel": "expediente clínico",
+      "layer": "clinico",
+      "type": "app",
+      "path": "apps/pacientes/",
+      "summary": "Registro del paciente pediátrico, alta o vinculación de su tutor, ficha imprimible y expediente con línea de tiempo unificada.",
+      "modelos": [
+        "Paciente",
+        "NotaClinica"
+      ],
+      "detalles": [
+        "Estados: SOSPECHOSO → REFERIDO → EN_ESTUDIO → CONFIRMADO/DESCARTADO → EN_TRATAMIENTO → EN_REMISION → FINALIZADO.",
+        "Al registrar, crea (o reutiliza) el CustomUser PADRE_TUTOR y su PadreTutor, generando un PIN de 6 dígitos.",
+        "El expediente arma una línea de tiempo con cribados, referencias, seguimientos, documentos, notas, síntomas e indicaciones.",
+        "dirección, alergias y antecedentes se guardan cifrados."
+      ],
+      "acceso": "puede_ver_pacientes (todo el personal); edición limitada al médico asignado, al creador o al ADMIN.",
+      "rutas": [
+        "/pacientes/",
+        "/pacientes/nuevo/",
+        "/pacientes/<pk>/",
+        "/pacientes/<pk>/ficha/",
+        "/pacientes/<pk>/resetear-pin/"
+      ],
+      "x": 870,
+      "y": 110,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "cribado",
+      "label": "cribado",
+      "sublabel": "detección temprana",
+      "layer": "clinico",
+      "type": "app",
+      "path": "apps/cribado/",
+      "summary": "Cuestionario clínico de 13 signos que calcula automáticamente el nivel de riesgo y decide si el caso requiere referencia.",
+      "modelos": [
+        "CuestionarioCribado"
+      ],
+      "detalles": [
+        "Regla (calcular_resultado): alarma mayor (dolor de cabeza, vómitos, masa abdominal o leucocoria) o puntaje ≥ 6 → riesgo ALTO, sospecha alta y requiere_referencia = True.",
+        "Puntaje ≥ 3 → riesgo MEDIO; por debajo, riesgo BAJO.",
+        "Cada cribado deja una NotaClinica y puede mover el estado del paciente.",
+        "Exportación a CSV desde el listado."
+      ],
+      "acceso": "puede_ver_cribado (clínicos, enfermería y ADMIN) · puede_hacer_cribado solo MEDICO y PEDIATRA.",
+      "rutas": [
+        "/cribado/",
+        "/cribado/nuevo/",
+        "/cribado/resultado/<pk>/",
+        "/cribado/resultado/<pk>/referencia/",
+        "/cribado/exportar/"
+      ],
+      "x": 870,
+      "y": 215,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "referencias",
+      "label": "referencias",
+      "sublabel": "derivación MSP",
+      "layer": "clinico",
+      "type": "app",
+      "path": "apps/referencias/",
+      "summary": "Referencia médica con máquina de estados, contrarreferencia del especialista, formulario MSP imprimible y solicitud de ingreso a la Casa FACCI.",
+      "modelos": [
+        "ReferenciaMedica",
+        "Contrarreferencia",
+        "ReferenciaIngresoCasaFACCI"
+      ],
+      "detalles": [
+        "Estados: PENDIENTE → ACEPTADA → EN_PROCESO → COMPLETADA, con CANCELADA como salida.",
+        "El destinatario acepta, rechaza, inicia atención y completa; el referente solo puede cancelar mientras esté PENDIENTE o ACEPTADA.",
+        "Para completar se exige una observación de resultado o una contrarreferencia.",
+        "La contrarreferencia registra diagnóstico, tipo de cáncer, estadio, tratamiento y si requiere seguimiento en FACCI; al emitirse cierra la referencia."
+      ],
+      "acceso": "puede_ver_referencias (equipo clínico ampliado + Coordinador FACCI en lectura) · puede_gestionar_referencias (clínicos + ADMIN).",
+      "rutas": [
+        "/referencias/",
+        "/referencias/nueva/",
+        "/referencias/<pk>/",
+        "/referencias/<pk>/imprimir/",
+        "/referencias/<pk>/contrarreferir/",
+        "/referencias/ingreso-casa-facci/nuevo/"
+      ],
+      "x": 870,
+      "y": 320,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "seguimiento",
+      "label": "seguimiento",
+      "sublabel": "protocolo e indicaciones",
+      "layer": "clinico",
+      "type": "app",
+      "path": "apps/seguimiento/",
+      "summary": "Seguimiento clínico por fases del protocolo e indicaciones médicas dirigidas a la familia.",
+      "modelos": [
+        "SeguimientoPaciente",
+        "IndicacionMedica"
+      ],
+      "detalles": [
+        "Fases: INDUCCION → CONSOLIDACION → MANTENIMIENTO → VIGILANCIA.",
+        "Cada consulta registra estado clínico, síntomas, tratamiento, medicamentos, peso/talla (calcula IMC), próxima cita y si requiere hospitalización.",
+        "IndicacionMedica tiene prioridad ALTA/MEDIA/BAJA y bandera visible_padre que la publica en el portal de la familia.",
+        "Genera el descargo de tratamiento en PDF."
+      ],
+      "acceso": "puede_ver_seguimiento / puede_ver_indicaciones · puede_gestionar_indicaciones (clínicos + ADMIN).",
+      "rutas": [
+        "/seguimiento/",
+        "/seguimiento/registrar/",
+        "/seguimiento/timeline/",
+        "/indicaciones/",
+        "/indicaciones/paciente/<id>/descargo/"
+      ],
+      "x": 870,
+      "y": 425,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "laboratorio",
+      "label": "laboratorio",
+      "sublabel": "resultados y banderas",
+      "layer": "clinico",
+      "type": "app",
+      "path": "apps/laboratorio/",
+      "summary": "Registro de estudios de laboratorio contra un catálogo de parámetros con rangos de referencia; cada valor recibe una bandera calculada.",
+      "modelos": [
+        "CatalogoEstudio",
+        "CatalogoParametro",
+        "ResultadoLaboratorio",
+        "ValorResultado"
+      ],
+      "detalles": [
+        "Banderas: NORMAL, BAJO, ALTO, CRITICO_BAJO, CRITICO_ALTO, SIN_RANGO.",
+        "Fuera de rango por debajo del 70 % o por encima del 130 % del límite ⇒ crítico; los parámetros marcados alerta_critica escalan siempre.",
+        "Valores cualitativos (positivo, detectado, mutación…) también pueden escalar a crítico.",
+        "Un resultado con valores críticos cambia de estado y dispara alerta clínica."
+      ],
+      "acceso": "puede_ver_laboratorio (clínicos, enfermería y ADMIN).",
+      "rutas": [
+        "/laboratorio/",
+        "/laboratorio/nuevo/",
+        "/laboratorio/<pk>/",
+        "/laboratorio/catalogo/parametros/"
+      ],
+      "x": 870,
+      "y": 530,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "documentos",
+      "label": "documentos",
+      "sublabel": "estudios e informes",
+      "layer": "clinico",
+      "type": "app",
+      "path": "apps/documentos/",
+      "summary": "Documentos médicos del paciente y solicitudes de estudio dirigidas a la familia, con revisión, visibilidad y vista previa en línea.",
+      "modelos": [
+        "DocumentoMedico",
+        "SolicitudDocumento"
+      ],
+      "detalles": [
+        "Tipos: hemograma, analítica, radiografía, sonografía, resonancia, tomografía, biopsia, receta, informe, referimiento.",
+        "Estados del documento: PENDIENTE → REVISADO / CORRECCION.",
+        "Ciclo de la solicitud: PENDIENTE → SUBIDO → REVISADO (o CORRECCION).",
+        "visible_padre controla si la familia puede consultarlo desde su portal.",
+        "X_FRAME_OPTIONS = SAMEORIGIN permite previsualizar PDF e imágenes en un iframe propio."
+      ],
+      "acceso": "lectura para todo el personal · puede_subir_documentos para crear, revisar y eliminar.",
+      "rutas": [
+        "/documentos/",
+        "/documentos/subir/",
+        "/documentos/<pk>/",
+        "/documentos/<pk>/preview/",
+        "/documentos/solicitudes/"
+      ],
+      "x": 870,
+      "y": 635,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "casos",
+      "label": "casos",
+      "sublabel": "caso oncológico",
+      "layer": "clinico",
+      "type": "app",
+      "path": "apps/casos/",
+      "summary": "Caso clínico oncológico del paciente (apertura, tipo de cáncer, protocolo, prioridad, estado) con notas de evolución.",
+      "modelos": [
+        "CasoClinico",
+        "NotaEvolucion"
+      ],
+      "detalles": [
+        "Estados: ABIERTO → EN_ESTUDIO → EN_TRATAMIENTO → EN_REMISION → CERRADO / ARCHIVADO.",
+        "Puede nacer de un cribado (cribado_origen).",
+        "settings.py marca la app como 'kept for migration history', pero sus vistas y rutas siguen activas."
+      ],
+      "acceso": "solo_personal; la creación y edición se limitan a los roles clínicos.",
+      "rutas": [
+        "/casos/",
+        "/casos/nuevo/",
+        "/casos/<pk>/",
+        "/casos/<pk>/cerrar/"
+      ],
+      "x": 870,
+      "y": 740,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "dashboard",
+      "label": "dashboard",
+      "sublabel": "tableros · alertas · matrices",
+      "layer": "soporte",
+      "type": "app",
+      "path": "apps/dashboard/",
+      "summary": "Tableros por rol, bandeja de alertas clínicas, matrices operativas, centros de salud, auditoría y ajustes del sistema.",
+      "modelos": [
+        "AlertaClinica"
+      ],
+      "detalles": [
+        "dashboard_view arma indicadores, gráfica y alertas según el rol y el alcance de datos del usuario.",
+        "Alertas: PENDIENTE → REVISADA → RESUELTA / DESCARTADA, con prioridad BAJA…CRITICA y fecha límite.",
+        "Cada alerta enlaza directo al objeto que la originó (referencia, cribado, documento o expediente).",
+        "/auditoria/ (solo ADMIN) consulta LogActividad; /matrices/ y /ajustes/ completan la operación."
+      ],
+      "acceso": "solo_personal para el tablero · puede_ver_alertas · matrices y auditoría restringidas a ADMIN / PERSONAL_FACCI.",
+      "rutas": [
+        "/",
+        "/dashboard/",
+        "/alertas/",
+        "/alertas/<pk>/revisar/",
+        "/matrices/",
+        "/auditoria/",
+        "/ajustes/"
+      ],
+      "x": 1125,
+      "y": 110,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "notificaciones",
+      "label": "notificaciones",
+      "sublabel": "bandeja del usuario",
+      "layer": "soporte",
+      "type": "app",
+      "path": "apps/notificaciones/",
+      "summary": "Bandeja unificada de avisos por usuario, con deduplicación, prioridad, acción directa y contador en la campana de ambos portales.",
+      "modelos": [
+        "Notificacion"
+      ],
+      "detalles": [
+        "13 tipos: referencia, cita, seguimiento, alerta clínica, documento, paciente, cribado, medicamento, síntomas, reporte, mensaje, sistema.",
+        "clave_dedupe única evita avisos repetidos por el mismo hecho.",
+        "Un context_processor inyecta el conteo de no leídas en todas las plantillas.",
+        "El objeto relacionado se guarda con GenericForeignKey."
+      ],
+      "acceso": "login_required; cada usuario solo ve las suyas (también el tutor).",
+      "rutas": [
+        "/notificaciones/",
+        "/mensajes/notificaciones/",
+        "/mensajes/notificaciones/api/",
+        "/mensajes/notificaciones/abrir/<pk>/"
+      ],
+      "x": 1125,
+      "y": 215,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "reportes",
+      "label": "reportes",
+      "sublabel": "PENCI-RD · estadística",
+      "layer": "soporte",
+      "type": "app",
+      "path": "apps/reportes/",
+      "summary": "Tablero estadístico, generación de reportes en PDF/Excel/CSV, vista previa, envío por correo y panel PENCI-RD.",
+      "modelos": [
+        "ReporteGenerado"
+      ],
+      "detalles": [
+        "Tipos: resumen mensual, por provincia, por diagnóstico, seguimiento de casos y referencias médicas.",
+        "Los parámetros (periodo, provincia, diagnóstico, formato) se validan en parse_report_params.",
+        "Cada generación queda registrada como ReporteGenerado con código de documento y total de registros."
+      ],
+      "acceso": "puede_ver_reportes para todo el personal (lectura) · generar y exportar solo ADMIN y PERSONAL_FACCI.",
+      "rutas": [
+        "/reportes/",
+        "/reportes/generar/",
+        "/reportes/vista-previa/",
+        "/reportes/enviar-correo/",
+        "/reportes/penci/"
+      ],
+      "x": 1125,
+      "y": 320,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "psicosocial",
+      "label": "psicosocial",
+      "sublabel": "contexto familiar",
+      "layer": "soporte",
+      "type": "app",
+      "path": "apps/psicosocial/",
+      "summary": "Evaluación psicosocial de la familia con puntaje automático de vulnerabilidad y plan de intervención.",
+      "modelos": [
+        "EvaluacionPsicosocial"
+      ],
+      "detalles": [
+        "Cinco secciones: economía, vivienda, red de apoyo, bienestar del cuidador e impacto en el paciente.",
+        "Puntaje 0–24 → BAJO (<5), MEDIO (5–10), ALTO (11–16), CRITICO (≥17).",
+        "Un riesgo alto o crítico avisa al equipo y suele derivar en gestión de Casa FACCI."
+      ],
+      "acceso": "puede_ver_psicosocial (equipo FACCI + ADMIN) · puede_gestionar_psicosocial (Trabajo Social + ADMIN).",
+      "rutas": [
+        "/psicosocial/",
+        "/psicosocial/nuevo/",
+        "/psicosocial/<pk>/"
+      ],
+      "x": 1125,
+      "y": 425,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "alojamiento",
+      "label": "alojamiento",
+      "sublabel": "Casa FACCI",
+      "layer": "soporte",
+      "type": "app",
+      "path": "apps/alojamiento/",
+      "summary": "Casa FACCI: habitaciones, estancias de las familias durante el tratamiento, entrega de habitación con inventario y reportes de ocupación.",
+      "modelos": [
+        "HabitacionCasa",
+        "EstanciaFamiliar",
+        "EntregaHabitacion",
+        "ItemEntregaHabitacion"
+      ],
+      "detalles": [
+        "Motivos de estancia: quimioterapia, cirugía, radioterapia, hospitalización prolongada o consulta.",
+        "La disponibilidad de una habitación se calcula con las estancias ACTIVA frente a su capacidad.",
+        "La entrega de habitación es única por estancia e imprime un acta con inventario firmado."
+      ],
+      "acceso": "puede_ver_alojamiento (equipo FACCI + clínicos en lectura) · puede_gestionar_alojamiento (Trabajo Social, Coordinador FACCI y ADMIN).",
+      "rutas": [
+        "/alojamiento/",
+        "/alojamiento/nuevo/",
+        "/alojamiento/habitaciones/",
+        "/alojamiento/<pk>/checkout/",
+        "/alojamiento/reportes/estancias/"
+      ],
+      "x": 1125,
+      "y": 530,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "padres",
+      "label": "padres",
+      "sublabel": "portal de la familia",
+      "layer": "portal",
+      "type": "app",
+      "path": "apps/padres/",
+      "summary": "Portal del padre, madre o tutor: estado del paciente, evolución, indicaciones, documentos compartidos, recursos educativos y reporte de síntomas.",
+      "modelos": [
+        "PadreTutor",
+        "ReporteSintoma",
+        "RecursoEducativo",
+        "RegistroTomaMedicamento"
+      ],
+      "detalles": [
+        "Solo ve indicaciones con visible_padre y documentos marcados como visibles.",
+        "El reporte de síntomas (leve/moderada/severa) llega al equipo clínico como notificación y entra en la línea de tiempo del expediente.",
+        "Marcar un medicamento como tomado queda registrado por día y posición (RegistroTomaMedicamento).",
+        "Los recursos educativos se cargan con el comando cargar_recursos_familia.",
+        "Dirección y contactos de emergencia del tutor se guardan cifrados."
+      ],
+      "acceso": "PADRE_TUTOR, confinado por ControlAccesoPorRolMiddleware.",
+      "rutas": [
+        "/padres/",
+        "/padres/evolucion/",
+        "/padres/evolucion/reportar/",
+        "/padres/indicaciones/",
+        "/padres/documentos/",
+        "/padres/recursos/",
+        "/recursos/<slug>/"
+      ],
+      "x": 1125,
+      "y": 655,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "usuarios",
+      "label": "usuarios",
+      "sublabel": "cuentas y roles",
+      "layer": "soporte",
+      "type": "app",
+      "path": "apps/usuarios/",
+      "summary": "Alta, edición, activación y perfil de las cuentas del personal; consulta de la matriz de roles y de la configuración institucional.",
+      "detalles": [
+        "Reservado a ADMIN salvo el perfil propio, abierto a todo el personal.",
+        "El teléfono del usuario se guarda cifrado.",
+        "La vista de roles muestra la matriz de permisos tal como la define CustomUser."
+      ],
+      "acceso": "roles_requeridos('ADMIN') · /usuarios/perfil/ con solo_personal.",
+      "rutas": [
+        "/usuarios/",
+        "/usuarios/nuevo/",
+        "/usuarios/<pk>/editar/",
+        "/usuarios/roles/",
+        "/usuarios/perfil/"
+      ],
+      "x": 1125,
+      "y": 760,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "svc_alertas",
+      "label": "Motor de alertas",
+      "sublabel": "dashboard/services.py",
+      "layer": "servicio",
+      "type": "service",
+      "path": "apps/dashboard/services.py",
+      "summary": "Genera, actualiza y resuelve automáticamente las alertas clínicas a partir del estado real de cribados, referencias, seguimientos, documentos y pacientes.",
+      "detalles": [
+        "Deduplica por clave_dedupe y nunca reabre una alerta ya cerrada.",
+        "SINTOMAS_ALARMA (inmediata), SOSPECHOSO_SIN_REFERENCIA (24 h), ALTA_PRIORIDAD_SIN_REVISION (24 h), REFERENCIA_SIN_SEGUIMIENTO (72 h), CASO_CRITICO, SEGUIMIENTO_PENDIENTE, DOCUMENTO_PENDIENTE (3 días) y solicitudes (7 días).",
+        "Cuando la condición desaparece, la alerta se marca RESUELTA con su comentario de cierre.",
+        "generar_alertas_pendientes() recalcula el tablero completo."
+      ],
+      "x": 1380,
+      "y": 110,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "svc_notif",
+      "label": "Motor de avisos",
+      "sublabel": "signals + services",
+      "layer": "servicio",
+      "type": "service",
+      "path": "apps/notificaciones/signals.py · services.py",
+      "summary": "Traduce los hechos del dominio en avisos personales: quién debe enterarse, con qué prioridad y hacia qué pantalla.",
+      "detalles": [
+        "usuarios_del_paciente() reúne médico asignado, creador y tutor.",
+        "Referencia urgente o alta: avisa al especialista destino y difunde a oncólogos y administradores.",
+        "Cubre además cribado con riesgo, seguimiento, cambios de expediente, documentos, solicitudes, síntomas y reportes.",
+        "Cada aviso lleva clave_dedupe y queda auditado."
+      ],
+      "x": 1380,
+      "y": 215,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "svc_reportes",
+      "label": "Reportes PENCI",
+      "sublabel": "reportes/services.py",
+      "layer": "servicio",
+      "type": "service",
+      "path": "apps/reportes/services.py",
+      "summary": "Construye el reporte (columnas, filas, resumen) y lo renderiza a PDF con ReportLab, a Excel con openpyxl o a CSV.",
+      "detalles": [
+        "REPORT_BUILDERS: resumen mensual, por provincia, por diagnóstico, seguimiento y referencias.",
+        "Aplica el periodo, la provincia y el diagnóstico pedidos antes de agregar.",
+        "El PDF lleva logo institucional, código de documento y versión."
+      ],
+      "x": 1380,
+      "y": 320,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "svc_matrices",
+      "label": "Matrices operativas",
+      "sublabel": "matrices_services.py",
+      "layer": "servicio",
+      "type": "service",
+      "path": "apps/dashboard/matrices_services.py",
+      "summary": "Calcula los indicadores de coordinación contra sus metas (cobertura, tiempos de respuesta, alertas atendidas) y los exporta a PDF o CSV.",
+      "detalles": [
+        "Cada indicador se semaforiza comparando el valor con su objetivo.",
+        "Disponible solo para ADMIN y Coordinador FACCI."
+      ],
+      "x": 1380,
+      "y": 425,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "svc_pdf",
+      "label": "PDF institucionales",
+      "sublabel": "ReportLab",
+      "layer": "servicio",
+      "type": "service",
+      "path": "apps/referencias/form_msp_pdf.py · apps/alojamiento/entrega.py · apps/seguimiento/descargo.py",
+      "summary": "Formularios oficiales y actas en PDF: referencia MSP, ingreso a Casa FACCI, entrega de habitación, reporte de estancias, descargo de tratamiento y ficha del paciente.",
+      "detalles": [
+        "Cada documento replica el formato en papel que usa la fundación.",
+        "Se sirven como descarga y, en algunos casos, se guardan como DocumentoMedico del paciente."
+      ],
+      "x": 1380,
+      "y": 530,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "svc_audit",
+      "label": "Auditoría",
+      "sublabel": "core/audit.py · signals.py",
+      "layer": "servicio",
+      "type": "service",
+      "path": "apps/core/signals.py",
+      "summary": "Registra en LogActividad quién hizo qué, sobre qué objeto y desde qué IP, comparando el estado previo y el posterior de cada modelo sensible.",
+      "detalles": [
+        "pre_save guarda los campos auditables; post_save calcula los que cambiaron y describe el cambio.",
+        "Cubre pacientes, cribados, referencias, seguimientos, documentos, solicitudes, alertas y reportes, más login y logout.",
+        "El tipo de acción y el módulo se infieren del texto si no se indican."
+      ],
+      "x": 1380,
+      "y": 655,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "svc_crypto",
+      "label": "Cifrado de datos",
+      "sublabel": "core/encryption.py",
+      "layer": "servicio",
+      "type": "service",
+      "path": "apps/core/encryption.py",
+      "summary": "Campos de modelo que cifran y descifran de forma transparente con Fernet, usando FACCI_ENCRYPTION_KEY.",
+      "detalles": [
+        "EncryptedCharField y EncryptedTextField.",
+        "Protegen dirección, alergias y antecedentes del paciente; dirección y contactos de emergencia del tutor; teléfono del usuario.",
+        "Sin clave configurada el valor se guarda en claro: es una variable obligatoria en producción."
+      ],
+      "x": 1380,
+      "y": 760,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "templates",
+      "label": "Plantillas",
+      "sublabel": "templates/ · static/",
+      "layer": "datos",
+      "type": "ui",
+      "path": "templates/",
+      "summary": "103 plantillas Django organizadas por módulo sobre dos layouts base: uno para el portal clínico y otro para el portal de padres.",
+      "detalles": [
+        "layouts/base.html + components/sidebar.html (menú guiado por la matriz de permisos).",
+        "layouts/base_padres.html + navbar y bottom nav propios del portal familiar.",
+        "components/cards/ y components/pagination.html se reutilizan en todos los listados.",
+        "static/css/facci.css, print.css y utilidades JS (searchable-select, live-filter)."
+      ],
+      "x": 1625,
+      "y": 215,
+      "w": 190,
+      "h": 62
+    },
+    {
+      "id": "media",
+      "label": "Almacenamiento",
+      "sublabel": "MEDIA_ROOT · descargas",
+      "layer": "datos",
+      "type": "storage",
+      "path": "media/",
+      "summary": "Almacenamiento de adjuntos y destino de los documentos generados.",
+      "detalles": [
+        "documentos/%Y/%m/ — estudios e informes del paciente.",
+        "laboratorio/%Y/%m/ — adjuntos de resultados.",
+        "reportes/%Y/%m/ — reportes generados.",
+        "pacientes/, perfiles/, logo_app/, logo_reportes/ — imágenes."
+      ],
+      "x": 1625,
+      "y": 430,
+      "w": 190,
+      "h": 62
+    },
+    {
+      "id": "orm",
+      "label": "Modelos (ORM)",
+      "sublabel": "32 modelos",
+      "layer": "datos",
+      "type": "orm",
+      "path": "apps/*/models.py",
+      "summary": "Capa de modelos de todas las apps: claves UUID, índices explícitos por consulta frecuente y lógica de cálculo dentro de save().",
+      "detalles": [
+        "Cálculos en el modelo: nivel de riesgo del cribado, puntaje psicosocial, bandera del valor de laboratorio.",
+        "AUTH_USER_MODEL = auth_app.CustomUser.",
+        "Índices por estado, prioridad, paciente y fecha en los modelos más consultados."
+      ],
+      "x": 1125,
+      "y": 900,
+      "w": 206,
+      "h": 62
+    },
+    {
+      "id": "db",
+      "label": "Base de datos",
+      "sublabel": "SQLite (dev) · MySQL (prod)",
+      "layer": "datos",
+      "type": "database",
+      "path": "config/settings.py:76",
+      "summary": "Motor conmutable por la variable DB_ENGINE; en MySQL fuerza utf8mb4 y sql_mode estricto.",
+      "detalles": [
+        "El comando migrate_to_mysql acompaña la migración de datos.",
+        "El comando backup respalda la base."
+      ],
+      "x": 1380,
+      "y": 900,
+      "w": 206,
+      "h": 62
+    }
+  ],
+  "edges": [
+    {
+      "id": "actor_clinico__urlconf",
+      "source": "actor_clinico",
+      "target": "urlconf",
+      "kind": "peticion",
+      "label": "HTTPS · sesión Django",
+      "detail": "Todo el portal clínico entra por config/urls.py."
+    },
+    {
+      "id": "actor_padre__urlconf",
+      "source": "actor_padre",
+      "target": "urlconf",
+      "kind": "peticion",
+      "label": "HTTPS · portal familiar",
+      "detail": "El tutor llega a /acceso/padres/ y luego a /padres/."
+    },
+    {
+      "id": "actor_api__api_jwt",
+      "source": "actor_api",
+      "target": "api_jwt",
+      "kind": "peticion",
+      "label": "POST /api/token/",
+      "detail": "Obtiene el par de tokens y firma cada llamada con el de acceso."
+    },
+    {
+      "id": "urlconf__mw_login",
+      "source": "urlconf",
+      "target": "mw_login",
+      "kind": "peticion",
+      "label": "toda petición web",
+      "detail": "LoginRequiredMiddleware exige sesión salvo en rutas públicas."
+    },
+    {
+      "id": "mw_login__mw_rol",
+      "source": "mw_login",
+      "target": "mw_rol",
+      "kind": "peticion",
+      "label": "usuario autenticado",
+      "detail": "Encadenados en MIDDLEWARE, en ese orden."
+    },
+    {
+      "id": "mw_rol__decoradores",
+      "source": "mw_rol",
+      "target": "decoradores",
+      "kind": "peticion",
+      "label": "portal correcto según rol",
+      "detail": "Superado el confinamiento de portal, decide el decorador de la vista."
+    },
+    {
+      "id": "decoradores__matriz_acceso",
+      "source": "decoradores",
+      "target": "matriz_acceso",
+      "kind": "peticion",
+      "label": "@requiere_acceso('puede_ver_*')",
+      "detail": "El decorador consulta la propiedad de la matriz sobre el usuario."
+    },
+    {
+      "id": "urlconf__auth_clinico",
+      "source": "urlconf",
+      "target": "auth_clinico",
+      "kind": "peticion",
+      "label": "/login/",
+      "detail": "Ruta pública: no pasa por LoginRequiredMiddleware."
+    },
+    {
+      "id": "urlconf__auth_padres",
+      "source": "urlconf",
+      "target": "auth_padres",
+      "kind": "peticion",
+      "label": "/acceso/padres/",
+      "detail": "Ruta pública del portal familiar."
+    },
+    {
+      "id": "auth_clinico__matriz_acceso",
+      "source": "auth_clinico",
+      "target": "matriz_acceso",
+      "kind": "peticion",
+      "label": "sesión con rol",
+      "detail": "El rol del CustomUser activa su fila de la matriz."
+    },
+    {
+      "id": "auth_padres__padres",
+      "source": "auth_padres",
+      "target": "padres",
+      "kind": "peticion",
+      "label": "redirect padres:estado",
+      "detail": "El tutor aterriza directamente en el estado de su hijo o hija."
+    },
+    {
+      "id": "matriz_acceso__dashboard",
+      "source": "matriz_acceso",
+      "target": "dashboard",
+      "kind": "peticion",
+      "label": "home por rol",
+      "detail": "home_view delega en dashboard_view, que arma indicadores según el rol."
+    },
+    {
+      "id": "api_jwt__pacientes",
+      "source": "api_jwt",
+      "target": "pacientes",
+      "kind": "peticion",
+      "label": "/api/pacientes/",
+      "detail": "PacienteViewSet."
+    },
+    {
+      "id": "api_jwt__cribado",
+      "source": "api_jwt",
+      "target": "cribado",
+      "kind": "peticion",
+      "label": "/api/cribado/cribados/",
+      "detail": "CuestionarioCribadoViewSet."
+    },
+    {
+      "id": "api_jwt__seguimiento",
+      "source": "api_jwt",
+      "target": "seguimiento",
+      "kind": "peticion",
+      "label": "/api/seguimiento/*",
+      "detail": "Referencias, seguimientos y alertas comparten este router."
+    },
+    {
+      "id": "api_jwt__documentos",
+      "source": "api_jwt",
+      "target": "documentos",
+      "kind": "peticion",
+      "label": "/api/documentos/",
+      "detail": "Documentos y solicitudes."
+    },
+    {
+      "id": "api_jwt__core",
+      "source": "api_jwt",
+      "target": "core",
+      "kind": "peticion",
+      "label": "/api/core/",
+      "detail": "Centros de salud y su mapa geocodificado."
+    },
+    {
+      "id": "matriz_acceso__pacientes",
+      "source": "matriz_acceso",
+      "target": "pacientes",
+      "kind": "acceso",
+      "label": "puede_ver_pacientes",
+      "detail": "Todo el personal; el alcance de registros depende del rol."
+    },
+    {
+      "id": "matriz_acceso__cribado",
+      "source": "matriz_acceso",
+      "target": "cribado",
+      "kind": "acceso",
+      "label": "puede_ver_cribado · puede_hacer_cribado",
+      "detail": "Crear cribados es exclusivo de MEDICO y PEDIATRA."
+    },
+    {
+      "id": "matriz_acceso__referencias",
+      "source": "matriz_acceso",
+      "target": "referencias",
+      "kind": "acceso",
+      "label": "puede_ver / gestionar_referencias",
+      "detail": "Enfermería y Trabajo Social solo leen."
+    },
+    {
+      "id": "matriz_acceso__seguimiento",
+      "source": "matriz_acceso",
+      "target": "seguimiento",
+      "kind": "acceso",
+      "label": "puede_ver_seguimiento · indicaciones",
+      "detail": "Gestionar indicaciones: clínicos y ADMIN."
+    },
+    {
+      "id": "matriz_acceso__laboratorio",
+      "source": "matriz_acceso",
+      "target": "laboratorio",
+      "kind": "acceso",
+      "label": "puede_ver_laboratorio",
+      "detail": "Sin acceso para Trabajo Social ni Coordinador FACCI."
+    },
+    {
+      "id": "matriz_acceso__documentos",
+      "source": "matriz_acceso",
+      "target": "documentos",
+      "kind": "acceso",
+      "label": "puede_subir_documentos",
+      "detail": "El Coordinador FACCI queda en solo lectura."
+    },
+    {
+      "id": "matriz_acceso__casos",
+      "source": "matriz_acceso",
+      "target": "casos",
+      "kind": "acceso",
+      "label": "solo_personal",
+      "detail": "Crear y editar se limita a los roles clínicos."
+    },
+    {
+      "id": "matriz_acceso__psicosocial",
+      "source": "matriz_acceso",
+      "target": "psicosocial",
+      "kind": "acceso",
+      "label": "puede_ver / gestionar_psicosocial",
+      "detail": "Editar: Trabajo Social y ADMIN."
+    },
+    {
+      "id": "matriz_acceso__alojamiento",
+      "source": "matriz_acceso",
+      "target": "alojamiento",
+      "kind": "acceso",
+      "label": "puede_ver / gestionar_alojamiento",
+      "detail": "Gestión: Trabajo Social, Coordinador FACCI y ADMIN."
+    },
+    {
+      "id": "matriz_acceso__reportes",
+      "source": "matriz_acceso",
+      "target": "reportes",
+      "kind": "acceso",
+      "label": "puede_ver / generar_reportes",
+      "detail": "Generar y exportar: ADMIN y Coordinador FACCI."
+    },
+    {
+      "id": "matriz_acceso__usuarios",
+      "source": "matriz_acceso",
+      "target": "usuarios",
+      "kind": "acceso",
+      "label": "roles_requeridos('ADMIN')",
+      "detail": "El perfil propio queda abierto a todo el personal."
+    },
+    {
+      "id": "matriz_acceso__padres",
+      "source": "matriz_acceso",
+      "target": "padres",
+      "kind": "acceso",
+      "label": "rol PADRE_TUTOR",
+      "detail": "Cualquier otro rol es expulsado del portal familiar."
+    },
+    {
+      "id": "pacientes__cribado",
+      "source": "pacientes",
+      "target": "cribado",
+      "kind": "flujo",
+      "label": "paciente asignado o creado",
+      "detail": "El cuestionario solo ofrece los pacientes del médico que lo aplica."
+    },
+    {
+      "id": "cribado__pacientes",
+      "source": "cribado",
+      "target": "pacientes",
+      "kind": "flujo",
+      "label": "NotaClinica + estado",
+      "detail": "Riesgo ALTO → SOSPECHOSO, MEDIO → EN_ESTUDIO, BAJO → DESCARTADO."
+    },
+    {
+      "id": "cribado__referencias",
+      "source": "cribado",
+      "target": "referencias",
+      "kind": "flujo",
+      "label": "requiere_referencia → referencia",
+      "detail": "crear_referencia_view fija prioridad URGENTE (riesgo alto) o ALTA (medio) y arrastra los hallazgos como motivo."
+    },
+    {
+      "id": "referencias__pacientes",
+      "source": "referencias",
+      "target": "pacientes",
+      "kind": "flujo",
+      "label": "estado → REFERIDO",
+      "detail": "Al emitir la referencia el expediente cambia de estado."
+    },
+    {
+      "id": "referencias__seguimiento",
+      "source": "referencias",
+      "target": "seguimiento",
+      "kind": "flujo",
+      "label": "contrarreferencia → seguimiento FACCI",
+      "detail": "requiere_seguimiento_facci abre el seguimiento por fases del protocolo."
+    },
+    {
+      "id": "referencias__alojamiento",
+      "source": "referencias",
+      "target": "alojamiento",
+      "kind": "flujo",
+      "label": "ingreso a Casa FACCI",
+      "detail": "ReferenciaIngresoCasaFACCI reserva habitación para la familia."
+    },
+    {
+      "id": "seguimiento__pacientes",
+      "source": "seguimiento",
+      "target": "pacientes",
+      "kind": "flujo",
+      "label": "evolución en el expediente",
+      "detail": "Cada consulta entra en la línea de tiempo del paciente."
+    },
+    {
+      "id": "seguimiento__padres",
+      "source": "seguimiento",
+      "target": "padres",
+      "kind": "flujo",
+      "label": "indicaciones visible_padre",
+      "detail": "Es lo que la familia ve como pauta de cuidado en casa."
+    },
+    {
+      "id": "pacientes__psicosocial",
+      "source": "pacientes",
+      "target": "psicosocial",
+      "kind": "flujo",
+      "label": "evaluación del entorno",
+      "detail": "Trabajo Social evalúa con visión global de pacientes."
+    },
+    {
+      "id": "psicosocial__alojamiento",
+      "source": "psicosocial",
+      "target": "alojamiento",
+      "kind": "flujo",
+      "label": "gestiona la estancia",
+      "detail": "Una vulnerabilidad alta suele derivar en alojamiento en la Casa FACCI."
+    },
+    {
+      "id": "documentos__padres",
+      "source": "documentos",
+      "target": "padres",
+      "kind": "flujo",
+      "label": "documento visible_padre",
+      "detail": "La familia consulta solo lo que el equipo marca como visible."
+    },
+    {
+      "id": "padres__documentos",
+      "source": "padres",
+      "target": "documentos",
+      "kind": "flujo",
+      "label": "sube el estudio solicitado",
+      "detail": "La solicitud pasa a SUBIDO y queda pendiente de revisión."
+    },
+    {
+      "id": "padres__pacientes",
+      "source": "padres",
+      "target": "pacientes",
+      "kind": "flujo",
+      "label": "ReporteSintoma",
+      "detail": "Lo que la familia observa en casa entra en la línea de tiempo del expediente."
+    },
+    {
+      "id": "casos__pacientes",
+      "source": "casos",
+      "target": "pacientes",
+      "kind": "flujo",
+      "label": "caso oncológico",
+      "detail": "Agrupa el tratamiento y las notas de evolución del paciente confirmado."
+    },
+    {
+      "id": "laboratorio__pacientes",
+      "source": "laboratorio",
+      "target": "pacientes",
+      "kind": "flujo",
+      "label": "resultados en el expediente",
+      "detail": "Los estudios quedan asociados al paciente y a su médico solicitante."
+    },
+    {
+      "id": "core__referencias",
+      "source": "core",
+      "target": "referencias",
+      "kind": "flujo",
+      "label": "CentroSalud destino",
+      "detail": "El hospital de destino y su capacidad oncológica salen del catálogo de centros."
+    },
+    {
+      "id": "core__dashboard",
+      "source": "core",
+      "target": "dashboard",
+      "kind": "flujo",
+      "label": "centros y mapa",
+      "detail": "El tablero de centros de salud usa las coordenadas geocodificadas."
+    },
+    {
+      "id": "usuarios__matriz_acceso",
+      "source": "usuarios",
+      "target": "matriz_acceso",
+      "kind": "flujo",
+      "label": "alta de cuentas y roles",
+      "detail": "Cambiar el rol de un usuario cambia de inmediato su fila en la matriz."
+    },
+    {
+      "id": "dashboard__reportes",
+      "source": "dashboard",
+      "target": "reportes",
+      "kind": "flujo",
+      "label": "indicadores PENCI-RD",
+      "detail": "El tablero enlaza con la estadística y la generación de reportes."
+    },
+    {
+      "id": "cribado__svc_alertas",
+      "source": "cribado",
+      "target": "svc_alertas",
+      "kind": "evento",
+      "label": "generar_alertas_cribado",
+      "detail": "Riesgo alto o alarma mayor → SINTOMAS_ALARMA; requiere referencia y no la hay → SOSPECHOSO_SIN_REFERENCIA (24 h)."
+    },
+    {
+      "id": "referencias__svc_alertas",
+      "source": "referencias",
+      "target": "svc_alertas",
+      "kind": "evento",
+      "label": "generar_alertas_referencia",
+      "detail": "ALTA_PRIORIDAD_SIN_REVISION (24 h) y REFERENCIA_SIN_SEGUIMIENTO (72 h); al cerrarse, ambas se resuelven."
+    },
+    {
+      "id": "seguimiento__svc_alertas",
+      "source": "seguimiento",
+      "target": "svc_alertas",
+      "kind": "evento",
+      "label": "generar_alertas_seguimiento",
+      "detail": "CASO_CRITICO si requiere hospitalización; SEGUIMIENTO_PENDIENTE si vence la próxima cita."
+    },
+    {
+      "id": "documentos__svc_alertas",
+      "source": "documentos",
+      "target": "svc_alertas",
+      "kind": "evento",
+      "label": "documento / solicitud pendiente",
+      "detail": "DOCUMENTO_PENDIENTE a los 3 días; solicitudes a los 7."
+    },
+    {
+      "id": "pacientes__svc_alertas",
+      "source": "pacientes",
+      "target": "svc_alertas",
+      "kind": "evento",
+      "label": "paciente sin revisión",
+      "detail": "REFERIDO o EN_TRATAMIENTO sin ningún seguimiento registrado."
+    },
+    {
+      "id": "laboratorio__svc_alertas",
+      "source": "laboratorio",
+      "target": "svc_alertas",
+      "kind": "evento",
+      "label": "valores críticos",
+      "detail": "Un valor con bandera crítica levanta alerta y marca el resultado como CRITICO."
+    },
+    {
+      "id": "svc_alertas__dashboard",
+      "source": "svc_alertas",
+      "target": "dashboard",
+      "kind": "evento",
+      "label": "AlertaClinica (dedupe)",
+      "detail": "Alimenta la bandeja /alertas/ y los contadores del tablero."
+    },
+    {
+      "id": "svc_alertas__svc_notif",
+      "source": "svc_alertas",
+      "target": "svc_notif",
+      "kind": "evento",
+      "label": "alerta ALTA o CRÍTICA",
+      "detail": "Solo las alertas abiertas y prioritarias generan notificación personal."
+    },
+    {
+      "id": "cribado__svc_notif",
+      "source": "cribado",
+      "target": "svc_notif",
+      "kind": "evento",
+      "label": "cribado con riesgo",
+      "detail": "Avisa al médico asignado y al creador; el tutor queda excluido."
+    },
+    {
+      "id": "referencias__svc_notif",
+      "source": "referencias",
+      "target": "svc_notif",
+      "kind": "evento",
+      "label": "referencia creada o actualizada",
+      "detail": "Al especialista destino, con difusión a oncólogos y administradores si es ALTA o URGENTE."
+    },
+    {
+      "id": "seguimiento__svc_notif",
+      "source": "seguimiento",
+      "target": "svc_notif",
+      "kind": "evento",
+      "label": "nuevo seguimiento",
+      "detail": "Al tutor le llega apuntando a su vista de evolución."
+    },
+    {
+      "id": "pacientes__svc_notif",
+      "source": "pacientes",
+      "target": "svc_notif",
+      "kind": "evento",
+      "label": "expediente asignado o actualizado",
+      "detail": "Cambios de estado, diagnóstico o médico asignado."
+    },
+    {
+      "id": "documentos__svc_notif",
+      "source": "documentos",
+      "target": "svc_notif",
+      "kind": "evento",
+      "label": "estudio solicitado o cargado",
+      "detail": "Al tutor: 'Subir resultado'. Al equipo: 'requiere revisión'."
+    },
+    {
+      "id": "padres__svc_notif",
+      "source": "padres",
+      "target": "svc_notif",
+      "kind": "evento",
+      "label": "reporte de síntomas",
+      "detail": "Gravedad severa eleva la prioridad del aviso al equipo clínico."
+    },
+    {
+      "id": "psicosocial__svc_notif",
+      "source": "psicosocial",
+      "target": "svc_notif",
+      "kind": "evento",
+      "label": "riesgo alto o crítico",
+      "detail": "Alerta al equipo FACCI sobre la vulnerabilidad de la familia."
+    },
+    {
+      "id": "reportes__svc_notif",
+      "source": "reportes",
+      "target": "svc_notif",
+      "kind": "evento",
+      "label": "reporte generado",
+      "detail": "Confirmación de baja prioridad a quien lo generó."
+    },
+    {
+      "id": "svc_notif__notificaciones",
+      "source": "svc_notif",
+      "target": "notificaciones",
+      "kind": "evento",
+      "label": "Notificacion (clave_dedupe)",
+      "detail": "Persiste el aviso con tipo, prioridad, icono y acción."
+    },
+    {
+      "id": "notificaciones__dashboard",
+      "source": "notificaciones",
+      "target": "dashboard",
+      "kind": "evento",
+      "label": "campana del portal clínico",
+      "detail": "El context_processor inyecta el conteo de no leídas."
+    },
+    {
+      "id": "notificaciones__padres",
+      "source": "notificaciones",
+      "target": "padres",
+      "kind": "evento",
+      "label": "campana del portal familiar",
+      "detail": "Única ruta fuera de /padres/ permitida al tutor."
+    },
+    {
+      "id": "reportes__svc_reportes",
+      "source": "reportes",
+      "target": "svc_reportes",
+      "kind": "salida",
+      "label": "build_report → PDF/XLSX/CSV",
+      "detail": "Construye columnas, filas y resumen antes de renderizar."
+    },
+    {
+      "id": "dashboard__svc_matrices",
+      "source": "dashboard",
+      "target": "svc_matrices",
+      "kind": "salida",
+      "label": "matrices operativas",
+      "detail": "Indicadores contra metas, con vista previa y descarga."
+    },
+    {
+      "id": "referencias__svc_pdf",
+      "source": "referencias",
+      "target": "svc_pdf",
+      "kind": "salida",
+      "label": "formulario MSP · ingreso Casa FACCI",
+      "detail": "Réplica del formato oficial en papel."
+    },
+    {
+      "id": "alojamiento__svc_pdf",
+      "source": "alojamiento",
+      "target": "svc_pdf",
+      "kind": "salida",
+      "label": "entrega de habitación · estancias",
+      "detail": "Acta con inventario y reporte de ocupación."
+    },
+    {
+      "id": "seguimiento__svc_pdf",
+      "source": "seguimiento",
+      "target": "svc_pdf",
+      "kind": "salida",
+      "label": "descargo de tratamiento",
+      "detail": "Pauta firmada que se entrega a la familia."
+    },
+    {
+      "id": "pacientes__svc_pdf",
+      "source": "pacientes",
+      "target": "svc_pdf",
+      "kind": "salida",
+      "label": "ficha del paciente",
+      "detail": "Resumen imprimible del expediente."
+    },
+    {
+      "id": "svc_reportes__media",
+      "source": "svc_reportes",
+      "target": "media",
+      "kind": "salida",
+      "label": "reportes/%Y/%m/",
+      "detail": "El archivo queda asociado al ReporteGenerado."
+    },
+    {
+      "id": "svc_matrices__media",
+      "source": "svc_matrices",
+      "target": "media",
+      "kind": "salida",
+      "label": "descarga PDF/CSV",
+      "detail": "Se entrega como respuesta directa, sin persistirse."
+    },
+    {
+      "id": "svc_pdf__media",
+      "source": "svc_pdf",
+      "target": "media",
+      "kind": "salida",
+      "label": "PDF generado",
+      "detail": "Descarga inmediata y, en el caso MSP, guardado como documento del paciente."
+    },
+    {
+      "id": "documentos__media",
+      "source": "documentos",
+      "target": "media",
+      "kind": "salida",
+      "label": "documentos/%Y/%m/",
+      "detail": "Archivos subidos por el equipo o por la familia."
+    },
+    {
+      "id": "laboratorio__media",
+      "source": "laboratorio",
+      "target": "media",
+      "kind": "salida",
+      "label": "laboratorio/%Y/%m/",
+      "detail": "Adjunto del resultado de laboratorio."
+    },
+    {
+      "id": "dashboard__templates",
+      "source": "dashboard",
+      "target": "templates",
+      "kind": "salida",
+      "label": "layouts/base.html",
+      "detail": "Sidebar y navbar del portal clínico, guiados por la matriz."
+    },
+    {
+      "id": "padres__templates",
+      "source": "padres",
+      "target": "templates",
+      "kind": "salida",
+      "label": "layouts/base_padres.html",
+      "detail": "Navegación propia del portal familiar, pensada para móvil."
+    },
+    {
+      "id": "notificaciones__templates",
+      "source": "notificaciones",
+      "target": "templates",
+      "kind": "salida",
+      "label": "campana + context_processor",
+      "detail": "components/notifications_js.html en ambos layouts."
+    },
+    {
+      "id": "pacientes__svc_audit",
+      "source": "pacientes",
+      "target": "svc_audit",
+      "kind": "auditoria",
+      "label": "alta y edición del expediente",
+      "detail": "Campos auditados: nombres, fecha de nacimiento, provincia, estado, diagnóstico y médico asignado."
+    },
+    {
+      "id": "cribado__svc_audit",
+      "source": "cribado",
+      "target": "svc_audit",
+      "kind": "auditoria",
+      "label": "cribado creado o editado",
+      "detail": "Se auditan los 13 síntomas y las observaciones."
+    },
+    {
+      "id": "referencias__svc_audit",
+      "source": "referencias",
+      "target": "svc_audit",
+      "kind": "auditoria",
+      "label": "cambio de estado",
+      "detail": "El historial de la referencia se reconstruye desde LogActividad."
+    },
+    {
+      "id": "seguimiento__svc_audit",
+      "source": "seguimiento",
+      "target": "svc_audit",
+      "kind": "auditoria",
+      "label": "consulta registrada",
+      "detail": "Fase, tratamiento, medicamentos y próxima cita."
+    },
+    {
+      "id": "documentos__svc_audit",
+      "source": "documentos",
+      "target": "svc_audit",
+      "kind": "auditoria",
+      "label": "carga, revisión y borrado",
+      "detail": "Incluye las eliminaciones (post_delete)."
+    },
+    {
+      "id": "reportes__svc_audit",
+      "source": "reportes",
+      "target": "svc_audit",
+      "kind": "auditoria",
+      "label": "generación de reporte",
+      "detail": "Tipo de acción REPORTE."
+    },
+    {
+      "id": "auth_clinico__svc_audit",
+      "source": "auth_clinico",
+      "target": "svc_audit",
+      "kind": "auditoria",
+      "label": "login / logout",
+      "detail": "Señales user_logged_in y user_logged_out."
+    },
+    {
+      "id": "dashboard__svc_audit",
+      "source": "dashboard",
+      "target": "svc_audit",
+      "kind": "auditoria",
+      "label": "consulta /auditoria/",
+      "detail": "Solo ADMIN, con filtros por módulo, tipo de acción y fecha."
+    },
+    {
+      "id": "svc_audit__orm",
+      "source": "svc_audit",
+      "target": "orm",
+      "kind": "auditoria",
+      "label": "LogActividad",
+      "detail": "Usuario, acción, módulo, objeto, descripción e IP."
+    },
+    {
+      "id": "pacientes__svc_crypto",
+      "source": "pacientes",
+      "target": "svc_crypto",
+      "kind": "cifrado",
+      "label": "dirección · alergias · antecedentes",
+      "detail": "EncryptedTextField sobre el modelo Paciente."
+    },
+    {
+      "id": "padres__svc_crypto",
+      "source": "padres",
+      "target": "svc_crypto",
+      "kind": "cifrado",
+      "label": "dirección · contacto de emergencia",
+      "detail": "EncryptedCharField / EncryptedTextField sobre PadreTutor."
+    },
+    {
+      "id": "usuarios__svc_crypto",
+      "source": "usuarios",
+      "target": "svc_crypto",
+      "kind": "cifrado",
+      "label": "teléfono del usuario",
+      "detail": "EncryptedCharField sobre CustomUser."
+    },
+    {
+      "id": "svc_crypto__orm",
+      "source": "svc_crypto",
+      "target": "orm",
+      "kind": "cifrado",
+      "label": "valor cifrado en reposo",
+      "detail": "Cifra al guardar y descifra al leer, de forma transparente para la vista."
+    },
+    {
+      "id": "pacientes__orm",
+      "source": "pacientes",
+      "target": "orm",
+      "kind": "datos",
+      "label": "Paciente · NotaClinica",
+      "detail": "Índices por código, estado, tutor y provincia."
+    },
+    {
+      "id": "cribado__orm",
+      "source": "cribado",
+      "target": "orm",
+      "kind": "datos",
+      "label": "CuestionarioCribado",
+      "detail": "Índices por paciente, nivel de riesgo y fecha."
+    },
+    {
+      "id": "referencias__orm",
+      "source": "referencias",
+      "target": "orm",
+      "kind": "datos",
+      "label": "ReferenciaMedica · Contrarreferencia",
+      "detail": "Contrarreferencia es 1:1 con la referencia."
+    },
+    {
+      "id": "seguimiento__orm",
+      "source": "seguimiento",
+      "target": "orm",
+      "kind": "datos",
+      "label": "SeguimientoPaciente · IndicacionMedica",
+      "detail": "Índices por paciente, fecha y hospitalización."
+    },
+    {
+      "id": "laboratorio__orm",
+      "source": "laboratorio",
+      "target": "orm",
+      "kind": "datos",
+      "label": "Catálogo · Resultado · Valor",
+      "detail": "Parámetro único por estudio."
+    },
+    {
+      "id": "documentos__orm",
+      "source": "documentos",
+      "target": "orm",
+      "kind": "datos",
+      "label": "DocumentoMedico · SolicitudDocumento",
+      "detail": "La solicitud enlaza 1:1 con el documento que la resuelve."
+    },
+    {
+      "id": "casos__orm",
+      "source": "casos",
+      "target": "orm",
+      "kind": "datos",
+      "label": "CasoClinico · NotaEvolucion",
+      "detail": "Código de caso autogenerado."
+    },
+    {
+      "id": "psicosocial__orm",
+      "source": "psicosocial",
+      "target": "orm",
+      "kind": "datos",
+      "label": "EvaluacionPsicosocial",
+      "detail": "Puntaje y nivel de riesgo se recalculan en save()."
+    },
+    {
+      "id": "alojamiento__orm",
+      "source": "alojamiento",
+      "target": "orm",
+      "kind": "datos",
+      "label": "Habitación · Estancia · Entrega",
+      "detail": "Entrega única por estancia, ítems únicos por entrega."
+    },
+    {
+      "id": "padres__orm",
+      "source": "padres",
+      "target": "orm",
+      "kind": "datos",
+      "label": "PadreTutor · Síntomas · Recursos",
+      "detail": "La toma de medicamento es única por paciente, nombre, índice y día."
+    },
+    {
+      "id": "dashboard__orm",
+      "source": "dashboard",
+      "target": "orm",
+      "kind": "datos",
+      "label": "AlertaClinica",
+      "detail": "clave_dedupe única sostiene la deduplicación."
+    },
+    {
+      "id": "notificaciones__orm",
+      "source": "notificaciones",
+      "target": "orm",
+      "kind": "datos",
+      "label": "Notificacion",
+      "detail": "Índices por usuario, leída, archivada, tipo y prioridad."
+    },
+    {
+      "id": "reportes__orm",
+      "source": "reportes",
+      "target": "orm",
+      "kind": "datos",
+      "label": "ReporteGenerado",
+      "detail": "Deja trazabilidad de cada exportación."
+    },
+    {
+      "id": "usuarios__orm",
+      "source": "usuarios",
+      "target": "orm",
+      "kind": "datos",
+      "label": "CustomUser",
+      "detail": "AUTH_USER_MODEL con UUID, cédula única y rol indexado."
+    },
+    {
+      "id": "core__orm",
+      "source": "core",
+      "target": "orm",
+      "kind": "datos",
+      "label": "CentroSalud · LogActividad · Configuración",
+      "detail": "Catálogos y trazas transversales."
+    },
+    {
+      "id": "orm__db",
+      "source": "orm",
+      "target": "db",
+      "kind": "datos",
+      "label": "SQL",
+      "detail": "SQLite en desarrollo, MySQL utf8mb4 en producción."
+    }
+  ],
+  "flows": [
+    {
+      "id": "flow_acceso_clinico",
+      "name": "Acceso del personal clínico",
+      "category": "Acceso",
+      "actor": "Cualquier rol del portal interno",
+      "outcome": "Sesión abierta y tablero cargado según el rol.",
+      "description": "Entrada estándar al portal interno: el login acepta usuario o correo, deja traza de auditoría y el rol determina qué tablero y qué menú se dibujan.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_clinico",
+          "edge": null,
+          "title": "El profesional abre /login/",
+          "detail": "Puede escribir su nombre de usuario o su correo institucional."
+        },
+        {
+          "n": 2,
+          "node": "urlconf",
+          "edge": "actor_clinico__urlconf",
+          "title": "config/urls.py resuelve la ruta",
+          "detail": "/login/ es pública: no exige sesión previa."
+        },
+        {
+          "n": 3,
+          "node": "auth_clinico",
+          "edge": "urlconf__auth_clinico",
+          "title": "login_view autentica",
+          "detail": "Si falla y el dato tiene @, busca el usuario por correo y reintenta. Detecta aparte la cuenta deshabilitada para avisarlo con claridad.",
+          "ref": "apps/auth_app/views.py:6"
+        },
+        {
+          "n": 4,
+          "node": "svc_audit",
+          "edge": "auth_clinico__svc_audit",
+          "title": "Se registra el inicio de sesión",
+          "detail": "La señal user_logged_in escribe un LogActividad de tipo LOGIN con la IP.",
+          "ref": "apps/core/signals.py:137"
+        },
+        {
+          "n": 5,
+          "node": "matriz_acceso",
+          "edge": "auth_clinico__matriz_acceso",
+          "title": "El rol activa su fila de la matriz",
+          "detail": "Las propiedades puede_ver_* deciden a la vez el menú lateral y el permiso real de cada vista.",
+          "ref": "apps/auth_app/models.py:130"
+        },
+        {
+          "n": 6,
+          "node": "dashboard",
+          "edge": "matriz_acceso__dashboard",
+          "title": "home_view entrega el tablero",
+          "detail": "Indicadores, gráfica y alertas filtrados por el alcance de datos del rol.",
+          "ref": "apps/dashboard/views.py:167"
+        },
+        {
+          "n": 7,
+          "node": "templates",
+          "edge": "dashboard__templates",
+          "title": "Se renderiza el layout clínico",
+          "detail": "layouts/base.html con el sidebar construido desde la matriz."
+        }
+      ]
+    },
+    {
+      "id": "flow_acceso_padres",
+      "name": "Acceso de la familia (código + PIN)",
+      "category": "Acceso",
+      "actor": "Padre / Tutor",
+      "outcome": "El tutor entra a su portal, confinado a las rutas de la familia.",
+      "description": "El portal familiar no pide usuario y contraseña al uso: acepta el código del paciente (ej. FACCI-MR01) o el correo del tutor, más el PIN generado al registrar al niño o la niña.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_padre",
+          "edge": null,
+          "title": "El tutor abre /acceso/padres/",
+          "detail": "Pantalla separada, pensada para móvil."
+        },
+        {
+          "n": 2,
+          "node": "urlconf",
+          "edge": "actor_padre__urlconf",
+          "title": "Ruta pública del portal familiar",
+          "detail": "No pasa por la exigencia de sesión."
+        },
+        {
+          "n": 3,
+          "node": "auth_padres",
+          "edge": "urlconf__auth_padres",
+          "title": "login_padres_view resuelve al tutor",
+          "detail": "Busca por correo con rol PADRE_TUTOR, luego por código de paciente y por último por nombre de usuario; valida el PIN contra la contraseña.",
+          "ref": "apps/auth_app/views.py:75"
+        },
+        {
+          "n": 4,
+          "node": "mw_rol",
+          "edge": "mw_login__mw_rol",
+          "title": "El middleware lo confina",
+          "detail": "Desde ese momento cualquier ruta fuera de /padres/, /recursos/ y las notificaciones lo devuelve a su estado.",
+          "ref": "apps/core/middleware.py:42"
+        },
+        {
+          "n": 5,
+          "node": "padres",
+          "edge": "auth_padres__padres",
+          "title": "Portal: estado del paciente",
+          "detail": "Estado actual, próxima cita, indicaciones activas y accesos a evolución, documentos y recursos."
+        },
+        {
+          "n": 6,
+          "node": "templates",
+          "edge": "padres__templates",
+          "title": "Layout propio de la familia",
+          "detail": "layouts/base_padres.html con navbar y navegación inferior."
+        }
+      ]
+    },
+    {
+      "id": "flow_registro_paciente",
+      "name": "Registro del paciente y alta del tutor",
+      "category": "Clínico",
+      "actor": "Pediatra · Médico General · Enfermería",
+      "outcome": "Expediente creado, tutor con acceso al portal y PIN entregado.",
+      "description": "Registrar un paciente crea también, en la misma operación, la cuenta del padre o tutor con su PIN de acceso, y cifra los datos sensibles del expediente.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_clinico",
+          "edge": null,
+          "title": "POST /pacientes/nuevo/",
+          "detail": "Formulario con datos del niño o la niña y de su responsable."
+        },
+        {
+          "n": 2,
+          "node": "matriz_acceso",
+          "edge": null,
+          "title": "Se comprueba el acceso",
+          "detail": "puede_ver_pacientes cubre a todo el personal; el alcance de lo que verá después depende del rol."
+        },
+        {
+          "n": 3,
+          "node": "pacientes",
+          "edge": "matriz_acceso__pacientes",
+          "title": "registro_view crea el expediente",
+          "detail": "Genera el código FACCI-… y llama a _obtener_o_crear_tutor: si la cédula o el correo ya existen reutiliza la cuenta, y si no crea un CustomUser PADRE_TUTOR con PIN aleatorio de 6 dígitos.",
+          "ref": "apps/pacientes/views.py:103"
+        },
+        {
+          "n": 4,
+          "node": "svc_crypto",
+          "edge": "pacientes__svc_crypto",
+          "title": "Se cifran los datos sensibles",
+          "detail": "Dirección, alergias y antecedentes del paciente; dirección y contacto de emergencia del tutor.",
+          "ref": "apps/core/encryption.py"
+        },
+        {
+          "n": 5,
+          "node": "orm",
+          "edge": "svc_crypto__orm",
+          "title": "Persistencia",
+          "detail": "Paciente, PadreTutor y CustomUser quedan enlazados; el tutor es PROTECT en el paciente."
+        },
+        {
+          "n": 6,
+          "node": "svc_notif",
+          "edge": "pacientes__svc_notif",
+          "title": "Aviso al médico asignado",
+          "detail": "notificar_paciente crea el aviso 'Paciente asignado' apuntando al expediente.",
+          "ref": "apps/notificaciones/signals.py:223"
+        },
+        {
+          "n": 7,
+          "node": "notificaciones",
+          "edge": "svc_notif__notificaciones",
+          "title": "Entra en la bandeja",
+          "detail": "Con clave de deduplicación para no repetirse."
+        },
+        {
+          "n": 8,
+          "node": "svc_audit",
+          "edge": "pacientes__svc_audit",
+          "title": "Queda auditado",
+          "detail": "LogActividad de tipo CREACION con el nombre y el código del paciente."
+        }
+      ]
+    },
+    {
+      "id": "flow_cribado",
+      "name": "Cribado de detección temprana",
+      "category": "Clínico",
+      "actor": "Médico General · Pediatra (únicos autorizados)",
+      "outcome": "Nivel de riesgo calculado, expediente actualizado y alertas abiertas si procede.",
+      "description": "Corazón del sistema. Trece signos de alarma se convierten en un nivel de riesgo con una regla explícita, y ese resultado mueve el estado del paciente y despierta al motor de alertas.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_clinico",
+          "edge": null,
+          "title": "Solo MEDICO o PEDIATRA",
+          "detail": "Ni siquiera el Administrador puede crear cribados: es la única acción que la matriz le niega."
+        },
+        {
+          "n": 2,
+          "node": "matriz_acceso",
+          "edge": null,
+          "title": "puede_hacer_cribado",
+          "detail": "El decorador @requiere_acceso lee la misma propiedad que muestra la opción en el menú."
+        },
+        {
+          "n": 3,
+          "node": "cribado",
+          "edge": "matriz_acceso__cribado",
+          "title": "cuestionario_view guarda las respuestas",
+          "detail": "Solo ofrece pacientes propios (asignados o creados). calcular_resultado() corre dentro de save().",
+          "ref": "apps/cribado/views.py:262"
+        },
+        {
+          "n": 4,
+          "node": "cribado",
+          "edge": null,
+          "title": "Regla de decisión",
+          "detail": "Alarma mayor (dolor de cabeza, vómitos, masa abdominal o leucocoria) o puntaje ≥ 6 → ALTO + requiere_referencia. Puntaje ≥ 3 → MEDIO. Resto → BAJO.",
+          "ref": "apps/cribado/models.py:151"
+        },
+        {
+          "n": 5,
+          "node": "pacientes",
+          "edge": "cribado__pacientes",
+          "title": "Traza y estado del expediente",
+          "detail": "Deja una NotaClinica (de tipo ALERTA si el riesgo es alto) y mueve el estado a SOSPECHOSO, EN_ESTUDIO o DESCARTADO.",
+          "ref": "apps/cribado/views.py:146"
+        },
+        {
+          "n": 6,
+          "node": "svc_alertas",
+          "edge": "cribado__svc_alertas",
+          "title": "Se evalúan las alertas",
+          "detail": "SINTOMAS_ALARMA con fecha límite inmediata y SOSPECHOSO_SIN_REFERENCIA con 24 horas de plazo.",
+          "ref": "apps/dashboard/services.py:109"
+        },
+        {
+          "n": 7,
+          "node": "dashboard",
+          "edge": "svc_alertas__dashboard",
+          "title": "Aparece en la bandeja de alertas",
+          "detail": "Con prioridad, plazo y enlace directo al cribado."
+        },
+        {
+          "n": 8,
+          "node": "svc_notif",
+          "edge": "cribado__svc_notif",
+          "title": "Aviso al equipo",
+          "detail": "Riesgo alto → prioridad crítica; el tutor no recibe este aviso."
+        },
+        {
+          "n": 9,
+          "node": "svc_audit",
+          "edge": "cribado__svc_audit",
+          "title": "Auditoría del cribado",
+          "detail": "Se registran los síntomas marcados y el resultado."
+        }
+      ]
+    },
+    {
+      "id": "flow_referencia",
+      "name": "Referencia médica (derivación)",
+      "category": "Clínico",
+      "actor": "Médico referente",
+      "outcome": "Paciente en estado REFERIDO, especialista avisado y formulario MSP listo.",
+      "description": "El cribado positivo se convierte en una derivación formal, con prioridad heredada del riesgo y trazabilidad hacia el cuestionario que la originó.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "cribado",
+          "edge": null,
+          "title": "Resultado con requiere_referencia",
+          "detail": "La pantalla de resultado ofrece el botón de crear referencia."
+        },
+        {
+          "n": 2,
+          "node": "referencias",
+          "edge": "cribado__referencias",
+          "title": "Se emite la referencia",
+          "detail": "Prioridad URGENTE si el riesgo era alto y ALTA si era medio; el motivo se autocompleta con los hallazgos positivos. Si el cribado ya tenía referencia, redirige a la existente.",
+          "ref": "apps/cribado/views.py:477"
+        },
+        {
+          "n": 3,
+          "node": "pacientes",
+          "edge": "referencias__pacientes",
+          "title": "Estado → REFERIDO",
+          "detail": "El expediente refleja la derivación."
+        },
+        {
+          "n": 4,
+          "node": "svc_notif",
+          "edge": "referencias__svc_notif",
+          "title": "Aviso al especialista destino",
+          "detail": "Y difusión a todos los oncólogos y administradores activos si la prioridad es ALTA o URGENTE, incluso si aún no hay destinatario asignado.",
+          "ref": "apps/notificaciones/signals.py:79"
+        },
+        {
+          "n": 5,
+          "node": "notificaciones",
+          "edge": "svc_notif__notificaciones",
+          "title": "Bandeja del oncólogo",
+          "detail": "Con el prefijo URGENTE cuando corresponde."
+        },
+        {
+          "n": 6,
+          "node": "svc_alertas",
+          "edge": "referencias__svc_alertas",
+          "title": "Alertas de vigilancia",
+          "detail": "ALTA_PRIORIDAD_SIN_REVISION (24 h) y REFERENCIA_SIN_SEGUIMIENTO (72 h); si se vence el plazo, la prioridad escala.",
+          "ref": "apps/dashboard/services.py:150"
+        },
+        {
+          "n": 7,
+          "node": "svc_pdf",
+          "edge": "referencias__svc_pdf",
+          "title": "Formulario MSP",
+          "detail": "Documento oficial imprimible, que además puede guardarse como documento del paciente.",
+          "ref": "apps/referencias/form_msp_pdf.py"
+        },
+        {
+          "n": 8,
+          "node": "media",
+          "edge": "svc_pdf__media",
+          "title": "Descarga o archivo",
+          "detail": "Se entrega al paciente y queda en el expediente si se guarda."
+        }
+      ]
+    },
+    {
+      "id": "flow_estados_referencia",
+      "name": "Máquina de estados de la referencia",
+      "category": "Clínico",
+      "actor": "Oncólogo (destinatario) y médico referente",
+      "outcome": "Referencia atendida o cancelada, con historial completo.",
+      "description": "PENDIENTE → ACEPTADA → EN_PROCESO → COMPLETADA, con CANCELADA como salida. Las transiciones disponibles dependen de si quien mira es el destinatario o el referente.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_clinico",
+          "edge": null,
+          "title": "El oncólogo abre la referencia",
+          "detail": "Solo ve las dirigidas a él (especialista_destino) o las que él mismo emitió."
+        },
+        {
+          "n": 2,
+          "node": "matriz_acceso",
+          "edge": "matriz_acceso__referencias",
+          "title": "puede_ver_referencias",
+          "detail": "Coordinador FACCI y Trabajo Social entran en solo lectura."
+        },
+        {
+          "n": 3,
+          "node": "referencias",
+          "edge": null,
+          "title": "Transiciones del destinatario",
+          "detail": "PENDIENTE → aceptar o rechazar. ACEPTADA → iniciar atención. EN_PROCESO → marcar completada. Completar exige una observación de resultado o una contrarreferencia.",
+          "ref": "apps/referencias/views.py:652"
+        },
+        {
+          "n": 4,
+          "node": "referencias",
+          "edge": null,
+          "title": "Transiciones del referente",
+          "detail": "Solo puede cancelar, y únicamente mientras la referencia esté PENDIENTE o ACEPTADA."
+        },
+        {
+          "n": 5,
+          "node": "svc_notif",
+          "edge": "referencias__svc_notif",
+          "title": "Ambos lados quedan enterados",
+          "detail": "Cada cambio de estado notifica al referente y al destinatario."
+        },
+        {
+          "n": 6,
+          "node": "svc_alertas",
+          "edge": "referencias__svc_alertas",
+          "title": "Cierre de alertas",
+          "detail": "Al completar o cancelar, las alertas asociadas se marcan RESUELTA con su comentario de cierre."
+        },
+        {
+          "n": 7,
+          "node": "svc_audit",
+          "edge": "referencias__svc_audit",
+          "title": "Historial reconstruido",
+          "detail": "El detalle de la referencia arma su línea de tiempo leyendo LogActividad."
+        }
+      ]
+    },
+    {
+      "id": "flow_contrarreferencia",
+      "name": "Contrarreferencia del especialista",
+      "category": "Clínico",
+      "actor": "Oncólogo destinatario (o Administrador)",
+      "outcome": "Diagnóstico devuelto al centro de origen y seguimiento abierto en FACCI.",
+      "description": "El ciclo se cierra cuando el especialista devuelve el resultado de la atención: diagnóstico, tipo de cáncer, estadio, tratamiento y si el caso continúa en FACCI.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "referencias",
+          "edge": null,
+          "title": "Solo el destinatario puede emitirla",
+          "detail": "Y solo con la referencia ACEPTADA, EN_PROCESO o COMPLETADA. Es 1:1: una referencia, una contrarreferencia.",
+          "ref": "apps/referencias/views.py:798"
+        },
+        {
+          "n": 2,
+          "node": "referencias",
+          "edge": null,
+          "title": "Se registra el resultado",
+          "detail": "Diagnóstico confirmado, estadio I–IV, estudios realizados, medicamentos y recomendaciones al médico referente."
+        },
+        {
+          "n": 3,
+          "node": "referencias",
+          "edge": null,
+          "title": "La referencia se completa",
+          "detail": "Si no lo estaba, pasa automáticamente a COMPLETADA."
+        },
+        {
+          "n": 4,
+          "node": "seguimiento",
+          "edge": "referencias__seguimiento",
+          "title": "Seguimiento en FACCI",
+          "detail": "requiere_seguimiento_facci abre la etapa de tratamiento por fases del protocolo."
+        },
+        {
+          "n": 5,
+          "node": "pacientes",
+          "edge": "seguimiento__pacientes",
+          "title": "Expediente actualizado",
+          "detail": "El diagnóstico y el estado del paciente reflejan el resultado."
+        },
+        {
+          "n": 6,
+          "node": "svc_audit",
+          "edge": "referencias__svc_audit",
+          "title": "Traza de la emisión",
+          "detail": "Queda registrado quién contrarrefirió y con qué resultado."
+        }
+      ]
+    },
+    {
+      "id": "flow_seguimiento",
+      "name": "Seguimiento por fases e indicaciones",
+      "category": "Clínico",
+      "actor": "Médico tratante",
+      "outcome": "Consulta registrada, alertas actualizadas e indicaciones publicadas a la familia.",
+      "description": "Inducción → Consolidación → Mantenimiento → Vigilancia. De cada consulta salen las indicaciones que la familia verá en su portal.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_clinico",
+          "edge": null,
+          "title": "Registrar seguimiento",
+          "detail": "Estado clínico, síntomas, tratamiento, medicamentos, peso y talla, próxima cita."
+        },
+        {
+          "n": 2,
+          "node": "matriz_acceso",
+          "edge": "matriz_acceso__seguimiento",
+          "title": "puede_ver_seguimiento",
+          "detail": "Enfermería y Trabajo Social entran en solo lectura."
+        },
+        {
+          "n": 3,
+          "node": "seguimiento",
+          "edge": null,
+          "title": "Se guarda la consulta",
+          "detail": "El IMC se calcula solo a partir de peso y talla.",
+          "ref": "apps/seguimiento/views.py:517"
+        },
+        {
+          "n": 4,
+          "node": "svc_alertas",
+          "edge": "seguimiento__svc_alertas",
+          "title": "Alertas del seguimiento",
+          "detail": "CASO_CRITICO si requiere hospitalización; SEGUIMIENTO_PENDIENTE si la próxima cita vence sin una consulta posterior.",
+          "ref": "apps/dashboard/services.py:219"
+        },
+        {
+          "n": 5,
+          "node": "svc_notif",
+          "edge": "seguimiento__svc_notif",
+          "title": "Aviso a la familia y al equipo",
+          "detail": "Al tutor le llega apuntando a su vista de evolución."
+        },
+        {
+          "n": 6,
+          "node": "notificaciones",
+          "edge": "svc_notif__notificaciones",
+          "title": "Bandeja de ambos portales",
+          "detail": "Prioridad alta si el caso requiere hospitalización."
+        },
+        {
+          "n": 7,
+          "node": "padres",
+          "edge": "seguimiento__padres",
+          "title": "Indicaciones para casa",
+          "detail": "IndicacionMedica con visible_padre: medicación, hidratación, higiene, alimentación y descanso, con prioridad Alta/Media/Baja."
+        },
+        {
+          "n": 8,
+          "node": "svc_pdf",
+          "edge": "seguimiento__svc_pdf",
+          "title": "Descargo de tratamiento",
+          "detail": "PDF firmable que se entrega al responsable del paciente."
+        }
+      ]
+    },
+    {
+      "id": "flow_sintomas_familia",
+      "name": "La familia reporta síntomas",
+      "category": "Familia",
+      "actor": "Padre / Tutor",
+      "outcome": "El equipo clínico recibe el aviso y lo ve en la línea de tiempo del expediente.",
+      "description": "Único canal por el que la familia introduce información clínica: lo que observa en casa llega al equipo con la gravedad que ella misma indica.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_padre",
+          "edge": null,
+          "title": "Reportar síntomas",
+          "detail": "Selección de síntomas, fecha de inicio, gravedad (leve, moderada, severa) y descripción libre."
+        },
+        {
+          "n": 2,
+          "node": "padres",
+          "edge": null,
+          "title": "Se guarda el ReporteSintoma",
+          "detail": "Queda asociado al paciente y al tutor que lo envía.",
+          "ref": "apps/padres/views.py:267"
+        },
+        {
+          "n": 3,
+          "node": "svc_notif",
+          "edge": "padres__svc_notif",
+          "title": "Aviso al equipo clínico",
+          "detail": "Gravedad severa eleva la prioridad; el aviso apunta al expediente.",
+          "ref": "apps/notificaciones/signals.py:342"
+        },
+        {
+          "n": 4,
+          "node": "notificaciones",
+          "edge": "svc_notif__notificaciones",
+          "title": "Bandeja del personal",
+          "detail": "Con icono de síntomas y color de alerta."
+        },
+        {
+          "n": 5,
+          "node": "pacientes",
+          "edge": "padres__pacientes",
+          "title": "Línea de tiempo del expediente",
+          "detail": "El reporte se mezcla con cribados, seguimientos y documentos en orden cronológico."
+        },
+        {
+          "n": 6,
+          "node": "dashboard",
+          "edge": "notificaciones__dashboard",
+          "title": "Visible desde el tablero",
+          "detail": "La campana del portal clínico muestra el contador de no leídas."
+        }
+      ]
+    },
+    {
+      "id": "flow_documentos",
+      "name": "Solicitud y carga de estudios",
+      "category": "Familia",
+      "actor": "Médico solicitante y Padre / Tutor",
+      "outcome": "Estudio solicitado, subido por la familia y revisado por el equipo.",
+      "description": "Circuito de ida y vuelta entre el equipo clínico y la familia, con vigilancia automática de lo que queda pendiente.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_clinico",
+          "edge": null,
+          "title": "El médico solicita un estudio",
+          "detail": "SolicitudDocumento con título e indicaciones (ej. hemograma completo y plaquetas)."
+        },
+        {
+          "n": 2,
+          "node": "documentos",
+          "edge": "matriz_acceso__documentos",
+          "title": "Se crea la solicitud",
+          "detail": "Estado inicial PENDIENTE."
+        },
+        {
+          "n": 3,
+          "node": "svc_notif",
+          "edge": "documentos__svc_notif",
+          "title": "Aviso al tutor",
+          "detail": "'Estudio solicitado' con acción directa a /padres/documentos/subir/<id>/.",
+          "ref": "apps/notificaciones/signals.py:280"
+        },
+        {
+          "n": 4,
+          "node": "padres",
+          "edge": "documentos__padres",
+          "title": "La familia lo ve en su portal",
+          "detail": "Junto con los documentos marcados como visibles."
+        },
+        {
+          "n": 5,
+          "node": "documentos",
+          "edge": "padres__documentos",
+          "title": "El tutor sube el archivo",
+          "detail": "La solicitud pasa a SUBIDO y el documento entra como PENDIENTE de revisión.",
+          "ref": "apps/padres/views.py:658"
+        },
+        {
+          "n": 6,
+          "node": "media",
+          "edge": "documentos__media",
+          "title": "Archivo almacenado",
+          "detail": "documentos/%Y/%m/, con vista previa en iframe del mismo origen."
+        },
+        {
+          "n": 7,
+          "node": "svc_alertas",
+          "edge": "documentos__svc_alertas",
+          "title": "Vigilancia del pendiente",
+          "detail": "DOCUMENTO_PENDIENTE a los 3 días y solicitud sin resolver a los 7."
+        },
+        {
+          "n": 8,
+          "node": "svc_audit",
+          "edge": "documentos__svc_audit",
+          "title": "Traza completa",
+          "detail": "Carga, cambio de estado, cambio de visibilidad y eliminación quedan registrados."
+        }
+      ]
+    },
+    {
+      "id": "flow_laboratorio",
+      "name": "Resultado de laboratorio con valores críticos",
+      "category": "Clínico",
+      "actor": "Enfermería / Técnico y equipo clínico",
+      "outcome": "Valores marcados con su bandera y alerta crítica escalada.",
+      "description": "Cada parámetro se compara contra el catálogo de rangos y recibe una bandera; un valor crítico cambia el estado del resultado y levanta alerta.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_clinico",
+          "edge": null,
+          "title": "Se captura el resultado",
+          "detail": "Estudio del catálogo, fecha de muestra y valores por parámetro."
+        },
+        {
+          "n": 2,
+          "node": "laboratorio",
+          "edge": "matriz_acceso__laboratorio",
+          "title": "ValorResultado.save() calcula la bandera",
+          "detail": "Bajo el 70 % del mínimo o sobre el 130 % del máximo ⇒ crítico. Los parámetros con alerta_critica escalan cualquier desviación, y los valores cualitativos ('positivo', 'detectado', 'mutación') también.",
+          "ref": "apps/laboratorio/models.py:226"
+        },
+        {
+          "n": 3,
+          "node": "svc_alertas",
+          "edge": "laboratorio__svc_alertas",
+          "title": "Alerta clínica",
+          "detail": "El resultado pasa a estado CRITICO y se genera la alerta correspondiente.",
+          "ref": "apps/laboratorio/views.py:237"
+        },
+        {
+          "n": 4,
+          "node": "dashboard",
+          "edge": "svc_alertas__dashboard",
+          "title": "Bandeja de alertas",
+          "detail": "Prioridad crítica con enlace al resultado."
+        },
+        {
+          "n": 5,
+          "node": "svc_notif",
+          "edge": "svc_alertas__svc_notif",
+          "title": "Notificación al equipo",
+          "detail": "Solo las alertas abiertas de prioridad alta o crítica generan aviso personal."
+        },
+        {
+          "n": 6,
+          "node": "pacientes",
+          "edge": "laboratorio__pacientes",
+          "title": "Al expediente",
+          "detail": "El estudio queda asociado al paciente y a quien lo solicitó."
+        },
+        {
+          "n": 7,
+          "node": "media",
+          "edge": "laboratorio__media",
+          "title": "Adjunto",
+          "detail": "laboratorio/%Y/%m/ para el informe original."
+        }
+      ]
+    },
+    {
+      "id": "flow_psicosocial_casa",
+      "name": "Evaluación psicosocial y Casa FACCI",
+      "category": "Operación FACCI",
+      "actor": "Trabajo Social / Psicología y Coordinador FACCI",
+      "outcome": "Riesgo psicosocial medido y familia alojada durante el tratamiento.",
+      "description": "El acompañamiento no clínico: se mide la vulnerabilidad de la familia y, cuando hace falta, se le da alojamiento en la Casa FACCI mientras dura el tratamiento.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "pacientes",
+          "edge": null,
+          "title": "Trabajo Social elige al paciente",
+          "detail": "Tiene visión global de pacientes, en lectura clínica."
+        },
+        {
+          "n": 2,
+          "node": "psicosocial",
+          "edge": "pacientes__psicosocial",
+          "title": "Se aplica la evaluación",
+          "detail": "Economía, vivienda, red de apoyo, bienestar del cuidador e impacto en el paciente.",
+          "ref": "apps/psicosocial/views.py:116"
+        },
+        {
+          "n": 3,
+          "node": "psicosocial",
+          "edge": null,
+          "title": "Puntaje y nivel",
+          "detail": "0–24 puntos: BAJO (<5), MEDIO (5–10), ALTO (11–16), CRÍTICO (≥17). Se recalcula en cada guardado.",
+          "ref": "apps/psicosocial/models.py:205"
+        },
+        {
+          "n": 4,
+          "node": "svc_notif",
+          "edge": "psicosocial__svc_notif",
+          "title": "Aviso si el riesgo es alto",
+          "detail": "El equipo FACCI recibe el caso para intervención."
+        },
+        {
+          "n": 5,
+          "node": "alojamiento",
+          "edge": "psicosocial__alojamiento",
+          "title": "Estancia en la Casa FACCI",
+          "detail": "Habitación según disponibilidad (estancias activas frente a capacidad), acompañante y motivo: quimioterapia, cirugía, radioterapia, hospitalización o consulta.",
+          "ref": "apps/alojamiento/views.py:87"
+        },
+        {
+          "n": 6,
+          "node": "svc_pdf",
+          "edge": "alojamiento__svc_pdf",
+          "title": "Entrega de habitación",
+          "detail": "Acta con inventario, única por estancia, firmada por FACCI y por el familiar responsable."
+        },
+        {
+          "n": 7,
+          "node": "media",
+          "edge": "svc_pdf__media",
+          "title": "Documento descargable",
+          "detail": "También el reporte de ocupación y el formulario de estancia."
+        }
+      ]
+    },
+    {
+      "id": "flow_ingreso_casa_desde_referencia",
+      "name": "Ingreso a Casa FACCI desde la referencia",
+      "category": "Operación FACCI",
+      "actor": "Equipo clínico y Coordinación FACCI",
+      "outcome": "Solicitud de alojamiento vinculada a la derivación del paciente.",
+      "description": "Vía alternativa a la psicosocial: cuando la derivación obliga a la familia a trasladarse, la propia referencia origina el ingreso a la Casa.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "referencias",
+          "edge": null,
+          "title": "Referencia con traslado",
+          "detail": "Desde el detalle de la referencia se abre el formulario de ingreso."
+        },
+        {
+          "n": 2,
+          "node": "alojamiento",
+          "edge": "referencias__alojamiento",
+          "title": "ReferenciaIngresoCasaFACCI",
+          "detail": "Centro de origen, hospital destino, motivo, fechas, habitación y datos del responsable. Estados: PENDIENTE → APROBADA → INGRESADO (o CANCELADA).",
+          "ref": "apps/referencias/ingreso_casa.py"
+        },
+        {
+          "n": 3,
+          "node": "core",
+          "edge": "core__referencias",
+          "title": "Catálogo de centros",
+          "detail": "Origen y destino salen de CentroSalud, con su capacidad oncológica y estado de derivación."
+        },
+        {
+          "n": 4,
+          "node": "svc_pdf",
+          "edge": "referencias__svc_pdf",
+          "title": "Formulario imprimible",
+          "detail": "Réplica del formato en papel del ingreso a la Casa FACCI."
+        },
+        {
+          "n": 5,
+          "node": "media",
+          "edge": "svc_pdf__media",
+          "title": "Descarga",
+          "detail": "Se entrega firmado a la familia."
+        }
+      ]
+    },
+    {
+      "id": "flow_alertas",
+      "name": "Ciclo de vida de la alerta clínica",
+      "category": "Operación FACCI",
+      "actor": "Equipo clínico (salvo Coordinador FACCI)",
+      "outcome": "Alertas atendidas, resueltas o descartadas, sin duplicados.",
+      "description": "Las alertas no se crean a mano: el motor las deriva del estado real del sistema, las deduplica por clave y las resuelve solas cuando la condición desaparece.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "svc_alertas",
+          "edge": null,
+          "title": "Recálculo del tablero",
+          "detail": "generar_alertas_pendientes() recorre cribados de riesgo alto, referencias abiertas, seguimientos críticos o vencidos, documentos y solicitudes pendientes y pacientes sin revisión.",
+          "ref": "apps/dashboard/services.py:329"
+        },
+        {
+          "n": 2,
+          "node": "svc_alertas",
+          "edge": null,
+          "title": "Deduplicación",
+          "detail": "clave_dedupe única por hecho: si la alerta ya existe se actualiza, y si estaba cerrada no se reabre."
+        },
+        {
+          "n": 3,
+          "node": "dashboard",
+          "edge": "svc_alertas__dashboard",
+          "title": "Bandeja /alertas/",
+          "detail": "PENDIENTE → REVISADA → RESUELTA o DESCARTADA, con prioridad, fecha límite y días de vencimiento.",
+          "ref": "apps/dashboard/views.py:431"
+        },
+        {
+          "n": 4,
+          "node": "svc_notif",
+          "edge": "svc_alertas__svc_notif",
+          "title": "Solo las prioritarias notifican",
+          "detail": "Alta o crítica, y solo mientras la alerta siga abierta."
+        },
+        {
+          "n": 5,
+          "node": "notificaciones",
+          "edge": "svc_notif__notificaciones",
+          "title": "Aviso personal",
+          "detail": "Enlaza al objeto que originó la alerta: referencia, cribado, documento o expediente."
+        },
+        {
+          "n": 6,
+          "node": "svc_audit",
+          "edge": "dashboard__svc_audit",
+          "title": "Cada cierre queda registrado",
+          "detail": "Quién revisó o resolvió, cuándo y con qué comentario."
+        }
+      ]
+    },
+    {
+      "id": "flow_reportes",
+      "name": "Reportes PENCI-RD y exportación",
+      "category": "Operación FACCI",
+      "actor": "Administrador · Coordinador FACCI",
+      "outcome": "Reporte generado en PDF, Excel o CSV, registrado y descargable.",
+      "description": "La estadística institucional: quien coordina construye el reporte con su periodo y filtros, y el sistema deja constancia de cada exportación.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_clinico",
+          "edge": null,
+          "title": "Solo ADMIN y Coordinador FACCI",
+          "detail": "El resto del personal ve los reportes en solo lectura."
+        },
+        {
+          "n": 2,
+          "node": "matriz_acceso",
+          "edge": "matriz_acceso__reportes",
+          "title": "puede_generar_reportes",
+          "detail": "roles_requeridos('ADMIN', 'PERSONAL_FACCI') sobre la vista de generación."
+        },
+        {
+          "n": 3,
+          "node": "reportes",
+          "edge": null,
+          "title": "parse_report_params",
+          "detail": "Tipo, periodo, provincia, diagnóstico y formato se validan antes de construir nada.",
+          "ref": "apps/reportes/services.py:133"
+        },
+        {
+          "n": 4,
+          "node": "svc_reportes",
+          "edge": "reportes__svc_reportes",
+          "title": "build_report y renderizado",
+          "detail": "Resumen mensual, por provincia, por diagnóstico, seguimiento de casos o referencias; salida en PDF (ReportLab), Excel (openpyxl) o CSV."
+        },
+        {
+          "n": 5,
+          "node": "media",
+          "edge": "svc_reportes__media",
+          "title": "Archivo guardado",
+          "detail": "reportes/%Y/%m/, enlazado al ReporteGenerado con su código de documento."
+        },
+        {
+          "n": 6,
+          "node": "svc_notif",
+          "edge": "reportes__svc_notif",
+          "title": "Confirmación",
+          "detail": "Aviso de baja prioridad a quien lo generó."
+        },
+        {
+          "n": 7,
+          "node": "svc_audit",
+          "edge": "reportes__svc_audit",
+          "title": "Auditoría",
+          "detail": "LogActividad de tipo REPORTE con el total de registros exportados."
+        }
+      ]
+    },
+    {
+      "id": "flow_matrices",
+      "name": "Matrices operativas de coordinación",
+      "category": "Operación FACCI",
+      "actor": "Administrador · Coordinador FACCI",
+      "outcome": "Indicadores contra metas, con vista previa y descarga.",
+      "description": "Panel de gestión: mide el desempeño operativo del programa frente a los objetivos definidos y lo exporta para reuniones y rendición de cuentas.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "matriz_acceso",
+          "edge": "matriz_acceso__dashboard",
+          "title": "puede_ver_matrices",
+          "detail": "Restringido a ADMIN y Coordinador FACCI."
+        },
+        {
+          "n": 2,
+          "node": "dashboard",
+          "edge": null,
+          "title": "/matrices/ con su periodo",
+          "detail": "Vista previa en pantalla antes de exportar.",
+          "ref": "apps/dashboard/views.py:594"
+        },
+        {
+          "n": 3,
+          "node": "svc_matrices",
+          "edge": "dashboard__svc_matrices",
+          "title": "build_matrices_report",
+          "detail": "Cada indicador se semaforiza comparando su valor con la meta (cobertura, tiempos de respuesta, alertas atendidas).",
+          "ref": "apps/dashboard/matrices_services.py:122"
+        },
+        {
+          "n": 4,
+          "node": "media",
+          "edge": "svc_matrices__media",
+          "title": "Descarga PDF o CSV",
+          "detail": "Se entrega como respuesta directa, sin quedar almacenado."
+        }
+      ]
+    },
+    {
+      "id": "flow_api",
+      "name": "Consumo de la API REST con JWT",
+      "category": "Plataforma",
+      "actor": "Integración externa o agente",
+      "outcome": "Datos clínicos accesibles con token, bajo permisos y límite de tasa.",
+      "description": "Superficie programática del sistema. Nota: los routers de notificaciones y de casos existen en el código pero no están montados en config/urls.py.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "actor_api",
+          "edge": null,
+          "title": "Solicita el token",
+          "detail": "POST /api/token/ con credenciales; /api/token/refresh/ lo renueva."
+        },
+        {
+          "n": 2,
+          "node": "api_jwt",
+          "edge": "actor_api__api_jwt",
+          "title": "DRF valida y limita",
+          "detail": "IsAuthenticated por defecto; throttling de 30/min anónimo y 200/min autenticado.",
+          "ref": "config/settings.py:183"
+        },
+        {
+          "n": 3,
+          "node": "pacientes",
+          "edge": "api_jwt__pacientes",
+          "title": "/api/pacientes/",
+          "detail": "PacienteViewSet."
+        },
+        {
+          "n": 4,
+          "node": "cribado",
+          "edge": "api_jwt__cribado",
+          "title": "/api/cribado/cribados/",
+          "detail": "Cuestionarios con su nivel de riesgo calculado."
+        },
+        {
+          "n": 5,
+          "node": "seguimiento",
+          "edge": "api_jwt__seguimiento",
+          "title": "/api/seguimiento/*",
+          "detail": "Referencias, seguimientos y alertas comparten router."
+        },
+        {
+          "n": 6,
+          "node": "documentos",
+          "edge": "api_jwt__documentos",
+          "title": "/api/documentos/",
+          "detail": "Documentos y solicitudes."
+        },
+        {
+          "n": 7,
+          "node": "core",
+          "edge": "api_jwt__core",
+          "title": "/api/core/",
+          "detail": "Centros de salud y su mapa geocodificado."
+        },
+        {
+          "n": 8,
+          "node": "orm",
+          "edge": "pacientes__orm",
+          "title": "Lectura por ORM",
+          "detail": "Con select_related e índices por estado, prioridad y fecha."
+        },
+        {
+          "n": 9,
+          "node": "db",
+          "edge": "orm__db",
+          "title": "Base de datos",
+          "detail": "SQLite en desarrollo, MySQL en producción."
+        }
+      ]
+    },
+    {
+      "id": "flow_auditoria_cifrado",
+      "name": "Auditoría y protección de datos sensibles",
+      "category": "Plataforma",
+      "actor": "Todo el sistema · consulta el Administrador",
+      "outcome": "Traza completa de quién hizo qué y datos personales cifrados en reposo.",
+      "description": "Dos garantías transversales de un sistema con datos de salud infantil: trazabilidad de cada escritura y cifrado de los campos personales.",
+      "steps": [
+        {
+          "n": 1,
+          "node": "pacientes",
+          "edge": null,
+          "title": "Cualquier escritura clínica",
+          "detail": "Pacientes, cribados, referencias, seguimientos, documentos, solicitudes, alertas y reportes."
+        },
+        {
+          "n": 2,
+          "node": "svc_audit",
+          "edge": "pacientes__svc_audit",
+          "title": "Señales pre_save y post_save",
+          "detail": "pre_save guarda el estado anterior; post_save compara campo a campo y describe el cambio en lenguaje natural.",
+          "ref": "apps/core/signals.py:171"
+        },
+        {
+          "n": 3,
+          "node": "orm",
+          "edge": "svc_audit__orm",
+          "title": "LogActividad",
+          "detail": "Usuario, acción, tipo, módulo, objeto, descripción, IP y fecha. El módulo y el tipo se infieren si no se indican."
+        },
+        {
+          "n": 4,
+          "node": "dashboard",
+          "edge": "dashboard__svc_audit",
+          "title": "Consulta de auditoría",
+          "detail": "/auditoria/, exclusiva del Administrador, con filtros por módulo, tipo de acción y periodo."
+        },
+        {
+          "n": 5,
+          "node": "svc_crypto",
+          "edge": "pacientes__svc_crypto",
+          "title": "Cifrado en reposo",
+          "detail": "Fernet sobre dirección, alergias y antecedentes del paciente, dirección y contactos del tutor y teléfono del usuario.",
+          "ref": "apps/core/encryption.py"
+        },
+        {
+          "n": 6,
+          "node": "db",
+          "edge": "orm__db",
+          "title": "Persistencia",
+          "detail": "Sin FACCI_ENCRYPTION_KEY definida, los campos se guardan en claro: es obligatoria en producción."
+        }
+      ]
+    }
+  ]
+}
