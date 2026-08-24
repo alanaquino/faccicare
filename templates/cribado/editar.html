@@ -64,7 +64,8 @@
               <input type="radio" name="{{ pregunta.campo }}" value="si"
                      {% if pregunta.presente %}checked{% endif %}
                      class="w-4 h-4 text-error border-outline-variant focus:ring-error/50 cribado-radio"
-                     data-peso="1"/>
+                     data-peso="1"
+                     {% if pregunta.alarma_mayor %}data-alarma-mayor="true"{% endif %}/>
               <span class="font-label-md text-label-md text-error">Sí</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
@@ -149,8 +150,10 @@
 
   function actualizarScore() {
     let score = 0;
+    let tieneAlarmaMayor = false;
     document.querySelectorAll('.cribado-radio:checked').forEach(r => {
       score += parseInt(r.dataset.peso || 0, 10);
+      if (r.dataset.alarmaMayor === 'true') tieneAlarmaMayor = true;
     });
 
     document.getElementById('score-display').textContent = score;
@@ -160,7 +163,7 @@
     document.getElementById('progreso-label').textContent = score + ' / ' + scoreMaximo + ' síntomas';
 
     let nivel;
-    if (score >= 6) {
+    if (tieneAlarmaMayor || score >= 6) {
       nivel = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-error font-label-md text-label-md"><span class="w-2 h-2 rounded-full bg-error"></span>Riesgo alto</span>';
     } else if (score >= 3) {
       nivel = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary-container/40 text-secondary font-label-md text-label-md"><span class="w-2 h-2 rounded-full bg-secondary"></span>Riesgo moderado</span>';

@@ -88,7 +88,12 @@ def _usuario_puede_ver_paciente(user, paciente):
     if user.rol == CustomUser.Rol.ONCOLOGO:
         return (
             paciente.medico_asignado == user or
-            paciente.referencias.filter(Q(especialista_destino=user) | Q(medico_referente=user)).exists()
+            paciente.referencias.filter(Q(especialista_destino=user) | Q(medico_referente=user)).exists() or
+            paciente.referencias.filter(
+                especialista_destino__isnull=True,
+                estado=ReferenciaMedica.EstadoReferencia.PENDIENTE,
+                prioridad=ReferenciaMedica.Prioridad.URGENTE,
+            ).exists()
         )
     return False
 
@@ -645,7 +650,12 @@ def detalle_view(request, pk):
             messages.error(request, 'No tiene permiso para ver esta referencia médica.')
             return redirect('referencias:lista')
     elif request.user.rol == CustomUser.Rol.ONCOLOGO:
-        if not (es_destinatario or referencia.medico_referente == request.user):
+        es_urgente_sin_asignar = (
+            referencia.especialista_destino_id is None and
+            referencia.estado == ReferenciaMedica.EstadoReferencia.PENDIENTE and
+            referencia.prioridad == ReferenciaMedica.Prioridad.URGENTE
+        )
+        if not (es_destinatario or referencia.medico_referente == request.user or es_urgente_sin_asignar):
             messages.error(request, 'No tiene permiso para ver esta referencia médica.')
             return redirect('referencias:lista')
 

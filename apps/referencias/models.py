@@ -149,11 +149,11 @@ class ReferenciaMedica(models.Model):
 
     @property
     def medico_origen(self):
-        return self.medico_referente.nombre_completo if self.medico_referente else 'Dr. Martínez'
+        return self.medico_referente.nombre_completo if self.medico_referente else 'Sin asignar'
 
     @property
     def medico_destino(self):
-        return self.especialista_destino.nombre_completo if self.especialista_destino else 'Dra. Elena Vargas'
+        return self.especialista_destino.nombre_completo if self.especialista_destino else 'Sin asignar'
 
     @property
     def estado_color(self):

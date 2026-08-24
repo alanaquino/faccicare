@@ -66,6 +66,12 @@ class RegistroPacienteForm(forms.Form):
             if name in {"alergias", "antecedentes_medicos"}:
                 field.widget.attrs.setdefault("rows", 3)
                 field.widget.attrs["class"] += " resize-none"
+        if self.is_bound:
+            for name in self.errors:
+                if name in self.fields:
+                    self.fields[name].widget.attrs["class"] += (
+                        " border-error focus:border-error focus:ring-error/50"
+                    )
 
     def clean_fecha_nacimiento(self):
         fecha = self.cleaned_data["fecha_nacimiento"]

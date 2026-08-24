@@ -22,6 +22,8 @@ from .ficha import build_ficha_context, ficha_pdf_filename, render_ficha_pdf
 from .forms import NotaClinicaForm, RegistroPacienteForm
 from .models import Paciente
 
+from apps.referencias.models import ReferenciaMedica
+
 
 MESES = {1: "Ene", 2: "Feb", 3: "Mar", 4: "Abr", 5: "May", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dic"}
 
@@ -786,7 +788,13 @@ def expediente_view(request, pk):
             messages.error(request, 'No tiene permiso para ver el expediente de este paciente.')
             return redirect('pacientes:lista')
     elif request.user.rol == CustomUser.Rol.ONCOLOGO:
-        if not paciente.referencias.filter(especialista_destino=request.user).exists():
+        tiene_referencia_propia = paciente.referencias.filter(especialista_destino=request.user).exists()
+        tiene_referencia_urgente_sin_asignar = paciente.referencias.filter(
+            especialista_destino__isnull=True,
+            estado=ReferenciaMedica.EstadoReferencia.PENDIENTE,
+            prioridad=ReferenciaMedica.Prioridad.URGENTE,
+        ).exists()
+        if not (tiene_referencia_propia or tiene_referencia_urgente_sin_asignar):
             messages.error(request, 'No tiene permiso para ver el expediente de este paciente, ya que no le ha sido referido.')
             return redirect('referencias:lista')
 
