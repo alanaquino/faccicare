@@ -96,6 +96,27 @@ La configuración usa `python-decouple`; puedes definir un archivo `.env`:
 
 ---
 
+## Despliegue en PythonAnywhere
+
+El proyecto se publica en PythonAnywhere. Todo lo necesario está en `deploy/`:
+
+```bash
+# Actualizar el sitio con los últimos cambios (consola Bash de PythonAnywhere)
+cd ~/faccicare
+bash deploy/pythonanywhere_update.sh
+```
+
+| Archivo | Para qué sirve |
+|---|---|
+| `deploy/pythonanywhere_update.sh` | Respaldo + `git pull` + dependencias + migraciones + estáticos + recarga |
+| `deploy/pythonanywhere_wsgi.py` | Plantilla del archivo WSGI de la web app |
+| `deploy/env.pythonanywhere.example` | Plantilla del `.env` de producción |
+
+Instalación inicial paso a paso y solución de problemas:
+[`deploy/README_PYTHONANYWHERE.md`](deploy/README_PYTHONANYWHERE.md).
+
+---
+
 ## Roles y Usuarios de Prueba
 
 El comando `python manage.py seed_data` crea los siguientes usuarios. Las contraseñas provienen de las variables `SEED_ADMIN_PASSWORD` / `SEED_DEFAULT_PASSWORD`; los valores mostrados son los que se usan por defecto en **DEBUG**.
