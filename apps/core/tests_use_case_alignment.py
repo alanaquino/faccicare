@@ -377,3 +377,26 @@ class UseCaseAlignmentTests(TestCase):
 
         self.assertRedirects(response, url)
         self.assertFalse(NotaClinica.objects.filter(texto='Intento no autorizado.').exists())
+
+    def test_exception_e1_warning_on_duplicate_reference(self):
+        cribado = CuestionarioCribado.objects.create(
+            paciente=self.paciente,
+            medico=self.medico,
+            nivel_riesgo=CuestionarioCribado.NivelRiesgo.ALTO,
+        )
+        
+        ReferenciaMedica.objects.create(
+            paciente=self.paciente,
+            cuestionario=cribado,
+            medico_referente=self.medico,
+            motivo_referencia='Referencia original',
+        )
+
+        self.client.force_login(self.medico)
+        response = self.client.get(reverse('referencias:crear') + f'?cribado={cribado.id}')
+        
+        self.assertRedirects(response, reverse('referencias:lista'))
+        
+        messages = list(get_messages(response.wsgi_request))
+        self.assertTrue(any('Advertencia: El cribado seleccionado ya tiene una referencia médica asociada.' in str(m.message) for m in messages))
+

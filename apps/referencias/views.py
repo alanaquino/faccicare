@@ -513,6 +513,10 @@ def crear_view(request):
             CuestionarioCribado.objects.select_related('paciente', 'medico'),
             pk=cribado_id,
         )
+        if ReferenciaMedica.objects.filter(cuestionario=cribado).exists():
+            messages.warning(request, 'Advertencia: El cribado seleccionado ya tiene una referencia médica asociada.')
+            return redirect('referencias:lista')
+
         if paciente_id and str(cribado.paciente_id) != str(paciente_id):
             messages.error(request, 'El cribado seleccionado no pertenece al paciente indicado.')
             return redirect('referencias:crear')
@@ -520,6 +524,8 @@ def crear_view(request):
     elif paciente_id:
         paciente_preseleccionado = get_object_or_404(Paciente, pk=paciente_id)
         cribado = _ultimo_cribado_del_paciente(paciente_preseleccionado)
+        if cribado and ReferenciaMedica.objects.filter(cuestionario=cribado).exists():
+            cribado = None
 
     if paciente_preseleccionado:
         is_authorized = (
