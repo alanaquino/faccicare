@@ -32,11 +32,11 @@
             <select name="paciente" data-searchable class="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all font-body-md text-body-md" required>
               <option value="">Seleccionar paciente...</option>
               {% if paciente_preseleccionado %}
-              <option value="{{ paciente_preseleccionado.id }}" selected>{{ paciente_preseleccionado.nombre_completo }} ({{ paciente_preseleccionado.cedula }})</option>
+              <option value="{{ paciente_preseleccionado.id }}" selected>{{ paciente_preseleccionado.nombre_completo }} ({{ paciente_preseleccionado.codigo_paciente }})</option>
               {% endif %}
               {% for paciente in pacientes %}
               {% if not paciente_preseleccionado or paciente_preseleccionado.pk != paciente.pk %}
-              <option value="{{ paciente.id }}">{{ paciente.nombre_completo }} ({{ paciente.cedula }})</option>
+              <option value="{{ paciente.id }}">{{ paciente.nombre_completo }} ({{ paciente.codigo_paciente }})</option>
               {% endif %}
               {% endfor %}
             </select>
