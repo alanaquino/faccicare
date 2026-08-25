@@ -1202,6 +1202,19 @@
                     class="px-2.5 py-1 rounded bg-surface-container text-on-surface font-label-sm text-xs hover:bg-surface-container-high transition-colors">
                     Ver
                   </button>
+                  {% if request.user.rol == 'ADMIN' or ind.medico_id == request.user.id %}
+                  <button type="button"
+                    data-id="{{ ind.id }}"
+                    data-titulo="{{ ind.titulo|escape }}"
+                    data-descripcion="{{ ind.descripcion|escape }}"
+                    data-tipo="{{ ind.tipo_indicacion }}"
+                    data-prioridad="{{ ind.prioridad }}"
+                    data-visible-padre="{{ ind.visible_padre|yesno:'true,false' }}"
+                    onclick="editarIndicacion(this)"
+                    class="p-1.5 rounded-lg text-primary hover:bg-primary-container/20 transition-colors" title="Editar indicación" aria-label="Editar indicación">
+                    <span class="material-symbols-outlined text-lg">edit</span>
+                  </button>
+                  {% endif %}
                   <form method="post" action="" onsubmit="return confirm('¿Está seguro de eliminar esta indicación?');" class="inline">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="eliminar_indicacion">
@@ -1237,7 +1250,7 @@
           <div class="flex justify-between items-center">
             <h4 class="font-title-md text-title-md text-on-surface font-semibold flex items-center gap-2">
               <span class="material-symbols-outlined text-primary">add_box</span>
-              Crear Nueva Indicación
+              <span id="indicacion-form-title">Crear Nueva Indicación</span>
             </h4>
             <button type="button" onclick="mostrarListadoIndicaciones()"
               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface-variant font-label-sm text-label-sm hover:bg-surface-container transition-colors">
@@ -1249,6 +1262,7 @@
           <form method="post" class="space-y-5 bg-surface rounded-xl border border-surface-container p-5 shadow-inner">
             {% csrf_token %}
             <input type="hidden" name="action" value="guardar_indicaciones">
+            <input type="hidden" name="indicacion_id" value="">
             
             <!-- Tipo de Indicación y Prioridad -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1308,10 +1322,10 @@
             </label>
 
             <div class="pt-2">
-              <button type="submit"
+              <button type="submit" id="indicacion-form-submit"
                 class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint active:scale-[0.98] transition-all shadow-sm">
                 <span class="material-symbols-outlined text-lg">save</span>
-                Guardar e Integrar Indicación
+                <span id="indicacion-form-submit-text">Guardar e Integrar Indicación</span>
               </button>
             </div>
           </form>
@@ -1769,6 +1783,32 @@
 <script>
   // Swapping sub-panels
   function mostrarFormularioCreacion() {
+    document.getElementById('indicaciones-listado-subpanel').classList.add('hidden');
+    document.getElementById('indicaciones-creacion-subpanel').classList.remove('hidden');
+    const form = document.querySelector('#indicaciones-creacion-subpanel form');
+    form.elements.action.value = 'guardar_indicaciones';
+    form.elements.indicacion_id.value = '';
+    document.getElementById('indicacion-form-title').textContent = 'Crear Nueva Indicación';
+    document.getElementById('indicacion-form-submit-text').textContent = 'Guardar e Integrar Indicación';
+    document.getElementById('id_titulo').value = '';
+    document.getElementById('id_descripcion').value = '';
+    document.getElementById('id_tipo_indicacion').value = 'MEDICACION';
+    document.getElementById('id_prioridad').value = 'MEDIA';
+    form.elements.visible_padre.checked = true;
+    actualizarMockupDynamic();
+  }
+
+  function editarIndicacion(button) {
+    const form = document.querySelector('#indicaciones-creacion-subpanel form');
+    form.elements.action.value = 'editar_indicacion';
+    form.elements.indicacion_id.value = button.dataset.id;
+    document.getElementById('indicacion-form-title').textContent = 'Editar Indicación';
+    document.getElementById('indicacion-form-submit-text').textContent = 'Guardar Cambios';
+    document.getElementById('id_titulo').value = button.dataset.titulo;
+    document.getElementById('id_descripcion').value = button.dataset.descripcion;
+    document.getElementById('id_tipo_indicacion').value = button.dataset.tipo;
+    document.getElementById('id_prioridad').value = button.dataset.prioridad;
+    form.elements.visible_padre.checked = button.dataset.visiblePadre === 'true';
     document.getElementById('indicaciones-listado-subpanel').classList.add('hidden');
     document.getElementById('indicaciones-creacion-subpanel').classList.remove('hidden');
     actualizarMockupDynamic();

@@ -837,7 +837,7 @@ def expediente_view(request, pk):
         
         # Restrict clinical actions (prescribing indications, clinical notes, requesting studies)
         # to clinicians only. Personal FACCI is blocked from doing clinical tasks.
-        if action in ["guardar_indicaciones", "eliminar_indicacion", "solicitar_estudio", "eliminar_estudio_solicitud"]:
+        if action in ["guardar_indicaciones", "editar_indicacion", "eliminar_indicacion", "solicitar_estudio", "eliminar_estudio_solicitud"]:
             if request.user.rol == CustomUser.Rol.PERSONAL_FACCI:
                 messages.error(request, 'Su rol no tiene autorización para realizar esta acción clínica.')
                 return redirect(request.path)
@@ -893,8 +893,16 @@ def expediente_view(request, pk):
             indicacion_id = request.POST.get("indicacion_id")
             from apps.seguimiento.models import IndicacionMedica
             ind = get_object_or_404(IndicacionMedica, id=indicacion_id, paciente=paciente)
-            ind.titulo = request.POST.get("titulo", ind.titulo).strip()
-            ind.descripcion = request.POST.get("descripcion", ind.descripcion).strip()
+            if request.user.rol != CustomUser.Rol.ADMIN and ind.medico_id != request.user.id:
+                messages.error(request, "Solo el médico autor o un Administrador puede modificar esta indicación.")
+                return redirect(f"{request.path}?tab=indicaciones")
+            titulo = request.POST.get("titulo", ind.titulo).strip()
+            descripcion = request.POST.get("descripcion", ind.descripcion).strip()
+            if not titulo or not descripcion:
+                messages.error(request, "Debe especificar un título y descripción para la indicación.")
+                return redirect(f"{request.path}?tab=indicaciones")
+            ind.titulo = titulo
+            ind.descripcion = descripcion
             ind.tipo_indicacion = request.POST.get("tipo_indicacion", ind.tipo_indicacion)
             ind.prioridad = request.POST.get("prioridad", ind.prioridad)
             ind.visible_padre = request.POST.get("visible_padre") == "on"

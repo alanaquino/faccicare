@@ -235,6 +235,38 @@ class UseCaseAlignmentTests(TestCase):
 
         self.assertEqual([event['id'] for event in filtered], ['cribado-2'])
 
+    def test_indication_can_be_edited_only_by_author_or_admin(self):
+        indication = IndicacionMedica.objects.create(
+            paciente=self.paciente,
+            medico=self.medico,
+            tipo_indicacion=IndicacionMedica.TipoIndicacion.MEDICACION,
+            titulo='Indicación original',
+            descripcion='Descripción original',
+        )
+        expediente_url = reverse('pacientes:expediente', kwargs={'pk': self.paciente.pk})
+        payload = {
+            'action': 'editar_indicacion',
+            'indicacion_id': str(indication.pk),
+            'tipo_indicacion': IndicacionMedica.TipoIndicacion.PAUTA_MEDICA,
+            'titulo': 'Indicación actualizada',
+            'descripcion': 'Descripción actualizada',
+            'prioridad': IndicacionMedica.Prioridad.ALTA,
+            'visible_padre': 'on',
+        }
+
+        self.client.force_login(self.medico)
+        response = self.client.post(expediente_url, payload)
+        self.assertRedirects(response, f'{expediente_url}?tab=indicaciones')
+        indication.refresh_from_db()
+        self.assertEqual(indication.titulo, 'Indicación actualizada')
+
+        self.client.force_login(self.oncologo)
+        payload['titulo'] = 'Cambio no autorizado'
+        response = self.client.post(expediente_url, payload)
+        self.assertRedirects(response, f'{expediente_url}?tab=indicaciones')
+        indication.refresh_from_db()
+        self.assertEqual(indication.titulo, 'Indicación actualizada')
+
     def test_deactivate_indication_sets_active_false(self):
         ind = IndicacionMedica.objects.create(
             paciente=self.paciente,
