@@ -150,6 +150,7 @@ class UseCaseAlignmentTests(TestCase):
         DocumentoMedico.objects.create(
             paciente=self.paciente,
             subido_por=self.medico,
+
             tipo_documento=DocumentoMedico.TipoDocumento.INFORME_MEDICO,
             archivo='documentos/visible.pdf',
             fecha_documento=datetime.date.today(),
@@ -290,6 +291,30 @@ class UseCaseAlignmentTests(TestCase):
         self.assertFalse(ind.activa)
         self.assertTrue(IndicacionMedica.objects.filter(pk=ind.pk).exists())
 
+    def test_reports_dashboard_period_selector_changes_monthly_data(self):
+        paciente_julio = Paciente.objects.create(
+            codigo_paciente='FACCI-20260002',
+            nombres='Paciente Julio',
+            apellidos='Prueba',
+            fecha_nacimiento=datetime.date(2018, 1, 1),
+            sexo=Paciente.Sexo.MASCULINO,
+            provincia='Santo Domingo',
+            padre_tutor=self.tutor,
+            medico_asignado=self.medico,
+            creado_por=self.medico,
+        )
+        Paciente.objects.filter(pk=paciente_julio.pk).update(
+            created_at=datetime.datetime(2026, 7, 15, tzinfo=datetime.timezone.utc),
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse('reportes:dashboard'), {'periodo': '2026-07'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['periodo_param'], '2026-07')
+        self.assertEqual(response.context['stats_generales']['nuevos_mes'], 1)
+        self.assertContains(response, 'value="2026-07"')
+        self.assertContains(response, 'selected')
     def test_non_author_cannot_deactivate_indication(self):
         ind = IndicacionMedica.objects.create(
             paciente=self.paciente,

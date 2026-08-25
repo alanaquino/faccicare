@@ -64,6 +64,28 @@
       </div>
     </div>
 
+    {# Próxima cita #}
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container p-6">
+      <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary">event</span>
+        Próxima Cita
+      </h3>
+      {% if proxima_cita %}
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-xl bg-primary-container/30 flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined text-primary">calendar_month</span>
+        </div>
+        <div class="flex-1">
+          <p class="font-label-md text-label-md text-on-surface">{{ proxima_cita.fecha }} &middot; {{ proxima_cita.hora }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">{{ proxima_cita.tipo }} con {{ proxima_cita.medico }}</p>
+          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ proxima_cita.lugar }}</p>
+        </div>
+      </div>
+      {% else %}
+      <p class="font-body-sm text-body-sm text-on-surface-variant">No hay cita próxima registrada.</p>
+      {% endif %}
+    </div>
+
     {# Medicación del día #}
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container p-6">
       <h3 class="font-headline-md text-headline-md text-on-background mb-4 flex items-center gap-2">

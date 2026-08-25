@@ -9,11 +9,13 @@
     <p class="font-body-md text-body-md text-on-surface-variant">Período: <strong>{{ periodo }}</strong></p>
   </div>
   <div class="flex gap-3">
-    <select class="px-4 py-2 rounded-lg border border-outline-variant bg-surface font-label-md text-label-md focus:outline-none focus:ring-2 focus:ring-primary/50">
-      {% for mes in ultimos_meses %}
-      <option {% if forloop.first %}selected{% endif %}>{{ mes }}</option>
+    <form id="form-periodo-reportes" method="get">
+    <select name="periodo" onchange="this.form.submit()" class="px-4 py-2 rounded-lg border border-outline-variant bg-surface font-label-md text-label-md focus:outline-none focus:ring-2 focus:ring-primary/50">
+      {% for mes in periodos_meses %}
+      <option value="{{ mes.valor }}" {% if mes.valor == periodo_param %}selected{% endif %}>{{ mes.etiqueta }}</option>
       {% endfor %}
     </select>
+    </form>
     {% if request.user.puede_ver_reportes %}
     <a href="{% url 'reportes:penci' %}"
        class="flex items-center gap-2 px-5 py-2 rounded-lg border border-primary text-primary font-label-md text-label-md hover:bg-primary-container/10 transition-colors shadow-sm">

@@ -87,7 +87,7 @@ def estado_view(request):
     from apps.seguimiento.models import IndicacionMedica
     ultimo_seguimiento = paciente.seguimientos.order_by('-fecha_seguimiento').first()
     db_meds = paciente.indicaciones_medicas.filter(
-        tipo_indicacion=IndicacionMedica.TipoIndicacion.MEDICACION, activa=True
+        tipo_indicacion=IndicacionMedica.TipoIndicacion.MEDICACION, activa=True, visible_padre=True
     ).order_by('prioridad', '-created_at')
 
     # Slugs tomados hoy — fuente de verdad: BD
