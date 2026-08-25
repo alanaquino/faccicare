@@ -96,9 +96,18 @@ class DocumentoMedicoViewSet(viewsets.ModelViewSet):
                 {'detail': 'No tienes permiso para modificar este documento.'},
                 status=status.HTTP_403_FORBIDDEN
             )
+            
+        observaciones = request.data.get('observaciones', '').strip()
+        if nuevo_estado == DocumentoMedico.EstadoDocumento.CORRECCION and not observaciones:
+            return Response(
+                {'detail': 'Debe ingresar las observaciones antes de marcar que requiere corrección.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         documento.estado = nuevo_estado
-        documento.save(update_fields=['estado', 'updated_at'])
+        if observaciones:
+            documento.descripcion = f"{documento.descripcion}\n[Observación de corrección]: {observaciones}".strip()
+        documento.save(update_fields=['estado', 'descripcion', 'updated_at'])
 
         serializer = self.get_serializer(documento)
         return Response(serializer.data)
