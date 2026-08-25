@@ -436,6 +436,24 @@ def _build_timeline(cribados, referencias, seguimientos, documentos, notas,
     return timeline
 
 
+def _filter_timeline(timeline, tipo_evento='', fecha_desde='', fecha_hasta=''):
+    try:
+        fecha_desde = datetime.date.fromisoformat(fecha_desde) if fecha_desde else None
+    except ValueError:
+        fecha_desde = None
+    try:
+        fecha_hasta = datetime.date.fromisoformat(fecha_hasta) if fecha_hasta else None
+    except ValueError:
+        fecha_hasta = None
+
+    return [
+        evento for evento in timeline
+        if (not tipo_evento or evento['tipo'] == tipo_evento)
+        and (not fecha_desde or evento['fecha_dt'].date() >= fecha_desde)
+        and (not fecha_hasta or evento['fecha_dt'].date() <= fecha_hasta)
+    ]
+
+
 @login_required
 def lista_view(request):
     if request.user.rol == CustomUser.Rol.PADRE_TUTOR:
@@ -839,7 +857,7 @@ def expediente_view(request, pk):
         
         # Restrict clinical actions (prescribing indications, clinical notes, requesting studies)
         # to clinicians only. Personal FACCI is blocked from doing clinical tasks.
-        if action in ["guardar_indicaciones", "eliminar_indicacion", "solicitar_estudio", "eliminar_estudio_solicitud", "agregar_nota"]:
+        if action in ["guardar_indicaciones", "editar_indicacion", "eliminar_indicacion", "solicitar_estudio", "eliminar_estudio_solicitud", "agregar_nota"]:
             if not _puede_agregar_nota_clinica(request.user):
                 messages.error(request, 'Su rol no tiene autorización para realizar esta acción clínica.')
                 return redirect(request.path)
@@ -895,8 +913,16 @@ def expediente_view(request, pk):
             indicacion_id = request.POST.get("indicacion_id")
             from apps.seguimiento.models import IndicacionMedica
             ind = get_object_or_404(IndicacionMedica, id=indicacion_id, paciente=paciente)
-            ind.titulo = request.POST.get("titulo", ind.titulo).strip()
-            ind.descripcion = request.POST.get("descripcion", ind.descripcion).strip()
+            if request.user.rol != CustomUser.Rol.ADMIN and ind.medico_id != request.user.id:
+                messages.error(request, "Solo el médico autor o un Administrador puede modificar esta indicación.")
+                return redirect(f"{request.path}?tab=indicaciones")
+            titulo = request.POST.get("titulo", ind.titulo).strip()
+            descripcion = request.POST.get("descripcion", ind.descripcion).strip()
+            if not titulo or not descripcion:
+                messages.error(request, "Debe especificar un título y descripción para la indicación.")
+                return redirect(f"{request.path}?tab=indicaciones")
+            ind.titulo = titulo
+            ind.descripcion = descripcion
             ind.tipo_indicacion = request.POST.get("tipo_indicacion", ind.tipo_indicacion)
             ind.prioridad = request.POST.get("prioridad", ind.prioridad)
             ind.visible_padre = request.POST.get("visible_padre") == "on"
@@ -1343,6 +1369,18 @@ def expediente_view(request, pk):
         nivel_riesgo__in=[EvaluacionPsicosocial.NivelRiesgo.ALTO, EvaluacionPsicosocial.NivelRiesgo.CRITICO],
     ).count()
 
+    timeline_clinico = _build_timeline(
+        cribados_qs, referencias_qs, seguimientos_qs, documentos_qs, notas_qs,
+        reportes_sintomas=paciente.reportes_sintomas.select_related('tutor__usuario').all(),
+        indicaciones=paciente.indicaciones_medicas.select_related('medico').all(),
+        solicitudes=paciente.solicitudes_documento.select_related('medico_solicitante').all(),
+    )
+    tipo_evento = request.GET.get('tipo_evento', '').strip()
+    fecha_desde = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta = request.GET.get('fecha_hasta', '').strip()
+    tipos_evento = sorted({evento['tipo'] for evento in timeline_clinico})
+    timeline_clinico = _filter_timeline(timeline_clinico, tipo_evento, fecha_desde, fecha_hasta)
+
     context = {
         "titulo_pagina": f"Expediente - {paciente.nombres} {paciente.apellidos}",
         "paciente": paciente,
@@ -1352,12 +1390,11 @@ def expediente_view(request, pk):
         "referencias": referencias_qs,
         "documentos": documentos_qs,
         "seguimientos": seguimientos_qs,
-        "timeline_clinico": _build_timeline(
-            cribados_qs, referencias_qs, seguimientos_qs, documentos_qs, notas_qs,
-            reportes_sintomas=paciente.reportes_sintomas.select_related('tutor__usuario').all(),
-            indicaciones=paciente.indicaciones_medicas.select_related('medico').all(),
-            solicitudes=paciente.solicitudes_documento.select_related('medico_solicitante').all(),
-        ),
+        "timeline_clinico": timeline_clinico,
+        "tipos_evento": tipos_evento,
+        "tipo_evento_seleccionado": tipo_evento,
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
         "tutor_nombre": tutor_nombre,
         "tutor_telefono": tutor_telefono,
         "tutor_email": tutor_email,
