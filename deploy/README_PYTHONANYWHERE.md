@@ -11,6 +11,11 @@ que haya cambios nuevos en el repositorio.
 
 En todos los ejemplos, reemplaza `tuusuario` por tu usuario real de PythonAnywhere.
 
+> **Rutas del servidor actual.** El proyecto vive en `~/faccicare_new` y el
+> entorno virtual es `~/.virtualenvs/facci-care`; ambos son los valores por
+> defecto del script. Si algún día mueves el proyecto, pásale `PROJECT_DIR` y
+> `VENV_DIR` en lugar de editar el script.
+
 ---
 
 ## Actualizar (lo que harás normalmente)
@@ -18,7 +23,7 @@ En todos los ejemplos, reemplaza `tuusuario` por tu usuario real de PythonAnywhe
 Abre una consola **Bash** desde la pestaña *Consoles* del panel y ejecuta:
 
 ```bash
-cd ~/faccicare
+cd ~/faccicare_new
 bash deploy/pythonanywhere_update.sh
 ```
 
@@ -54,7 +59,7 @@ Variables disponibles: `PA_USER`, `PROJECT_DIR`, `VENV_DIR`, `GIT_REMOTE`,
 ### Si el script se detiene por cambios locales
 
 ```bash
-cd ~/faccicare
+cd ~/faccicare_new
 git status --short        # ver qué cambió
 git checkout -- .         # descartar cambios locales (¡se pierden!)
 # o bien:  git stash       # guardarlos para después
@@ -71,7 +76,7 @@ script nunca los toca.
 
 ```bash
 cd ~
-git clone https://github.com/alanaquino/faccicare.git faccicare
+git clone https://github.com/alanaquino/faccicare.git faccicare_new
 ```
 
 ### 2. Crear el entorno virtual
@@ -80,12 +85,12 @@ Django 6.0 requiere Python 3.12 o superior; elige la versión más alta que
 ofrezca tu cuenta.
 
 ```bash
-mkvirtualenv --python=/usr/bin/python3.13 faccicare
-cd ~/faccicare
+mkvirtualenv --python=/usr/bin/python3.13 facci-care
+cd ~/faccicare_new
 pip install -r requirements.txt
 ```
 
-Eso crea el entorno en `~/.virtualenvs/faccicare`, que es la ruta que el script
+Eso crea el entorno en `~/.virtualenvs/facci-care`, que es la ruta que el script
 de actualización espera por defecto.
 
 ### 3. Crear la base de datos MySQL
@@ -97,14 +102,14 @@ usuario y contraseña.
 ### 4. Configurar el `.env`
 
 ```bash
-cp ~/faccicare/deploy/env.pythonanywhere.example ~/faccicare/.env
-nano ~/faccicare/.env
+cp ~/faccicare_new/deploy/env.pythonanywhere.example ~/faccicare_new/.env
+nano ~/faccicare_new/.env
 ```
 
 Genera las dos claves y pégalas en el archivo:
 
 ```bash
-cd ~/faccicare
+cd ~/faccicare_new
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
@@ -115,7 +120,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 ### 5. Migrar y crear el usuario administrador
 
 ```bash
-cd ~/faccicare
+cd ~/faccicare_new
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py collectstatic --noinput
@@ -130,9 +135,9 @@ En la pestaña **Web** del panel:
 
 1. *Add a new web app* → **Manual configuration** → la misma versión de Python
    del entorno virtual.
-2. **Source code**: `/home/tuusuario/faccicare`
-3. **Working directory**: `/home/tuusuario/faccicare`
-4. **Virtualenv**: `/home/tuusuario/.virtualenvs/faccicare`
+2. **Source code**: `/home/tuusuario/faccicare_new`
+3. **Working directory**: `/home/tuusuario/faccicare_new`
+4. **Virtualenv**: `/home/tuusuario/.virtualenvs/facci-care`
 5. **WSGI configuration file**: ábrelo y reemplaza todo su contenido por el de
    `deploy/pythonanywhere_wsgi.py` (ajustando `PROJECT_DIR` si clonaste en otra
    ruta).
@@ -140,8 +145,8 @@ En la pestaña **Web** del panel:
 
    | URL | Directory |
    |---|---|
-   | `/static/` | `/home/tuusuario/faccicare/staticfiles` |
-   | `/media/`  | `/home/tuusuario/faccicare/media` |
+   | `/static/` | `/home/tuusuario/faccicare_new/staticfiles` |
+   | `/media/`  | `/home/tuusuario/faccicare_new/media` |
 
 7. **Force HTTPS**: activado (`settings.py` ya aplica `SECURE_SSL_REDIRECT`,
    HSTS y cookies seguras cuando `DEBUG=False`).
@@ -153,7 +158,7 @@ En la pestaña **Web** del panel:
 
 ```bash
 # Comprobar configuración de producción
-cd ~/faccicare && python manage.py check --deploy
+cd ~/faccicare_new && python manage.py check --deploy
 
 # Ver los errores de la aplicación en vivo
 tail -f /var/log/tuusuario.pythonanywhere.com.error.log
@@ -176,11 +181,11 @@ tail -f /var/log/tuusuario.pythonanywhere.com.error.log
 El script respalda antes de cada actualización, pero también puedes hacerlo a mano:
 
 ```bash
-cd ~/faccicare
+cd ~/faccicare_new
 python manage.py backup                     # base de datos + media
 python manage.py backup --list              # listar respaldos existentes
 python manage.py backup --cleanup --keep 7  # borrar los de más de 7 días
 ```
 
-Los respaldos se guardan en `~/faccicare/backups/`. Descárgalos de vez en cuando
+Los respaldos se guardan en `~/faccicare_new/backups/`. Descárgalos de vez en cuando
 desde la pestaña *Files*, porque el disco de PythonAnywhere tiene cuota limitada.

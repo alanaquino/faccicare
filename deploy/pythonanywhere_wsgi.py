@@ -16,7 +16,7 @@ import os
 import sys
 
 # ── 1. Ruta del proyecto ──────────────────────────────────────────────────────
-PROJECT_DIR = os.path.expanduser('~/faccicare')
+PROJECT_DIR = os.path.expanduser('~/faccicare_new')
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 

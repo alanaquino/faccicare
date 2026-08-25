@@ -102,7 +102,7 @@ El proyecto se publica en PythonAnywhere. Todo lo necesario está en `deploy/`:
 
 ```bash
 # Actualizar el sitio con los últimos cambios (consola Bash de PythonAnywhere)
-cd ~/faccicare
+cd ~/faccicare_new
 bash deploy/pythonanywhere_update.sh
 ```
 

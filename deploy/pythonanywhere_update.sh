@@ -4,7 +4,7 @@
 # =============================================================================
 # Ejecuta este script desde una consola Bash de PythonAnywhere:
 #
-#   cd ~/faccicare
+#   cd ~/faccicare_new
 #   bash deploy/pythonanywhere_update.sh
 #
 # Que hace, en orden:
@@ -19,8 +19,8 @@
 #
 # Variables que puedes ajustar sin editar el script:
 #   PA_USER        Usuario de PythonAnywhere        (default: $USER)
-#   PROJECT_DIR    Ruta del proyecto                (default: ~/faccicare)
-#   VENV_DIR       Ruta del entorno virtual         (default: ~/.virtualenvs/faccicare)
+#   PROJECT_DIR    Ruta del proyecto                (default: ~/faccicare_new)
+#   VENV_DIR       Ruta del entorno virtual         (default: ~/.virtualenvs/facci-care)
 #   GIT_REMOTE     Remoto de git                    (default: origin)
 #   GIT_BRANCH     Rama a desplegar                 (default: main)
 #   WSGI_FILE      Archivo WSGI de la web app       (default: /var/www/${PA_USER}_pythonanywhere_com_wsgi.py)
@@ -33,9 +33,21 @@
 
 set -euo pipefail
 
-PA_USER="${PA_USER:-$USER}"
-PROJECT_DIR="${PROJECT_DIR:-$HOME/faccicare}"
-VENV_DIR="${VENV_DIR:-$HOME/.virtualenvs/faccicare}"
+# ── Auto-copia fuera del repositorio ──────────────────────────────────────────
+# Bash lee el script por partes mientras lo ejecuta. Como mas abajo hacemos
+# `git checkout`/`git merge` sobre el mismo repositorio donde vive este archivo,
+# el contenido bajo el cursor de lectura puede cambiar a mitad de ejecucion.
+# Para evitarlo, nos copiamos a un temporal y seguimos desde ahi.
+if [ -z "${FACCI_UPDATE_REEXEC:-}" ]; then
+    _self_copy="${TMPDIR:-/tmp}/faccicare_update_$$.sh"
+    cp "$0" "$_self_copy"
+    FACCI_UPDATE_REEXEC=1 exec bash "$_self_copy"
+fi
+trap 'rm -f "$0"' EXIT
+
+PA_USER="${PA_USER:-${USER:-$(whoami)}}"
+PROJECT_DIR="${PROJECT_DIR:-$HOME/faccicare_new}"
+VENV_DIR="${VENV_DIR:-$HOME/.virtualenvs/facci-care}"
 GIT_REMOTE="${GIT_REMOTE:-origin}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
 WSGI_FILE="${WSGI_FILE:-/var/www/${PA_USER}_pythonanywhere_com_wsgi.py}"
