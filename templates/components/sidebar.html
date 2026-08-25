@@ -172,9 +172,15 @@
       <div class="flex flex-col gap-1 mt-1 ml-2">
         <a href="{% url 'documentos:lista' %}" title="Documentos"
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
-                  {% if app == 'documentos' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+                  {% if app == 'documentos' and request.resolver_match.url_name != 'solicitudes' and request.resolver_match.url_name != 'crear_solicitud' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
           <span class="material-symbols-outlined text-xl">folder_open</span>
           <span class="sidebar-text">Documentos</span>
+        </a>
+        <a href="{% url 'documentos:solicitudes' %}" title="Solicitudes"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-label-md text-label-md transition-all
+                  {% if request.resolver_match.url_name == 'solicitudes' or request.resolver_match.url_name == 'crear_solicitud' %}bg-primary-container text-on-primary-container font-bold{% else %}text-on-surface-variant hover:bg-primary-container/50{% endif %}">
+          <span class="material-symbols-outlined text-xl">file_present</span>
+          <span class="sidebar-text">Solicitudes</span>
         </a>
         {# Reportes / PENCI-RD: todo el personal en solo lectura (solo ADMIN genera) #}
         {% if request.user.puede_ver_reportes %}
