@@ -1215,14 +1215,16 @@
                     <span class="material-symbols-outlined text-lg">edit</span>
                   </button>
                   {% endif %}
-                  <form method="post" action="" onsubmit="return confirm('¿Está seguro de eliminar esta indicación?');" class="inline">
+                  {% if request.user.rol == 'ADMIN' or ind.medico_id == request.user.id %}
+                  <form method="post" action="" onsubmit="return confirm('¿Está seguro de desactivar esta indicación? Se conservará en el historial clínico.');" class="inline">
                     {% csrf_token %}
-                    <input type="hidden" name="action" value="eliminar_indicacion">
+                    <input type="hidden" name="action" value="desactivar_indicacion">
                     <input type="hidden" name="indicacion_id" value="{{ ind.id }}">
-                    <button type="submit" class="p-1.5 rounded-lg text-outline-variant hover:bg-error-container/20 hover:text-error transition-colors" title="Eliminar indicación">
-                      <span class="material-symbols-outlined text-lg">delete</span>
+                    <button type="submit" class="p-1.5 rounded-lg text-outline-variant hover:bg-error-container/20 hover:text-error transition-colors" title="Desactivar indicación" aria-label="Desactivar indicación">
+                      <span class="material-symbols-outlined text-lg">block</span>
                     </button>
                   </form>
+                  {% endif %}
                 </div>
               </div>
               <p class="font-body-sm text-xs text-on-surface-variant mt-2 leading-relaxed pl-12 line-clamp-2">
