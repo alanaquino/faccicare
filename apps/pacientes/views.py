@@ -942,6 +942,9 @@ def expediente_view(request, pk):
             indicacion_id = request.POST.get("indicacion_id")
             from apps.seguimiento.models import IndicacionMedica
             ind = get_object_or_404(IndicacionMedica, id=indicacion_id, paciente=paciente)
+            if request.user.rol != CustomUser.Rol.ADMIN and ind.medico_id != request.user.id:
+                messages.error(request, "Solo el médico autor o un Administrador puede desactivar esta indicación.")
+                return redirect(f"{request.path}?tab=indicaciones")
             
             registrar_actividad(
                 usuario=request.user,

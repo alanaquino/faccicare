@@ -288,6 +288,26 @@ class UseCaseAlignmentTests(TestCase):
         self.assertRedirects(response, f"{reverse('pacientes:expediente', kwargs={'pk': self.paciente.pk})}?tab=indicaciones")
         ind.refresh_from_db()
         self.assertFalse(ind.activa)
+        self.assertTrue(IndicacionMedica.objects.filter(pk=ind.pk).exists())
+
+    def test_non_author_cannot_deactivate_indication(self):
+        ind = IndicacionMedica.objects.create(
+            paciente=self.paciente,
+            medico=self.admin,
+            titulo='Indicación del administrador',
+            descripcion='Prueba de autorización',
+        )
+        self.client.force_login(self.medico)
+        response = self.client.post(
+            reverse('pacientes:expediente', kwargs={'pk': self.paciente.pk}),
+            {
+                'action': 'desactivar_indicacion',
+                'indicacion_id': str(ind.pk),
+            }
+        )
+        self.assertRedirects(response, f"{reverse('pacientes:expediente', kwargs={'pk': self.paciente.pk})}?tab=indicaciones")
+        ind.refresh_from_db()
+        self.assertTrue(ind.activa)
 
     def test_document_correction_requires_observations(self):
         doc = DocumentoMedico.objects.create(
