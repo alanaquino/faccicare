@@ -2,6 +2,7 @@ import datetime
 
 from django.test import TestCase
 from django.urls import reverse
+from django.contrib.messages import get_messages
 
 from apps.alojamiento.models import EstanciaFamiliar, HabitacionCasa
 from apps.auth_app.models import CustomUser
@@ -10,7 +11,7 @@ from apps.documentos.models import DocumentoMedico
 from apps.pacientes.models import Paciente
 from apps.padres.models import PadreTutor, ReporteSintoma
 from apps.referencias.models import ReferenciaMedica
-from apps.seguimiento.models import IndicacionMedica
+from apps.seguimiento.models import IndicacionMedica, SeguimientoPaciente
 
 
 class UseCaseAlignmentTests(TestCase):
@@ -215,6 +216,11 @@ class UseCaseAlignmentTests(TestCase):
             }
         )
         self.assertRedirects(response, f"{reverse('pacientes:expediente', kwargs={'pk': self.paciente.pk})}?tab=resumen")
+        self.assertIn(
+            'La fecha de la cita no puede ser en el pasado.',
+            [str(message) for message in get_messages(response.wsgi_request)],
+        )
+        self.assertFalse(SeguimientoPaciente.objects.filter(paciente=self.paciente).exists())
 
     def test_deactivate_indication_sets_active_false(self):
         ind = IndicacionMedica.objects.create(

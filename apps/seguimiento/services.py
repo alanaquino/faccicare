@@ -1,3 +1,4 @@
+from apps.seguimiento.models import validar_fecha_proximo_seguimiento
 from apps.seguimiento.models import SeguimientoPaciente
 from apps.core.audit import registrar_actividad
 
@@ -5,6 +6,8 @@ def registrar_seguimiento(paciente, autor, *, estado_clinico, observaciones,
                           proxima_fecha_seguimiento, medico_seguimiento=None,
                           lugar_seguimiento=None, peso_kg=None, talla_cm=None,
                           temperatura_c=None, tension_arterial=''):
+    validar_fecha_proximo_seguimiento(proxima_fecha_seguimiento)
+
     seguimiento = SeguimientoPaciente.objects.create(
         paciente=paciente,
         medico=autor,

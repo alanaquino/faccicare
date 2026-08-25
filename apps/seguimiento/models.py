@@ -2,6 +2,7 @@ import re
 import uuid
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from apps.core.constants import (
@@ -12,6 +13,11 @@ from apps.core.constants import (
 from apps.pacientes.models import Paciente
 
 _TENSION_ARTERIAL_RE = re.compile(r'^\s*(\d{2,3})\s*/\s*(\d{2,3})')
+
+
+def validar_fecha_proximo_seguimiento(value):
+    if value and value < timezone.now():
+        raise ValidationError('La fecha de la cita no puede ser en el pasado.')
 
 
 class SeguimientoPaciente(models.Model):
@@ -76,6 +82,7 @@ class SeguimientoPaciente(models.Model):
         null=True,
         blank=True,
         verbose_name='Próximo seguimiento',
+        validators=[validar_fecha_proximo_seguimiento],
     )
     medico_seguimiento = models.ForeignKey(
         settings.AUTH_USER_MODEL,
