@@ -59,40 +59,56 @@ COLORES_CANCER = ['error', 'secondary', 'primary', 'tertiary', 'primary', 'outli
 def dashboard_view(request):
     hoy = timezone.now()
     generar_alertas_pendientes()
-    alertas_resumen = resumen_alertas(AlertaClinica.objects.all())
+    periodo_param = request.GET.get('periodo', '')
+    try:
+        periodo_inicio = datetime.datetime.strptime(periodo_param, '%Y-%m').date().replace(day=1)
+    except ValueError:
+        periodo_inicio = hoy.date().replace(day=1)
+        periodo_param = periodo_inicio.strftime('%Y-%m')
+    siguiente_mes = periodo_inicio.replace(day=28) + datetime.timedelta(days=4)
+    periodo_fin = siguiente_mes.replace(day=1) - datetime.timedelta(days=1)
+    periodo_inicio_dt = timezone.make_aware(datetime.datetime.combine(periodo_inicio, datetime.time.min))
+    periodo_fin_dt = timezone.make_aware(datetime.datetime.combine(periodo_fin, datetime.time.max))
+    alertas_resumen = resumen_alertas(AlertaClinica.objects.filter(
+        fecha_creacion__gte=periodo_inicio_dt,
+        fecha_creacion__lte=periodo_fin_dt,
+    ))
 
     # ── Stats generales ──────────────────────────────────────────────
     total_pacientes = Paciente.objects.count()
     nuevos_mes = Paciente.objects.filter(
-        created_at__month=hoy.month,
-        created_at__year=hoy.year,
+        created_at__date__gte=periodo_inicio,
+        created_at__date__lte=periodo_fin,
     ).count()
     cribados_positivos = CuestionarioCribado.objects.filter(
         resultado__in=['SOSPECHA_MODERADA', 'SOSPECHA_ALTA'],
-        fecha_evaluacion__month=hoy.month,
-        fecha_evaluacion__year=hoy.year,
+        fecha_evaluacion__date__gte=periodo_inicio,
+        fecha_evaluacion__date__lte=periodo_fin,
     ).count()
     referencias_enviadas = ReferenciaMedica.objects.filter(
-        fecha_referencia__month=hoy.month,
-        fecha_referencia__year=hoy.year,
+        fecha_referencia__date__gte=periodo_inicio,
+        fecha_referencia__date__lte=periodo_fin,
     ).count()
     en_tratamiento = Paciente.objects.filter(estado_actual='EN_TRATAMIENTO').count()
     en_remision = Paciente.objects.filter(estado_actual='EN_REMISION').count()
 
     # ── Distribución por provincia ───────────────────────────────────
     provincias_qs = list(
-        Paciente.objects
+        Paciente.objects.filter(
+            created_at__date__gte=periodo_inicio,
+            created_at__date__lte=periodo_fin,
+        )
         .values('provincia')
         .annotate(casos=Count('id'))
         .order_by('-casos')
     )
     max_casos = provincias_qs[0]['casos'] if provincias_qs else 1
 
-    mes_ant = _hace_n_meses(hoy, 1)
+    mes_ant = _hace_n_meses(periodo_inicio, 1)
     actual_prov = {
         p['provincia']: p['casos']
         for p in Paciente.objects.filter(
-            created_at__month=hoy.month, created_at__year=hoy.year,
+            created_at__date__gte=periodo_inicio, created_at__date__lte=periodo_fin,
         ).values('provincia').annotate(casos=Count('id'))
     }
     anterior_prov = {
@@ -122,7 +138,10 @@ def dashboard_view(request):
 
     # ── Tipos de cáncer ──────────────────────────────────────────────
     diag_qs = list(
-        Paciente.objects
+        Paciente.objects.filter(
+            created_at__date__gte=periodo_inicio,
+            created_at__date__lte=periodo_fin,
+        )
         .exclude(diagnostico='')
         .values('diagnostico')
         .annotate(casos=Count('id'))
@@ -140,7 +159,7 @@ def dashboard_view(request):
     ]
 
     # ── Tendencia mensual (últimos 6 meses) ──────────────────────────
-    inicio = _hace_n_meses(hoy, 5).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    inicio = _hace_n_meses(periodo_inicio_dt, 5)
 
     cribados_por_mes = {
         (e['mes'].year, e['mes'].month): e['total']
@@ -168,7 +187,7 @@ def dashboard_view(request):
 
     tendencia_mensual = []
     for i in range(6):
-        d = _hace_n_meses(hoy, 5 - i)
+        d = _hace_n_meses(periodo_inicio, 5 - i)
         key = (d.year, d.month)
         c = cribados_por_mes.get(key, 0)
         p = positivos_por_mes.get(key, 0)
@@ -182,12 +201,21 @@ def dashboard_view(request):
         f"{MESES_LARGOS[_hace_n_meses(hoy, i).month]} {_hace_n_meses(hoy, i).year}"
         for i in range(6)
     ]
-    periodo = ultimos_meses[0]
+    periodos_meses = [
+        {
+            'valor': _hace_n_meses(hoy, i).strftime('%Y-%m'),
+            'etiqueta': ultimos_meses[i],
+        }
+        for i in range(6)
+    ]
+    periodo = f'{MESES_LARGOS[periodo_inicio.month]} {periodo_inicio.year}'
 
     context = {
         'titulo_pagina': 'Reportes y Estadísticas',
         'periodo': periodo,
+        'periodo_param': periodo_param,
         'ultimos_meses': ultimos_meses,
+        'periodos_meses': periodos_meses,
         'stats_generales': {
             'total_pacientes': total_pacientes,
             'nuevos_mes': nuevos_mes,
