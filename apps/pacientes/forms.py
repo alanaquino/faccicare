@@ -125,16 +125,41 @@ class RegistroPacienteForm(forms.Form):
 
 
 class NotaClinicaForm(forms.ModelForm):
+    EXTENSIONES_ADJUNTO = {"pdf", "jpg", "jpeg", "png", "docx", "xlsx"}
+
     class Meta:
         model = NotaClinica
-        fields = ("tipo", "texto", "es_importante")
+        fields = ("tipo", "texto", "adjunto", "es_importante")
         widgets = {
             "texto": forms.Textarea(attrs={"rows": 4}),
+            "adjunto": forms.ClearableFileInput(attrs={"accept": ".pdf,.jpg,.jpeg,.png,.docx,.xlsx"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
+        for name, field in self.fields.items():
             field.widget.attrs.setdefault("class", INPUT_CLASSES)
+            if name in self.errors:
+                field.widget.attrs["class"] += " border-error focus:border-error focus:ring-error/50"
         self.fields["es_importante"].widget.attrs["class"] = "h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary"
+        self.fields["adjunto"].widget.attrs["class"] = (
+            "block w-full text-body-sm text-on-surface-variant file:mr-4 file:rounded-lg "
+            "file:border-0 file:bg-primary file:px-4 file:py-2 file:text-on-primary "
+            "file:font-label-md hover:file:opacity-90"
+        )
         self.fields["texto"].widget.attrs["class"] += " resize-none"
+
+    def clean_adjunto(self):
+        adjunto = self.cleaned_data.get("adjunto")
+        if not adjunto:
+            return adjunto
+
+        if adjunto.size > 20 * 1024 * 1024:
+            raise forms.ValidationError("El adjunto no puede superar 20 MB.")
+
+        extension = adjunto.name.rsplit(".", 1)[-1].lower() if "." in adjunto.name else ""
+        if extension not in self.EXTENSIONES_ADJUNTO:
+            permitidas = ", ".join(sorted(self.EXTENSIONES_ADJUNTO))
+            raise forms.ValidationError(f"Formato no permitido. Usar: {permitidas}.")
+
+        return adjunto

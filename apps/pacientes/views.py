@@ -91,6 +91,10 @@ def _puede_editar_paciente(user, paciente):
     return False
 
 
+def _puede_agregar_nota_clinica(user):
+    return user.rol not in [CustomUser.Rol.PADRE_TUTOR, CustomUser.Rol.PERSONAL_FACCI]
+
+
 def _generar_username_tutor(email, cedula, nombre_completo):
     base = (email.split("@")[0] if email else cedula or nombre_completo).lower()
     base = "".join(ch for ch in base if ch.isalnum() or ch in "._-").strip("._-") or "tutor"
@@ -178,7 +182,16 @@ def _build_timeline(cribados, referencias, seguimientos, documentos, notas,
         badges = [{"label": nota.get_tipo_display(), "color": nota.color}]
         if nota.es_importante:
             badges.append({"label": "Importante", "color": "error"})
+        campos_nota = []
+        adjunto_url = ""
+        if nota.adjunto:
+            adjunto_url = nota.adjunto.url
+            adjunto_label = nota.nombre_adjunto
+            if nota.tamano_adjunto:
+                adjunto_label = f"{adjunto_label} ({nota.tamano_adjunto})"
+            campos_nota.append({"label": "Adjunto", "valor": adjunto_label})
         timeline.append({
+            "id": str(nota.id),
             "fecha_dt": nota.created_at,
             "fecha": nota.fecha,
             "tipo": "Nota clínica",
@@ -188,7 +201,10 @@ def _build_timeline(cribados, referencias, seguimientos, documentos, notas,
             "icono": "note_alt",
             "color": nota.color,
             "badges": badges,
-            "campos": [],
+            "campos": campos_nota,
+            "adjunto_url": adjunto_url,
+            "adjunto_nombre": nota.nombre_adjunto,
+            "adjunto_extension": nota.extension_adjunto,
         })
 
     for cribado in cribados:
@@ -814,13 +830,17 @@ def expediente_view(request, pk):
             messages.error(request, 'No tiene permiso para ver el expediente de este paciente, ya que no le ha sido referido.')
             return redirect('referencias:lista')
 
+    nota_form = NotaClinicaForm()
+    abrir_modal_nota = False
+    tab_activo = request.GET.get("tab", "resumen")
+
     if request.method == "POST":
         action = request.POST.get("action")
         
         # Restrict clinical actions (prescribing indications, clinical notes, requesting studies)
         # to clinicians only. Personal FACCI is blocked from doing clinical tasks.
-        if action in ["guardar_indicaciones", "eliminar_indicacion", "solicitar_estudio", "eliminar_estudio_solicitud"]:
-            if request.user.rol == CustomUser.Rol.PERSONAL_FACCI:
+        if action in ["guardar_indicaciones", "eliminar_indicacion", "solicitar_estudio", "eliminar_estudio_solicitud", "agregar_nota"]:
+            if not _puede_agregar_nota_clinica(request.user):
                 messages.error(request, 'Su rol no tiene autorización para realizar esta acción clínica.')
                 return redirect(request.path)
         
@@ -1158,18 +1178,28 @@ def expediente_view(request, pk):
             return redirect(f"{request.path}?tab=resumen")
 
         elif action == "agregar_nota" or not action:
-            if request.user.rol == CustomUser.Rol.PERSONAL_FACCI:
+            if not _puede_agregar_nota_clinica(request.user):
                 messages.error(request, 'Su rol no tiene autorización para agregar notas clínicas.')
                 return redirect(request.path)
-            nota_form = NotaClinicaForm(request.POST)
+            nota_form = NotaClinicaForm(request.POST, request.FILES)
             if nota_form.is_valid():
                 nota = nota_form.save(commit=False)
                 nota.paciente = paciente
                 nota.autor = request.user
                 nota.save()
-                messages.success(request, "Nota clinica agregada al expediente.")
-                return redirect(f"{request.path}?tab=resumen")
-            messages.error(request, "Revise los datos de la nota clinica.")
+                registrar_actividad(
+                    usuario=request.user,
+                    accion="Registrar Nota Clínica",
+                    modelo="Paciente",
+                    objeto_id=str(paciente.id),
+                    objeto_repr=paciente.nombre_completo,
+                    descripcion=f'Registrada nota clínica de tipo "{nota.get_tipo_display()}" para el paciente {paciente.nombre_completo}',
+                )
+                messages.success(request, "Nota clínica agregada al expediente.")
+                return redirect(f"{request.path}?tab=evolucion#evento-{nota.id}")
+            abrir_modal_nota = True
+            tab_activo = "evolucion"
+            messages.error(request, "Revise los datos de la nota clínica.")
     else:
         nota_form = NotaClinicaForm()
 
@@ -1341,7 +1371,9 @@ def expediente_view(request, pk):
         "meses_seguimiento": meses_seguimiento,
         "documentos_count": documentos_qs.count(),
         "seguimientos_count": seguimientos_qs.count(),
-        "tab_activo": request.GET.get("tab", "resumen"),
+        "tab_activo": tab_activo,
+        "abrir_modal_nota": abrir_modal_nota,
+        "puede_agregar_nota_clinica": _puede_agregar_nota_clinica(request.user),
         "solicitudes_documento": solicitudes_qs,
         "solicitudes_pendientes_count": solicitudes_pendientes_count,
         "tipos_documento_choices": DocumentoMedico.TipoDocumento.choices,

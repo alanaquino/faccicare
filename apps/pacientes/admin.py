@@ -13,7 +13,7 @@ class PacienteAdmin(admin.ModelAdmin):
 
 @admin.register(NotaClinica)
 class NotaClinicaAdmin(admin.ModelAdmin):
-    list_display = ("paciente", "tipo", "autor", "es_importante", "created_at")
+    list_display = ("paciente", "tipo", "autor", "es_importante", "nombre_adjunto", "created_at")
     list_filter = ("tipo", "es_importante", "created_at")
     search_fields = ("paciente__codigo_paciente", "paciente__nombres", "paciente__apellidos", "texto")
-    readonly_fields = ("id", "created_at", "updated_at")
+    readonly_fields = ("id", "nombre_adjunto", "tamano_adjunto", "created_at", "updated_at")

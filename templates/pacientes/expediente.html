@@ -479,7 +479,7 @@
           <span class="material-symbols-outlined text-tertiary">note_alt</span>
           Notas Clínicas
         </h3>
-        {% if request.user.rol != 'PADRE_TUTOR' and request.user.rol != 'PERSONAL_FACCI' %}
+        {% if puede_agregar_nota_clinica %}
         <button type="button" onclick="abrirModalNota()"
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-tertiary text-tertiary font-label-sm text-label-sm hover:bg-tertiary-container/20 transition-colors">
           <span class="material-symbols-outlined" style="font-size:16px;">add</span>
@@ -517,6 +517,22 @@
             </div>
             <p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Por {{ nota.autor_nombre }}</p>
             <p class="font-body-md text-body-md text-on-surface mt-2 whitespace-pre-line leading-relaxed">{{ nota.texto }}</p>
+            {% if nota.adjunto %}
+            <div class="mt-3 flex items-center justify-between gap-3 rounded-lg border border-surface-container bg-surface-container-low px-3 py-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="material-symbols-outlined text-primary shrink-0" style="font-size:18px;">attach_file</span>
+                <div class="min-w-0">
+                  <p class="font-label-sm text-label-sm text-on-surface truncate">{{ nota.nombre_adjunto }}</p>
+                  <p class="font-body-sm text-body-sm text-on-surface-variant">{{ nota.extension_adjunto|upper }}{% if nota.tamano_adjunto %} &middot; {{ nota.tamano_adjunto }}{% endif %}</p>
+                </div>
+              </div>
+              <a href="{{ nota.adjunto.url }}" download
+                 class="p-2 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant shrink-0"
+                 title="Descargar adjunto">
+                <span class="material-symbols-outlined" style="font-size:20px;">download</span>
+              </a>
+            </div>
+            {% endif %}
           </div>
         </div>
         {% empty %}
@@ -895,14 +911,23 @@
 {# TAB 4: Evolucion clinica #}
 <div id="panel-evolucion" class="tab-panel hidden">
   <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-variant/40 p-6">
-    <div class="flex items-center justify-between mb-8 pb-4 border-b border-surface-variant/40">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8 pb-4 border-b border-surface-variant/40">
       <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2.5">
         <span class="material-symbols-outlined text-tertiary">timeline</span>
         Evolución Clínica
       </h3>
-      <span class="px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-md text-xs font-semibold">
-        {{ timeline_clinico|length }} eventos
-      </span>
+      <div class="flex items-center gap-2">
+        {% if puede_agregar_nota_clinica %}
+        <button type="button" onclick="abrirModalNota()"
+                class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+          <span class="material-symbols-outlined" style="font-size:18px;">add_notes</span>
+          Registrar nota
+        </button>
+        {% endif %}
+        <span class="px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-md text-xs font-semibold">
+          {{ timeline_clinico|length }} eventos
+        </span>
+      </div>
     </div>
 
     {% if timeline_clinico %}
@@ -948,6 +973,14 @@
                 </div>
               </div>
               <div class="flex gap-2 shrink-0">
+                {% if evento.adjunto_url %}
+                <a href="{{ evento.adjunto_url }}" download
+                   class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-container text-on-surface-variant font-label-md text-xs hover:bg-surface-container-high transition-all"
+                   title="{{ evento.adjunto_nombre }}">
+                  <span class="material-symbols-outlined" style="font-size:14px;">attach_file</span>
+                  Adjunto
+                </a>
+                {% endif %}
                 {% if evento.detalle_url == 'cribado' %}
                 <a href="{% url 'cribado:detalle' evento.id %}" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-on-primary font-label-md text-xs hover:opacity-95 transition-all shadow-sm">
                   <span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span>
@@ -1036,6 +1069,13 @@
       <span class="material-symbols-outlined text-outline-variant block mb-4" style="font-size:56px;">timeline</span>
       <p class="font-headline-sm text-headline-sm text-on-surface font-bold">Sin evolución clínica</p>
       <p class="font-body-md text-body-md text-on-surface-variant mt-2 max-w-sm mx-auto">Agregue una nota clínica o registre un cribado para iniciar la línea de tiempo.</p>
+      {% if puede_agregar_nota_clinica %}
+      <button type="button" onclick="abrirModalNota()"
+              class="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+        <span class="material-symbols-outlined" style="font-size:18px;">add_notes</span>
+        Registrar primera nota
+      </button>
+      {% endif %}
     </div>
     {% endif %}
   </div>
@@ -1797,10 +1837,12 @@
     const modal = document.getElementById('modalAgregarNota');
     modal.classList.remove('hidden');
     const text = modal.querySelector('textarea');
+    const file = modal.querySelector('input[type="file"]');
     if (text) {
       text.value = '';
       text.focus();
     }
+    if (file) file.value = '';
   }
 
   function cerrarModalNota() {
@@ -2165,7 +2207,7 @@ document.addEventListener('keydown', e => {
 </div>
 
 {# Modal Agregar Nota Clínica #}
-<div id="modalAgregarNota" class="fixed inset-0 z-[1050] flex items-center justify-center bg-black/40 backdrop-blur-sm hidden" onclick="if(event.target===this)cerrarModalNota()">
+<div id="modalAgregarNota" class="fixed inset-0 z-[1050] flex items-center justify-center bg-black/40 backdrop-blur-sm {% if not abrir_modal_nota %}hidden{% endif %}" onclick="if(event.target===this)cerrarModalNota()">
   <div class="bg-surface-container-lowest rounded-2xl shadow-2xl border border-surface-container w-full max-w-md mx-4 overflow-hidden">
     <div class="flex items-center justify-between px-6 py-4 border-b border-surface-container">
       <h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
@@ -2176,13 +2218,21 @@ document.addEventListener('keydown', e => {
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
-    <form method="post" action="{% url 'pacientes:expediente' paciente.id %}" class="px-6 py-5 space-y-4">
+    <form method="post" action="{% url 'pacientes:expediente' paciente.id %}" enctype="multipart/form-data" class="px-6 py-5 space-y-4">
       {% csrf_token %}
       <input type="hidden" name="action" value="agregar_nota">
+      {% if nota_form.non_field_errors %}
+      <div class="rounded-lg border border-error/30 bg-error-container/10 px-3 py-2 text-error font-body-sm text-body-sm">
+        {{ nota_form.non_field_errors|striptags }}
+      </div>
+      {% endif %}
 
       <div>
         <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="{{ nota_form.tipo.id_for_label }}">Tipo de Nota <span class="text-error">*</span></label>
         {{ nota_form.tipo }}
+        {% if nota_form.tipo.errors %}
+        <p class="mt-1 text-error text-body-sm">{{ nota_form.tipo.errors|striptags }}</p>
+        {% endif %}
       </div>
 
       <div class="flex items-center gap-2">
@@ -2195,6 +2245,15 @@ document.addEventListener('keydown', e => {
         {{ nota_form.texto }}
         {% if nota_form.texto.errors %}
         <p class="mt-1 text-error text-body-sm">{{ nota_form.texto.errors|striptags }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5" for="{{ nota_form.adjunto.id_for_label }}">Adjunto opcional</label>
+        {{ nota_form.adjunto }}
+        <p class="mt-1 font-body-sm text-body-sm text-on-surface-variant">PDF, imagen, DOCX o XLSX de hasta 20 MB.</p>
+        {% if nota_form.adjunto.errors %}
+        <p class="mt-1 text-error text-body-sm">{{ nota_form.adjunto.errors|striptags }}</p>
         {% endif %}
       </div>
 

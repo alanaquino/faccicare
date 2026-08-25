@@ -1,3 +1,4 @@
+import os
 import uuid
 from django.db import models
 from django.conf import settings
@@ -292,6 +293,13 @@ class NotaClinica(models.Model):
     texto = models.TextField(
         verbose_name='Nota clinica',
     )
+    adjunto = models.FileField(
+        upload_to='notas_clinicas/%Y/%m/',
+        null=True,
+        blank=True,
+        verbose_name='Adjunto',
+        help_text='Archivo opcional asociado a la nota clinica',
+    )
     es_importante = models.BooleanField(
         default=False,
         verbose_name='Marcar como importante',
@@ -311,6 +319,29 @@ class NotaClinica(models.Model):
 
     def __str__(self):
         return f'{self.paciente.nombre_completo} - {self.get_tipo_display()}'
+
+    @property
+    def nombre_adjunto(self):
+        return os.path.basename(self.adjunto.name) if self.adjunto else ''
+
+    @property
+    def extension_adjunto(self):
+        _, ext = os.path.splitext(self.nombre_adjunto)
+        return ext.lower().lstrip('.')
+
+    @property
+    def tamano_adjunto(self):
+        if not self.adjunto:
+            return ''
+        try:
+            size = self.adjunto.size
+            if size < 1024:
+                return f'{size} B'
+            if size < 1024 * 1024:
+                return f'{size / 1024:.1f} KB'
+            return f'{size / (1024 * 1024):.1f} MB'
+        except OSError:
+            return ''
 
     @property
     def autor_nombre(self):

@@ -1,6 +1,8 @@
 import datetime
+import tempfile
 
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.contrib.messages import get_messages
 
@@ -8,12 +10,13 @@ from apps.alojamiento.models import EstanciaFamiliar, HabitacionCasa
 from apps.auth_app.models import CustomUser
 from apps.cribado.models import CuestionarioCribado
 from apps.documentos.models import DocumentoMedico
-from apps.pacientes.models import Paciente
+from apps.pacientes.models import NotaClinica, Paciente
 from apps.padres.models import PadreTutor, ReporteSintoma
 from apps.referencias.models import ReferenciaMedica
 from apps.seguimiento.models import IndicacionMedica, SeguimientoPaciente
 
 
+@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.PBKDF2PasswordHasher'])
 class UseCaseAlignmentTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -260,3 +263,52 @@ class UseCaseAlignmentTests(TestCase):
         self.assertRedirects(response, reverse('documentos:detalle', kwargs={'pk': doc.pk}))
         doc.refresh_from_db()
         self.assertNotEqual(doc.estado, DocumentoMedico.EstadoDocumento.CORRECCION)
+
+    def test_clinical_evolution_exposes_note_registration_form(self):
+        self.client.force_login(self.medico)
+        response = self.client.get(reverse('pacientes:expediente', kwargs={'pk': self.paciente.pk}))
+
+        self.assertContains(response, 'Registrar nota')
+        self.assertContains(response, 'name="action" value="agregar_nota"')
+        self.assertContains(response, 'name="adjunto"')
+        self.assertContains(response, 'enctype="multipart/form-data"')
+
+    def test_clinician_can_register_clinical_note_with_optional_attachment(self):
+        self.client.force_login(self.medico)
+        url = reverse('pacientes:expediente', kwargs={'pk': self.paciente.pk})
+        adjunto = SimpleUploadedFile(
+            'evolucion.pdf',
+            b'%PDF-1.4 nota clinica',
+            content_type='application/pdf',
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir, override_settings(MEDIA_ROOT=tmpdir):
+            response = self.client.post(url, {
+                'action': 'agregar_nota',
+                'tipo': NotaClinica.TipoNota.EVOLUCION,
+                'texto': 'Paciente con buena tolerancia al tratamiento.',
+                'es_importante': 'on',
+                'adjunto': adjunto,
+            })
+
+            nota = NotaClinica.objects.get(paciente=self.paciente)
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response['Location'], f'{url}?tab=evolucion#evento-{nota.pk}')
+            self.assertEqual(nota.tipo, NotaClinica.TipoNota.EVOLUCION)
+            self.assertEqual(nota.texto, 'Paciente con buena tolerancia al tratamiento.')
+            self.assertTrue(nota.es_importante)
+            self.assertTrue(nota.adjunto.name.startswith('notas_clinicas/'))
+            self.assertTrue(nota.adjunto.name.endswith('.pdf'))
+
+    def test_coordinator_cannot_register_clinical_note(self):
+        self.client.force_login(self.coordinador)
+        url = reverse('pacientes:expediente', kwargs={'pk': self.paciente.pk})
+
+        response = self.client.post(url, {
+            'action': 'agregar_nota',
+            'tipo': NotaClinica.TipoNota.OBSERVACION,
+            'texto': 'Intento no autorizado.',
+        })
+
+        self.assertRedirects(response, url)
+        self.assertFalse(NotaClinica.objects.filter(texto='Intento no autorizado.').exists())
