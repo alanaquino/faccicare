@@ -302,6 +302,53 @@ def cambiar_visibilidad_view(request, pk):
 
 # Solicitudes de documentos
 @login_required
+@requiere_acceso('puede_subir_documentos')
+def crear_solicitud_view(request):
+    if request.method == 'POST':
+        paciente_id = request.POST.get('paciente')
+        titulo = request.POST.get('titulo', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+        
+        if not paciente_id or not titulo:
+            messages.error(request, 'El paciente y el título son obligatorios.')
+            return redirect('documentos:crear_solicitud')
+            
+        paciente = get_object_or_404(Paciente, id=paciente_id)
+        
+        SolicitudDocumento.objects.create(
+            paciente=paciente,
+            medico_solicitante=request.user,
+            titulo=titulo,
+            descripcion=descripcion
+        )
+        
+        messages.success(request, 'Solicitud creada exitosamente.')
+        return redirect('documentos:solicitudes')
+
+    if request.user.rol in [CustomUser.Rol.PEDIATRA, CustomUser.Rol.MEDICO]:
+        pacientes = Paciente.objects.filter(
+            Q(medico_asignado=request.user) | Q(creado_por=request.user)
+        ).distinct()
+    elif request.user.rol == CustomUser.Rol.ONCOLOGO:
+        pacientes = Paciente.objects.filter(
+            referencias__especialista_destino=request.user
+        ).distinct()
+    else:
+        pacientes = Paciente.objects.all()
+
+    paciente_preseleccionado = None
+    if request.GET.get('paciente'):
+        paciente_preseleccionado = Paciente.objects.filter(pk=request.GET.get('paciente')).first()
+
+    context = {
+        'titulo_pagina': 'Nueva Solicitud de Documento',
+        'pacientes': pacientes.order_by('nombres', 'apellidos'),
+        'paciente_preseleccionado': paciente_preseleccionado,
+    }
+    return render(request, 'documentos/crear_solicitud.html', context)
+
+
+@login_required
 @solo_personal
 def solicitudes_view(request):
     if request.user.rol in [CustomUser.Rol.PEDIATRA, CustomUser.Rol.MEDICO]:

@@ -13,4 +13,5 @@ urlpatterns = [
     path('<uuid:pk>/cambiar-estado/', views.cambiar_estado_view, name='cambiar_estado'),
     path('<uuid:pk>/cambiar-visibilidad/', views.cambiar_visibilidad_view, name='cambiar_visibilidad'),
     path('solicitudes/', views.solicitudes_view, name='solicitudes'),
+    path('solicitudes/crear/', views.crear_solicitud_view, name='crear_solicitud'),
 ]
