@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Case, When, Value, IntegerField
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -475,7 +475,18 @@ def alertas_view(request):
     if fecha_hasta_dt:
         alertas = alertas.filter(fecha_creacion__date__lte=fecha_hasta_dt)
 
-    alertas = list(alertas.order_by('estado', '-fecha_creacion'))
+    alertas = alertas.annotate(
+        prioridad_order=Case(
+            When(prioridad=AlertaClinica.Prioridad.CRITICA, then=Value(1)),
+            When(prioridad=AlertaClinica.Prioridad.ALTA, then=Value(2)),
+            When(prioridad=AlertaClinica.Prioridad.MEDIA, then=Value(3)),
+            When(prioridad=AlertaClinica.Prioridad.BAJA, then=Value(4)),
+            default=Value(5),
+            output_field=IntegerField(),
+        )
+    ).order_by('estado', 'prioridad_order', '-fecha_creacion')
+
+    alertas = list(alertas)
     total = len(alertas)
     urgentes_count = base_qs.filter(
         estado__in=ESTADOS_ABIERTOS,

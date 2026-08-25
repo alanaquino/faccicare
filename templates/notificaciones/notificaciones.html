@@ -165,6 +165,14 @@
       btnAll.classList.toggle('opacity-50', total === 0);
       btnAll.classList.toggle('pointer-events-none', total === 0);
     }
+    const bellBadge = document.getElementById('bellBadge');
+    if (bellBadge) {
+      if (total === 0) {
+        bellBadge.classList.add('hidden');
+      } else {
+        bellBadge.classList.remove('hidden');
+      }
+    }
   }
 
   async function alternarLeido(id) {
