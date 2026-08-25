@@ -222,6 +222,19 @@ class UseCaseAlignmentTests(TestCase):
         )
         self.assertFalse(SeguimientoPaciente.objects.filter(paciente=self.paciente).exists())
 
+    def test_clinical_timeline_filters_by_type_and_date_range(self):
+        from apps.pacientes.views import _filter_timeline
+
+        timeline = [
+            {'id': 'cribado-1', 'tipo': 'Cribado FACCI', 'fecha_dt': datetime.datetime(2026, 8, 10, tzinfo=datetime.timezone.utc)},
+            {'id': 'referencia-1', 'tipo': 'Referencia médica', 'fecha_dt': datetime.datetime(2026, 8, 15, tzinfo=datetime.timezone.utc)},
+            {'id': 'cribado-2', 'tipo': 'Cribado FACCI', 'fecha_dt': datetime.datetime(2026, 8, 20, tzinfo=datetime.timezone.utc)},
+        ]
+
+        filtered = _filter_timeline(timeline, 'Cribado FACCI', '2026-08-11', '2026-08-21')
+
+        self.assertEqual([event['id'] for event in filtered], ['cribado-2'])
+
     def test_deactivate_indication_sets_active_false(self):
         ind = IndicacionMedica.objects.create(
             paciente=self.paciente,

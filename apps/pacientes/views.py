@@ -420,6 +420,24 @@ def _build_timeline(cribados, referencias, seguimientos, documentos, notas,
     return timeline
 
 
+def _filter_timeline(timeline, tipo_evento='', fecha_desde='', fecha_hasta=''):
+    try:
+        fecha_desde = datetime.date.fromisoformat(fecha_desde) if fecha_desde else None
+    except ValueError:
+        fecha_desde = None
+    try:
+        fecha_hasta = datetime.date.fromisoformat(fecha_hasta) if fecha_hasta else None
+    except ValueError:
+        fecha_hasta = None
+
+    return [
+        evento for evento in timeline
+        if (not tipo_evento or evento['tipo'] == tipo_evento)
+        and (not fecha_desde or evento['fecha_dt'].date() >= fecha_desde)
+        and (not fecha_hasta or evento['fecha_dt'].date() <= fecha_hasta)
+    ]
+
+
 @login_required
 def lista_view(request):
     if request.user.rol == CustomUser.Rol.PADRE_TUTOR:
@@ -1313,6 +1331,18 @@ def expediente_view(request, pk):
         nivel_riesgo__in=[EvaluacionPsicosocial.NivelRiesgo.ALTO, EvaluacionPsicosocial.NivelRiesgo.CRITICO],
     ).count()
 
+    timeline_clinico = _build_timeline(
+        cribados_qs, referencias_qs, seguimientos_qs, documentos_qs, notas_qs,
+        reportes_sintomas=paciente.reportes_sintomas.select_related('tutor__usuario').all(),
+        indicaciones=paciente.indicaciones_medicas.select_related('medico').all(),
+        solicitudes=paciente.solicitudes_documento.select_related('medico_solicitante').all(),
+    )
+    tipo_evento = request.GET.get('tipo_evento', '').strip()
+    fecha_desde = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta = request.GET.get('fecha_hasta', '').strip()
+    tipos_evento = sorted({evento['tipo'] for evento in timeline_clinico})
+    timeline_clinico = _filter_timeline(timeline_clinico, tipo_evento, fecha_desde, fecha_hasta)
+
     context = {
         "titulo_pagina": f"Expediente - {paciente.nombres} {paciente.apellidos}",
         "paciente": paciente,
@@ -1322,12 +1352,11 @@ def expediente_view(request, pk):
         "referencias": referencias_qs,
         "documentos": documentos_qs,
         "seguimientos": seguimientos_qs,
-        "timeline_clinico": _build_timeline(
-            cribados_qs, referencias_qs, seguimientos_qs, documentos_qs, notas_qs,
-            reportes_sintomas=paciente.reportes_sintomas.select_related('tutor__usuario').all(),
-            indicaciones=paciente.indicaciones_medicas.select_related('medico').all(),
-            solicitudes=paciente.solicitudes_documento.select_related('medico_solicitante').all(),
-        ),
+        "timeline_clinico": timeline_clinico,
+        "tipos_evento": tipos_evento,
+        "tipo_evento_seleccionado": tipo_evento,
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
         "tutor_nombre": tutor_nombre,
         "tutor_telefono": tutor_telefono,
         "tutor_email": tutor_email,
