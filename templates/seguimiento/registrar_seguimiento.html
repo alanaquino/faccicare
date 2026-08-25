@@ -54,6 +54,40 @@
         </div>
       </div>
 
+      {# Signos Vitales #}
+      <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-container p-6 space-y-5">
+        <h3 class="font-headline-md text-headline-md text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-tertiary">monitor_heart</span>
+          Signos Vitales
+          <span class="font-body-sm text-body-sm text-on-surface-variant font-normal">(opcional)</span>
+        </h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Peso (kg)</label>
+            <input type="number" name="peso_kg" id="id_peso_kg" step="0.1" min="0" placeholder="Ej. 18.5"
+                   class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Talla (cm)</label>
+            <input type="number" name="talla_cm" id="id_talla_cm" step="0.1" min="0" placeholder="Ej. 105.0"
+                   class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Temperatura (°C)</label>
+            <input type="number" name="temperatura_c" step="0.1" min="0" placeholder="Ej. 37.0"
+                   class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+          </div>
+          <div>
+            <label class="block font-label-md text-label-md text-on-surface mb-1.5">Tensión arterial (mmHg)</label>
+            <input type="text" name="tension_arterial" placeholder="Ej. 110/70" pattern="^\d{2,3}\s*/\s*\d{2,3}$"
+                   title="Formato sistólica/diastólica, ej. 110/70"
+                   class="w-full px-3 py-2.5 rounded-lg border border-outline-variant bg-surface font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40">
+          </div>
+        </div>
+        <p class="font-body-sm text-body-sm text-on-surface-variant" id="imc-preview"></p>
+      </div>
+
     </div>
 
     {# Columna lateral: Programar próximo seguimiento #}
@@ -119,5 +153,28 @@
 
   </div>
 </form>
+
+<script>
+(function () {
+  const pesoInput = document.getElementById('id_peso_kg');
+  const tallaInput = document.getElementById('id_talla_cm');
+  const preview = document.getElementById('imc-preview');
+
+  function actualizarImc() {
+    const peso = parseFloat(pesoInput.value);
+    const talla = parseFloat(tallaInput.value);
+    if (!peso || !talla) {
+      preview.textContent = '';
+      return;
+    }
+    const tallaM = talla / 100;
+    const imc = peso / (tallaM * tallaM);
+    preview.textContent = 'IMC calculado: ' + imc.toFixed(1);
+  }
+
+  pesoInput.addEventListener('input', actualizarImc);
+  tallaInput.addEventListener('input', actualizarImc);
+})();
+</script>
 
 {% endblock %}

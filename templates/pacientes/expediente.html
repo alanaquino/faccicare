@@ -1771,6 +1771,28 @@
     document.getElementById('modalAgendarCita').classList.add('hidden');
   }
 
+  (function () {
+    const pesoInput = document.getElementById('modal-seg-peso');
+    const tallaInput = document.getElementById('modal-seg-talla');
+    const preview = document.getElementById('modal-seg-imc-preview');
+    if (!pesoInput || !tallaInput || !preview) return;
+
+    function actualizarImcModal() {
+      const peso = parseFloat(pesoInput.value);
+      const talla = parseFloat(tallaInput.value);
+      if (!peso || !talla) {
+        preview.textContent = '';
+        return;
+      }
+      const tallaM = talla / 100;
+      const imc = peso / (tallaM * tallaM);
+      preview.textContent = 'IMC calculado: ' + imc.toFixed(1);
+    }
+
+    pesoInput.addEventListener('input', actualizarImcModal);
+    tallaInput.addEventListener('input', actualizarImcModal);
+  })();
+
   function abrirModalNota() {
     const modal = document.getElementById('modalAgregarNota');
     modal.classList.remove('hidden');
@@ -2100,6 +2122,31 @@ document.addEventListener('keydown', e => {
         <textarea name="observaciones" rows="2" placeholder="Ej. Control de seguimiento, revisión de resultados..."
                   class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm resize-none"></textarea>
       </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Peso (kg)</label>
+          <input type="number" name="peso_kg" id="modal-seg-peso" step="0.1" min="0" placeholder="Ej. 18.5"
+                 class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm">
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Talla (cm)</label>
+          <input type="number" name="talla_cm" id="modal-seg-talla" step="0.1" min="0" placeholder="Ej. 105.0"
+                 class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm">
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Temperatura (°C)</label>
+          <input type="number" name="temperatura_c" step="0.1" min="0" placeholder="Ej. 37.0"
+                 class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm">
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5">Tensión arterial</label>
+          <input type="text" name="tension_arterial" placeholder="Ej. 110/70" pattern="^\d{2,3}\s*/\s*\d{2,3}$"
+                 title="Formato sistólica/diastólica, ej. 110/70"
+                 class="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface focus:outline-none focus:ring-2 focus:ring-secondary/45 font-body-sm text-body-sm">
+        </div>
+      </div>
+      <p class="font-body-sm text-body-sm text-on-surface-variant" id="modal-seg-imc-preview"></p>
 
       <div class="flex gap-3 justify-end pt-1">
         <button type="button" onclick="cerrarModalCita()"

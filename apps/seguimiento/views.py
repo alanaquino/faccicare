@@ -540,6 +540,20 @@ def registrar_seguimiento_view(request):
         lugar_id = request.POST.get('lugar_seguimiento', '').strip()
         lugar = CentroSalud.objects.filter(pk=lugar_id).first() if lugar_id else None
 
+        try:
+            peso_kg = float(request.POST.get('peso_kg', '').strip() or 0) or None
+        except (ValueError, TypeError):
+            peso_kg = None
+        try:
+            talla_cm = float(request.POST.get('talla_cm', '').strip() or 0) or None
+        except (ValueError, TypeError):
+            talla_cm = None
+        try:
+            temperatura_c = float(request.POST.get('temperatura_c', '').strip() or 0) or None
+        except (ValueError, TypeError):
+            temperatura_c = None
+        tension_arterial = request.POST.get('tension_arterial', '').strip()
+
         paciente = get_object_or_404(pacientes, pk=paciente_id)
 
         from django.utils.dateparse import parse_datetime
@@ -559,7 +573,7 @@ def registrar_seguimiento_view(request):
             medico_seguimiento = CustomUser.objects.filter(pk=medico_id).first()
 
         from apps.seguimiento.services import registrar_seguimiento
-        registrar_seguimiento(
+        seguimiento = registrar_seguimiento(
             paciente=paciente,
             autor=request.user,
             estado_clinico=paciente.get_estado_actual_display(),
@@ -567,7 +581,13 @@ def registrar_seguimiento_view(request):
             proxima_fecha_seguimiento=proxima_dt,
             medico_seguimiento=medico_seguimiento,
             lugar_seguimiento=lugar,
+            peso_kg=peso_kg,
+            talla_cm=talla_cm,
+            temperatura_c=temperatura_c,
+            tension_arterial=tension_arterial,
         )
+        for alerta in seguimiento.alertas_valores_atipicos:
+            messages.warning(request, alerta)
         messages.success(request, 'Seguimiento clínico registrado correctamente.')
         return redirect('seguimiento:lista')
 

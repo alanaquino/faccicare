@@ -249,6 +249,10 @@ def _build_timeline(cribados, referencias, seguimientos, documentos, notas,
             and not seguimiento.sintomas_actuales
             and not seguimiento.tratamiento_actual
             and not seguimiento.medicamentos
+            and seguimiento.peso_kg is None
+            and seguimiento.talla_cm is None
+            and seguimiento.temperatura_c is None
+            and not seguimiento.tension_arterial
         )
         if es_cita:
             medico_cita_nombre = _autor_nombre(seguimiento.medico_seguimiento) if seguimiento.medico_seguimiento else _autor_nombre(seguimiento.medico)
@@ -280,6 +284,8 @@ def _build_timeline(cribados, referencias, seguimientos, documentos, notas,
                 badges.append({"label": "Requiere hospitalización", "color": "error"})
             if seguimiento.proxima_fecha_seguimiento:
                 badges.append({"label": f"Próximo seguimiento: {seguimiento.proxima_fecha_seguimiento.strftime('%d/%m/%Y')}", "color": "secondary"})
+            for alerta in seguimiento.alertas_valores_atipicos:
+                badges.append({"label": alerta, "color": "error"})
             campos = []
             if seguimiento.sintomas_actuales:
                 campos.append({"label": "Síntomas", "valor": seguimiento.sintomas_actuales})
@@ -287,6 +293,16 @@ def _build_timeline(cribados, referencias, seguimientos, documentos, notas,
                 campos.append({"label": "Tratamiento", "valor": seguimiento.tratamiento_actual})
             if seguimiento.medicamentos:
                 campos.append({"label": "Medicamentos", "valor": seguimiento.medicamentos})
+            if seguimiento.peso_kg is not None:
+                campos.append({"label": "Peso", "valor": f"{seguimiento.peso_kg} kg"})
+            if seguimiento.talla_cm is not None:
+                campos.append({"label": "Talla", "valor": f"{seguimiento.talla_cm} cm"})
+            if seguimiento.imc is not None:
+                campos.append({"label": "IMC", "valor": str(seguimiento.imc)})
+            if seguimiento.temperatura_c is not None:
+                campos.append({"label": "Temperatura", "valor": f"{seguimiento.temperatura_c} °C"})
+            if seguimiento.tension_arterial:
+                campos.append({"label": "Tensión arterial", "valor": f"{seguimiento.tension_arterial} mmHg"})
             if seguimiento.observaciones:
                 campos.append({"label": "Observaciones", "valor": seguimiento.observaciones})
             timeline.append({
@@ -1021,6 +1037,19 @@ def expediente_view(request, pk):
             medico_id = request.POST.get("medico_seguimiento", "").strip()
             lugar_id = request.POST.get("lugar_seguimiento", "").strip()
             lugar = CentroSalud.objects.filter(pk=lugar_id).first() if lugar_id else None
+            try:
+                peso_kg = float(request.POST.get("peso_kg", "").strip() or 0) or None
+            except (ValueError, TypeError):
+                peso_kg = None
+            try:
+                talla_cm = float(request.POST.get("talla_cm", "").strip() or 0) or None
+            except (ValueError, TypeError):
+                talla_cm = None
+            try:
+                temperatura_c = float(request.POST.get("temperatura_c", "").strip() or 0) or None
+            except (ValueError, TypeError):
+                temperatura_c = None
+            tension_arterial = request.POST.get("tension_arterial", "").strip()
             from django.utils.timezone import make_aware, is_naive
             proxima_cita_dt = parse_datetime(proxima_cita_str)
             if not proxima_cita_dt:
@@ -1034,15 +1063,21 @@ def expediente_view(request, pk):
             medico_seguimiento = None
             if medico_id:
                 medico_seguimiento = CustomUser.objects.filter(pk=medico_id).first()
-            registrar_seguimiento(
+            seguimiento = registrar_seguimiento(
                 paciente=paciente,
                 autor=request.user,
                 estado_clinico=paciente.get_estado_actual_display(),
                 observaciones=motivo or "Seguimiento programado.",
                 proxima_fecha_seguimiento=proxima_cita_dt,
                 medico_seguimiento=medico_seguimiento,
-                lugar_seguimiento=lugar
+                lugar_seguimiento=lugar,
+                peso_kg=peso_kg,
+                talla_cm=talla_cm,
+                temperatura_c=temperatura_c,
+                tension_arterial=tension_arterial,
             )
+            for alerta in seguimiento.alertas_valores_atipicos:
+                messages.warning(request, alerta)
             messages.success(request, f'Seguimiento registrado para el {proxima_cita_dt.strftime("%d de %B de %Y a las %H:%M")}.')
             return redirect(f"{request.path}?tab=resumen")
 

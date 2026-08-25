@@ -3,7 +3,8 @@ from apps.core.audit import registrar_actividad
 
 def registrar_seguimiento(paciente, autor, *, estado_clinico, observaciones,
                           proxima_fecha_seguimiento, medico_seguimiento=None,
-                          lugar_seguimiento=None):
+                          lugar_seguimiento=None, peso_kg=None, talla_cm=None,
+                          temperatura_c=None, tension_arterial=''):
     seguimiento = SeguimientoPaciente.objects.create(
         paciente=paciente,
         medico=autor,
@@ -12,6 +13,10 @@ def registrar_seguimiento(paciente, autor, *, estado_clinico, observaciones,
         estado_clinico=estado_clinico,
         observaciones=observaciones or "Seguimiento clínico registrado.",
         proxima_fecha_seguimiento=proxima_fecha_seguimiento,
+        peso_kg=peso_kg,
+        talla_cm=talla_cm,
+        temperatura_c=temperatura_c,
+        tension_arterial=tension_arterial or '',
     )
     
     fecha_str = proxima_fecha_seguimiento.strftime("%d/%m/%Y %H:%M") if proxima_fecha_seguimiento else "sin fecha"

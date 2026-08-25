@@ -1,8 +1,17 @@
+import re
 import uuid
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
+from apps.core.constants import (
+    RANGOS_TENSION_ARTERIAL_PEDIATRICA,
+    TEMPERATURA_FIEBRE_C,
+    TEMPERATURA_HIPOTERMIA_C,
+)
 from apps.pacientes.models import Paciente
+
+_TENSION_ARTERIAL_RE = re.compile(r'^\s*(\d{2,3})\s*/\s*(\d{2,3})')
 
 
 class SeguimientoPaciente(models.Model):
@@ -98,6 +107,19 @@ class SeguimientoPaciente(models.Model):
         blank=True,
         verbose_name='Talla (cm)',
     )
+    temperatura_c = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        verbose_name='Temperatura (°C)',
+    )
+    tension_arterial = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name='Tensión arterial (mmHg)',
+        help_text='Formato sistólica/diastólica, ej. 110/70',
+    )
     requiere_hospitalizacion = models.BooleanField(
         default=False,
         verbose_name='Requiere hospitalización',
@@ -121,6 +143,66 @@ class SeguimientoPaciente(models.Model):
             talla_m = float(self.talla_cm) / 100
             return round(float(self.peso_kg) / (talla_m ** 2), 1)
         return None
+
+    @property
+    def tension_arterial_valores(self):
+        """(sistolica, diastolica) como enteros si el texto libre tiene formato NN/NN, si no None."""
+        if not self.tension_arterial:
+            return None
+        m = _TENSION_ARTERIAL_RE.match(self.tension_arterial)
+        if not m:
+            return None
+        return int(m.group(1)), int(m.group(2))
+
+    @property
+    def _edad_paciente_meses(self):
+        if not self.paciente_id or not self.paciente.fecha_nacimiento:
+            return None
+        hoy = timezone.now().date()
+        birth = self.paciente.fecha_nacimiento
+        return (hoy.year - birth.year) * 12 + (hoy.month - birth.month) - (1 if hoy.day < birth.day else 0)
+
+    @property
+    def alerta_temperatura(self):
+        if self.temperatura_c is None:
+            return None
+        temp = float(self.temperatura_c)
+        if temp >= TEMPERATURA_FIEBRE_C:
+            return f'Temperatura elevada (fiebre): {temp}°C'
+        if temp < TEMPERATURA_HIPOTERMIA_C:
+            return f'Temperatura baja (hipotermia): {temp}°C'
+        return None
+
+    @property
+    def alerta_tension_arterial(self):
+        """Compara la TA reportada contra rangos orientativos por edad (ver apps.core.constants)."""
+        valores = self.tension_arterial_valores
+        if not valores:
+            return None
+        edad_meses = self._edad_paciente_meses
+        if edad_meses is None:
+            return None
+        sistolica, diastolica = valores
+        for edad_max, sis_min, sis_max, dia_min, dia_max, etiqueta in RANGOS_TENSION_ARTERIAL_PEDIATRICA:
+            if edad_meses > edad_max:
+                continue
+            problemas = []
+            if not (sis_min <= sistolica <= sis_max):
+                problemas.append(f'sistólica {sistolica} mmHg (esperado {sis_min}-{sis_max} para {etiqueta})')
+            if not (dia_min <= diastolica <= dia_max):
+                problemas.append(f'diastólica {diastolica} mmHg (esperado {dia_min}-{dia_max} para {etiqueta})')
+            if problemas:
+                return 'Tensión arterial fuera de rango esperado: ' + '; '.join(problemas)
+            return None
+        return None
+
+    @property
+    def alertas_valores_atipicos(self):
+        return [a for a in (self.alerta_temperatura, self.alerta_tension_arterial) if a]
+
+    @property
+    def tiene_valores_atipicos(self):
+        return bool(self.alertas_valores_atipicos)
 
     def __str__(self):
         return (
