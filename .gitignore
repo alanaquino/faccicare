@@ -63,3 +63,4 @@ Desktop.ini
 # Artefactos locales de planificacion (no publicar)
 docs/superpowers/
 docs/
+*.gitignore
